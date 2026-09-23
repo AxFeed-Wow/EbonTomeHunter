@@ -1,14 +1,13 @@
 # EbonTomeHunter
 
+Find, buy and farm the **Echo tomes** of Project Ebonhold: Auction House prices and purchases, wishlist, drop places on the map, teleport near the mobs.
+
 **English** | [Français](#français)
 
 [![Check](https://github.com/AxFeed-Wow/EbonTomeHunter/actions/workflows/check.yml/badge.svg)](https://github.com/AxFeed-Wow/EbonTomeHunter/actions/workflows/check.yml)
 [![Latest release](https://img.shields.io/github/v/release/AxFeed-Wow/EbonTomeHunter)](https://github.com/AxFeed-Wow/EbonTomeHunter/releases/latest)
 ![WoW 3.3.5a](https://img.shields.io/badge/WoW-3.3.5a-1f6feb)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-
-A World of Warcraft 3.3.5a addon for **Project Ebonhold** that helps you **find, buy and farm the
-Echo tomes**.
 
 > **EbonTomeHunter is an independent community project.** It is not affiliated with, endorsed by,
 > or officially associated with Project Ebonhold or Blizzard Entertainment.
@@ -123,10 +122,9 @@ Released under the MIT License, © 2026 AxFeed-Wow. See [LICENSE](LICENSE).
 
 # EbonTomeHunter (Français)
 
-[English](#ebontomehunter) | **Français**
+Trouver, acheter et farmer les **tomes d'Echo** de Project Ebonhold : prix et achats à l'hôtel des ventes, wishlist, lieux de drop sur la carte, téléportation près des monstres.
 
-Un addon World of Warcraft 3.3.5a pour **Project Ebonhold** qui aide à **trouver, acheter et farmer
-les tomes d'Echo**.
+[English](#ebontomehunter) | **Français**
 
 > **EbonTomeHunter est un projet communautaire indépendant.** Il n'est ni affilié, ni approuvé, ni
 > officiellement associé à Project Ebonhold ou à Blizzard Entertainment.

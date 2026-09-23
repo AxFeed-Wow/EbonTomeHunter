@@ -12,7 +12,12 @@ d'AxFeed-Wow/EbonholdAddonManager.
     jour que si cette version diffère de celle installée ;
   - il télécharge l'archive de la branche (`archive/refs/heads/main.zip`), y trouve
     `EbonTomeHunter/EbonTomeHunter.toc` et copie **tout** le dossier `EbonTomeHunter/` ;
-  - `EbonTomeHunter/tests/` est exclu de cette archive par `.gitattributes` (`export-ignore`).
+  - `EbonTomeHunter/tests/` est exclu de cette archive par `.gitattributes` (`export-ignore`) ;
+  - sa fiche montre comme **description la première ligne de texte du README après le titre**
+    (une seule ligne ; markdown retiré ; badges, séparateurs et lignes de moins de 10 caractères
+    sautés), l'auteur du `## Author` du `.toc` et la licence trouvée dans le README. La phrase
+    d'accroche doit donc rester juste sous `# EbonTomeHunter`, **sur une seule ligne**, avant
+    « English | Français », et courte (~150 caractères : la fiche en montre deux lignes).
 
   Donc **`main` = ce que reçoivent les joueurs**. Un changement poussé sur `main` sans montée de
   version n'est pas proposé en mise à jour, mais arrive dans toute nouvelle installation : on
@@ -63,14 +68,11 @@ du jeu, sinon un `/reload` suffit.
 
 ## Première publication (2026-09-23)
 
-Dépôt créé en **privé**, pour relecture par l'utilisateur avant de le rendre public. Au passage en
-public :
-- `gh repo edit AxFeed-Wow/EbonTomeHunter --visibility public --accept-visibility-change-consequences` ;
-- activer le signalement privé des failles (SECURITY.md y renvoie) :
-  `gh api -X PUT repos/AxFeed-Wow/EbonTomeHunter/private-vulnerability-reporting` ;
-- ajouter l'addon au catalogue d'Ebonhold Addon Manager (c'est l'utilisateur qui le fait, dans son
-  logiciel) : dossier `EbonTomeHunter`, dépôt `AxFeed-Wow/EbonTomeHunter`, branche `main`. Le
-  README renvoie déjà vers le logiciel.
+- Dépôt créé en privé pour relecture par l'utilisateur, puis rendu public ; signalement privé des
+  failles activé (SECURITY.md y renvoie).
+- Ajout au catalogue d'Ebonhold Addon Manager : issue AxFeed-Wow/EbonholdAddonManager#6 (formulaire
+  « Addon submission »), approuvée par l'utilisateur (label `approved`). Entrée du catalogue :
+  `ebontomehunter`, dossier `EbonTomeHunter`, dépôt `AxFeed-Wow/EbonTomeHunter`, branche `main`.
 
 ## Ce qui ne doit jamais être publié
 

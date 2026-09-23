@@ -101,6 +101,8 @@ Dépôt : **github.com/AxFeed-Wow/EbonTomeHunter** (compte `gh` : AxFeed-Wow). D
 - **`main` = ce que reçoivent les joueurs** : Ebonhold Addon Manager (le logiciel de l'utilisateur)
   installe la branche `main` et propose la mise à jour quand le `## Version` du `.toc` change. Les
   releases ne servent qu'à l'installation à la main.
+- Le logiciel affiche comme description la **première ligne de texte du README après le titre** :
+  garder la phrase d'accroche juste sous `# EbonTomeHunter`, sur une seule ligne, courte.
 - Livrer : branche → `tools/check.py` → version (2 endroits) + CHANGELOG → `main` → tag `vX.Y.Z`
   poussé → le workflow `Release` construit le zip et crée la release.
 - **Ne rien pousser (ni branche `main`, ni tag) sans demande explicite de l'utilisateur.**
