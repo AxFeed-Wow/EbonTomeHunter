@@ -1,0 +1,14 @@
+  100000-199999    1465  Soul Ash skill tree nodes
+  200000-299999    1061  Echoes (quality variants)
+  300000-399999     148  Tome spells (item id == spell id)
+  400000-499999       1  Utility (Loot Grip)
+  500000-599999      68  Difficulty buffs (Normal / Hard / Very Hard)
+  600000-699999      97  Difficulty debuffs, intensity mechanics
+  700000-799999     122  Affixes (weapon / armour procs)
+  900000-999999     173  Creature, boss and intensity mechanics
+ 1000000-1099999    726  Class Echoes
+ 1200000-1299999    714  Appearances (transmog collection)
+ 2300000-2399999   1893  Mounts (collection)
+
+tomes: 148 (128 with an item name seen in game)
+custom achievements: 37

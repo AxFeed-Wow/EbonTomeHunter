@@ -1,0 +1,34 @@
+## Interface: 30300
+## Title: EbonTomeHunter
+## Notes: Find, buy and farm the Echo tomes of Project Ebonhold: Auction House prices and purchases, wishlist, tomes learned, drop places on the world map, teleport near the mobs, drops shared between players.
+## Notes-frFR: Trouver, acheter et farmer les tomes d'Echo de Project Ebonhold : prix et achats à l'hôtel des ventes, wishlist, tomes appris, lieux de drop sur la carte, téléportation près des monstres, drops partagés entre joueurs.
+## Author: AxFeed-Wow
+## Version: 2.0.0
+## X-Website: https://github.com/AxFeed-Wow/EbonTomeHunter
+## SavedVariables: EbonTomeHunterDB
+## SavedVariablesPerCharacter: EbonTomeHunterCharDB
+## OptionalDeps: ProjectEbonhold, EbonholdHub, EbonCompletionist, EbonBuilds, Auctionator
+Locale.lua
+Core.lua
+TomeData.lua
+MapData.lua
+Widgets.lua
+Catalog.lua
+Prices.lua
+Scan.lua
+Wishlist.lua
+Known.lua
+Buy.lua
+Share.lua
+WorldMap.lua
+Wowhead.lua
+Travel.lua
+Sources.lua
+Net.lua
+Comm.lua
+Loot.lua
+UI.lua
+AuctionHouse.lua
+Minimap.lua
+Options.lua
+Tutorial.lua

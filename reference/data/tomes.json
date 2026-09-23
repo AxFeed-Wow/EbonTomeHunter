@@ -1,0 +1,2415 @@
+[
+ {
+  "itemId": 300022,
+  "itemName": "Tome of Echo: Earthen Snap",
+  "itemNameVerified": true,
+  "echoName": "Earthen Snap",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200022,
+    "quality": 1,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Earthen Snap when offered new Echoes. Earthen Snap: Your first hit after entering combat roots the target",
+  "icon": "INTERFACE\\ICONS\\inv_eng_bombroot"
+ },
+ {
+  "itemId": 300025,
+  "itemName": "Tome of Echo: Frost Bite",
+  "itemNameVerified": true,
+  "echoName": "Frost Bite",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200025,
+    "quality": 1,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Frost Bite when offered new Echoes. Frost Bite: When struck, you have a chance to freeze the attacker",
+  "icon": "INTERFACE\\ICONS\\inv_10_dungeonjewelry_primalist_necklace_1_frost"
+ },
+ {
+  "itemId": 300436,
+  "itemName": "Tome of Echo: Shielded Steps",
+  "itemNameVerified": true,
+  "echoName": "Shielded Steps",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200436,
+    "quality": 1,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Shielded Steps when offered new Echoes. Shielded Steps: Reduces damage taken from area-of-effect attacks.",
+  "icon": "INTERFACE\\ICONS\\inv_shield_1h_artifactstormfist_d_04"
+ },
+ {
+  "itemId": 300437,
+  "itemName": "Tome of Echo: Steady Casting",
+  "itemNameVerified": true,
+  "echoName": "Steady Casting",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200437,
+    "quality": 1,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Steady Casting when offered new Echoes. Steady Casting: Reduces pushback suffered from damaging attacks while casting.",
+  "icon": "INTERFACE\\ICONS\\inv_glove_cloth_challengemage_d_01"
+ },
+ {
+  "itemId": 300438,
+  "itemName": "Tome of Echo: Subtle Presence",
+  "itemNameVerified": true,
+  "echoName": "Subtle Presence",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200438,
+    "quality": 1,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Subtle Presence when offered new Echoes. Subtle Presence: Reduces threat generated.",
+  "icon": "INTERFACE\\ICONS\\Spell_Magic_LesserInvisibilty"
+ },
+ {
+  "itemId": 300439,
+  "itemName": "Tome of Echo: Provoking Presence",
+  "itemNameVerified": true,
+  "echoName": "Provoking Presence",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200439,
+    "quality": 1,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Provoking Presence when offered new Echoes. Provoking Presence: Increases threat generated.",
+  "icon": "INTERFACE\\ICONS\\inv_plate_raidwarrior_o_01helm"
+ },
+ {
+  "itemId": 300446,
+  "itemName": "Tome of Echo: Stoneskin Threads",
+  "itemNameVerified": true,
+  "echoName": "Stoneskin Threads",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200446,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Stoneskin Threads when offered new Echoes. Stoneskin Threads: Reduces the duration of movement slowing effects on you.",
+  "icon": "INTERFACE\\ICONS\\inv_boots_mail_14"
+ },
+ {
+  "itemId": 300447,
+  "itemName": "Tome of Echo: Sundered Will",
+  "itemNameVerified": true,
+  "echoName": "Sundered Will",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200447,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Sundered Will when offered new Echoes. Sundered Will: Reduces the duration of fear effects on you.",
+  "icon": "INTERFACE\\ICONS\\spell_priest_burningwill"
+ },
+ {
+  "itemId": 300448,
+  "itemName": "Tome of Echo: Steady Grip",
+  "itemNameVerified": true,
+  "echoName": "Steady Grip",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200448,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Steady Grip when offered new Echoes. Steady Grip: Reduces the duration of disarm effects on you.",
+  "icon": "INTERFACE\\ICONS\\INV_Misc_Desecrated_PlateGloves"
+ },
+ {
+  "itemId": 300449,
+  "itemName": "Tome of Echo: Rootbreaker",
+  "itemNameVerified": true,
+  "echoName": "Rootbreaker",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200449,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Rootbreaker when offered new Echoes. Rootbreaker: Reduces the duration of root effects on you.",
+  "icon": "INTERFACE\\ICONS\\inv_1115_warrior_kick"
+ },
+ {
+  "itemId": 300450,
+  "itemName": "Tome of Echo: Insulated Soul",
+  "itemNameVerified": true,
+  "echoName": "Insulated Soul",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200450,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Insulated Soul when offered new Echoes. Insulated Soul: Reduces the duration of stun effects on you.",
+  "icon": "INTERFACE\\ICONS\\inv_soulbarrier"
+ },
+ {
+  "itemId": 300508,
+  "itemName": "Tome of Echo: Ember Ward",
+  "itemNameVerified": true,
+  "echoName": "Ember Ward",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200508,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Ember Ward when offered new Echoes. Ember Ward: Increases Fire Resistance.",
+  "icon": "Interface\\Icons\\Spell_Fire_SealOfFire"
+ },
+ {
+  "itemId": 300509,
+  "itemName": "Tome of Echo: Frost Ward",
+  "itemNameVerified": true,
+  "echoName": "Frost Ward",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200509,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Frost Ward when offered new Echoes. Frost Ward: Increases Frost Resistance.",
+  "icon": "INTERFACE\\ICONS\\Spell_Fire_FrostResistanceTotem"
+ },
+ {
+  "itemId": 300510,
+  "itemName": "Tome of Echo: Verdant Ward",
+  "itemNameVerified": true,
+  "echoName": "Verdant Ward",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200510,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Verdant Ward when offered new Echoes. Verdant Ward: Increases Nature Resistance.",
+  "icon": "Interface\\Icons\\Spell_Nature_ProtectionformNature"
+ },
+ {
+  "itemId": 300511,
+  "itemName": "Tome of Echo: Arcane Ward",
+  "itemNameVerified": true,
+  "echoName": "Arcane Ward",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200511,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Arcane Ward when offered new Echoes. Arcane Ward: Increases Arcane Resistance.",
+  "icon": "INTERFACE\\ICONS\\Spell_Arcane_ArcaneResilience"
+ },
+ {
+  "itemId": 300512,
+  "itemName": "Tome of Echo: Shadow Ward",
+  "itemNameVerified": true,
+  "echoName": "Shadow Ward",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200512,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Shadow Ward when offered new Echoes. Shadow Ward: Increases Shadow Resistance.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shadow_AntiShadow"
+ },
+ {
+  "itemId": 300569,
+  "itemName": "Tome of Echo: Beast Bane",
+  "itemNameVerified": true,
+  "echoName": "Beast Bane",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200569,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Beast Bane when offered new Echoes. Beast Bane: Increases your spell power when fighting Beasts.",
+  "icon": "INTERFACE\\ICONS\\Ability_Hunter_BeastMastery"
+ },
+ {
+  "itemId": 300570,
+  "itemName": "Tome of Echo: DragonKin Bane",
+  "itemNameVerified": true,
+  "echoName": "Dragonkin Bane",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200570,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Dragonkin Bane when offered new Echoes. Dragonkin Bane: Increases your spell power when fighting Dragonkin.",
+  "icon": "INTERFACE\\ICONS\\inv_pet_chromaticdragon"
+ },
+ {
+  "itemId": 300571,
+  "itemName": "Tome of Echo: Demon Bane",
+  "itemNameVerified": true,
+  "echoName": "Demon Bane",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200571,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Demon Bane when offered new Echoes. Demon Bane: Increases your spell power when fighting Demons.",
+  "icon": "INTERFACE\\ICONS\\ability_racial_demonbane"
+ },
+ {
+  "itemId": 300572,
+  "itemName": "Tome of Echo: Elemental Bane",
+  "itemNameVerified": true,
+  "echoName": "Elemental Bane",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200572,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Elemental Bane when offered new Echoes. Elemental Bane: Increases your spell power when fighting Elementals.",
+  "icon": "INTERFACE\\ICONS\\inv_10_elementalspiritfoozles_shadowflame"
+ },
+ {
+  "itemId": 300573,
+  "itemName": "Tome of Echo: Giant Bane",
+  "itemNameVerified": true,
+  "echoName": "Giant Bane",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200573,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Giant Bane when offered new Echoes. Giant Bane: Increases your spell power when fighting Giants.",
+  "icon": "INTERFACE\\ICONS\\Achievement_Dungeon_UlduarRaid_IceGiant_01"
+ },
+ {
+  "itemId": 300574,
+  "itemName": "Tome of Echo: Undead Bane",
+  "itemNameVerified": true,
+  "echoName": "Undead Bane",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200574,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Undead Bane when offered new Echoes. Undead Bane: Increases your spell power when fighting Undead.",
+  "icon": "INTERFACE\\ICONS\\Spell_Holy_TurnUndead"
+ },
+ {
+  "itemId": 300575,
+  "itemName": "Tome of Echo: Mechanical Bane",
+  "itemNameVerified": true,
+  "echoName": "Mechanical Bane",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200575,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Mechanical Bane when offered new Echoes. Mechanical Bane: Increases your spell power when fighting Mechanical enemies.",
+  "icon": "INTERFACE\\ICONS\\inv_10_engineering_manufacturedparts_mechanicalparts_color4"
+ },
+ {
+  "itemId": 300576,
+  "itemName": "Tome of Echo: Beast Slayer",
+  "itemNameVerified": true,
+  "echoName": "Beast Slayer",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200576,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Beast Slayer when offered new Echoes. Beast Slayer: Increases your attack power when fighting Beasts.",
+  "icon": "INTERFACE\\ICONS\\Ability_Hunter_Pet_CoreHound"
+ },
+ {
+  "itemId": 300577,
+  "itemName": "Tome of Echo: Dragon Slayer",
+  "itemNameVerified": true,
+  "echoName": "Dragon Slayer",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200577,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Dragon Slayer when offered new Echoes. Dragon Slayer: Increases your attack power when fighting Dragonkin.",
+  "icon": "INTERFACE\\ICONS\\spell_warrior_dragoncharge"
+ },
+ {
+  "itemId": 300578,
+  "itemName": "Tome of Echo: Demon Slayer",
+  "itemNameVerified": true,
+  "echoName": "Demon Slayer",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200578,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Demon Slayer when offered new Echoes. Demon Slayer: Increases your attack power when fighting Demons.",
+  "icon": "Interface\\Icons\\Ability_Warlock_DemonicPower"
+ },
+ {
+  "itemId": 300579,
+  "itemName": "Tome of Echo: Elemental Slayer",
+  "itemNameVerified": true,
+  "echoName": "Elemental Slayer",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200579,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Elemental Slayer when offered new Echoes. Elemental Slayer: Increases your attack power when fighting Elementals.",
+  "icon": "INTERFACE\\ICONS\\shaman_talent_primalelementalist"
+ },
+ {
+  "itemId": 300580,
+  "itemName": "Tome of Echo: Giant Slayer",
+  "itemNameVerified": true,
+  "echoName": "Giant Slayer",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200580,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Giant Slayer when offered new Echoes. Giant Slayer: Increases your attack power when fighting Giants.",
+  "icon": "INTERFACE\\ICONS\\inv_mace_2h_titan_c_01"
+ },
+ {
+  "itemId": 300581,
+  "itemName": "Tome of Echo: Undead Slayer",
+  "itemNameVerified": true,
+  "echoName": "Undead Slayer",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200581,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Undead Slayer when offered new Echoes. Undead Slayer: Increases your attack power when fighting Undead.",
+  "icon": "INTERFACE\\ICONS\\inv_cape_special_wc3scourge_d_01"
+ },
+ {
+  "itemId": 300582,
+  "itemName": "Tome of Echo: Machine Slayer",
+  "itemNameVerified": true,
+  "echoName": "Machine Slayer",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200582,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Machine Slayer when offered new Echoes. Machine Slayer: Increases your attack power when fighting Mechanical enemies.",
+  "icon": "INTERFACE\\ICONS\\inv_plate_mechagnome_c_01helm"
+ },
+ {
+  "itemId": 300583,
+  "itemName": "Tome of Echo: Crypt Lord’s Swarm",
+  "itemNameVerified": true,
+  "echoName": "Crypt Lord’s Swarm",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200583,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Crypt Lord’s Swarm when offered new Echoes. Crypt Lord’s Swarm: While in combat, you are enveloped by a Locust Swarm, reducing damage taken and dealing Nature damage to nearby enemies.",
+  "icon": "INTERFACE\\ICONS\\Achievement_Boss_Anubarak"
+ },
+ {
+  "itemId": 300585,
+  "itemName": "Tome of Echo: Widow’s Venom",
+  "itemNameVerified": true,
+  "echoName": "Widow’s Venom",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200585,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Widow’s Venom when offered new Echoes. Widow’s Venom: Dealing repeated Nature damage makes you unleash Poison Bolt Volley, spraying poison at all enemies.",
+  "icon": "INTERFACE\\ICONS\\achievement_dungeon_plaguefall_dominavenomblade"
+ },
+ {
+  "itemId": 300589,
+  "itemName": "Tome of Echo: Broodmother’s Webbing",
+  "itemNameVerified": true,
+  "echoName": "Broodmother’s Webbing",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200589,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Broodmother’s Webbing when offered new Echoes. Broodmother’s Webbing: When you take damage while below 50% health, you spray webs, dealing Nature damage to nearby enemies and stunning them.",
+  "icon": "INTERFACE\\ICONS\\INV_Misc_Web_02"
+ },
+ {
+  "itemId": 300592,
+  "itemName": "Tome of Echo: Curse of the Plaguebringer",
+  "itemNameVerified": true,
+  "echoName": "Curse of the Plaguebringer",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200592,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Curse of the Plaguebringer when offered new Echoes. Curse of the Plaguebringer: Dealing repeated Shadow damage afflicts the target with a curse, dealing Shadow damage periodically spreading to a nearby enemy.",
+  "icon": "INTERFACE\\ICONS\\warlock_pvp_cursefragility"
+ },
+ {
+  "itemId": 300595,
+  "itemName": "Tome of Echo: The Unclean’s Fever",
+  "itemNameVerified": true,
+  "echoName": "The Unclean’s Fever",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200595,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover The Unclean’s Fever when offered new Echoes. The Unclean’s Fever: Enemies that strike you are afflicted with Decrepit Fever, dealing Shadow damage and reducing the damage they deal to you.",
+  "icon": "INTERFACE\\ICONS\\Ability_Creature_Disease_03"
+ },
+ {
+  "itemId": 300597,
+  "itemName": "Tome of Echo: The Sporelord’s Gift",
+  "itemNameVerified": true,
+  "echoName": "The Sporelord’s Gift",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200597,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover The Sporelord’s Gift when offered new Echoes. The Sporelord’s Gift: While in combat, you periodically summon Spores increasing the critical strike damage of nearby allies.",
+  "icon": "INTERFACE\\ICONS\\inv_orange_sporecreature2"
+ },
+ {
+  "itemId": 300599,
+  "itemName": "Tome of Echo: Drillmaster’s Rebuke",
+  "itemNameVerified": true,
+  "echoName": "Drillmaster’s Rebuke",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200599,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Drillmaster’s Rebuke when offered new Echoes. Drillmaster’s Rebuke: Your melee attacks have a chance to unleash an Unbalancing Strike, leaving the target Unbalanced, increasing your damage dealt to it.",
+  "icon": "INTERFACE\\ICONS\\Ability_Warrior_DecisiveStrike"
+ },
+ {
+  "itemId": 300601,
+  "itemName": "Tome of Echo: The Harvester’s Tithe",
+  "itemNameVerified": true,
+  "echoName": "The Harvester’s Tithe",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200601,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover The Harvester’s Tithe when offered new Echoes. The Harvester’s Tithe: You harvest the souls of nearby enemies, increasing your damage done and regaining health when an enemy dies near you.",
+  "icon": "INTERFACE\\ICONS\\inv_ability_soulharvesterwarlock_demonicsoul"
+ },
+ {
+  "itemId": 300606,
+  "itemName": "Tome of Echo: Edict of the Four",
+  "itemNameVerified": true,
+  "echoName": "Edict of the Four",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200606,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Edict of the Four when offered new Echoes. Edict of the Four: Your damaging spells and abilities build Edict, invoking Edicts makes you cast Meteor, Void Zone, Unholy Shadow or Holy Wrath.",
+  "icon": "INTERFACE\\ICONS\\inv_10_inscription2_book1_color3"
+ },
+ {
+  "itemId": 300613,
+  "itemName": "Tome of Echo: Stitched Fury",
+  "itemNameVerified": true,
+  "echoName": "Stitched Fury",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200613,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Stitched Fury when offered new Echoes. Stitched Fury: While at low health, you go into a Frenzy, increasing Attack Speed and Physical damage dealt.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shadow_UnholyFrenzy"
+ },
+ {
+  "itemId": 300615,
+  "itemName": "Tome of Echo: Mutagenic Fumes",
+  "itemNameVerified": true,
+  "echoName": "Mutagenic Fumes",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200615,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Mutagenic Fumes when offered new Echoes. Mutagenic Fumes: Killing an enemy summons a Poison Cloud, dealing Nature damage to nearby enemies.",
+  "icon": "INTERFACE\\ICONS\\Ability_Rogue_DeviousPoisons"
+ },
+ {
+  "itemId": 300619,
+  "itemName": "Tome of Echo: Ravenous Bellow",
+  "itemNameVerified": true,
+  "echoName": "Ravenous Bellow",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200619,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Ravenous Bellow when offered new Echoes. Ravenous Bellow: Delivering a killing blow unleashes Terrifying Roar, dealing damage to nearby enemies and slowing them. Enemies hit take increased damage from you.",
+  "icon": "INTERFACE\\ICONS\\Ability_Devour"
+ },
+ {
+  "itemId": 300621,
+  "itemName": "Tome of Echo: Polarity Shift",
+  "itemNameVerified": true,
+  "echoName": "Polarity Shift",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200621,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Polarity Shift when offered new Echoes. Polarity Shift: You alternate between Positive and Negative Charge. Increases crit chance and damage done or reduces damage taken and increases healing and move speed.",
+  "icon": "INTERFACE\\ICONS\\inv_10_blacksmithing_craftedbar_electricalloy"
+ },
+ {
+  "itemId": 300627,
+  "itemName": "Tome of Echo: Chill of the Bone Wyrm",
+  "itemNameVerified": true,
+  "echoName": "Chill of the Bone Wyrm",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200627,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Chill of the Bone Wyrm when offered new Echoes. Chill of the Bone Wyrm: Dealing repeated Frost damage makes you unleash Frost Breath, dealing Frost damage and making enemies weaker to your Frost damage.",
+  "icon": "INTERFACE\\ICONS\\Ability_Mage_ChilledToTheBone"
+ },
+ {
+  "itemId": 300632,
+  "itemName": "Tome of Echo: Call of the Lich King",
+  "itemNameVerified": true,
+  "echoName": "Call of the Lich King",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200632,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Call of the Lich King when offered new Echoes. Call of the Lich King: Killing an enemies summon a Servant of the Lich King fighting for you.",
+  "icon": "INTERFACE\\ICONS\\achievement_raid_torghast_kel-thuzad"
+ },
+ {
+  "itemId": 300635,
+  "itemName": "Tome of Echo: Cinders of the Sanctum",
+  "itemNameVerified": true,
+  "echoName": "Cinders of the Sanctum",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200635,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Cinders of the Sanctum when offered new Echoes. Cinders of the Sanctum: Dealing repeated Fire damage makes you summon a Fire Cyclone, dealing Fire damage to nearby enemies.",
+  "icon": "INTERFACE\\ICONS\\inv_10_gearupgrade_wyrmsshadowflameenhancedcrest"
+ },
+ {
+  "itemId": 300639,
+  "itemName": "Tome of Echo: Storm of the Spellweaver",
+  "itemNameVerified": true,
+  "echoName": "Storm of the Spellweaver",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200639,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Storm of the Spellweaver when offered new Echoes. Storm of the Spellweaver: Dealing repeated Arcane damage makes you fire a salvo of Magic Missiles into the air, striking up to 3 nearby enemies.",
+  "icon": "INTERFACE\\ICONS\\ability_socererking_arcanemines"
+ },
+ {
+  "itemId": 300690,
+  "itemName": "Tome of Echo: Reaper’s Reprieve",
+  "itemNameVerified": true,
+  "echoName": "Reaper’s Reprieve",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200690,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Reaper’s Reprieve when offered new Echoes. Reaper’s Reprieve: Fatal damage instead reduces you to 1 health, prevents all damage for 3 sec, and heals you.",
+  "icon": "INTERFACE\\ICONS\\inv_sword_1h_deathknight_c_01"
+ },
+ {
+  "itemId": 300693,
+  "itemName": "Tome of Echo: Reaper’s Verdict",
+  "itemNameVerified": true,
+  "echoName": "Reaper’s Verdict",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200693,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Reaper’s Verdict when offered new Echoes. Reaper’s Verdict: Your damage against low health enemies is increased. When you damage a low health enemy, you deal a additional Shadow damage.",
+  "icon": "INTERFACE\\ICONS\\inv_ability_deathbringerdeathknight_reapersmark"
+ },
+ {
+  "itemId": 300695,
+  "itemName": "Tome of Echo: Reaper’s Doom",
+  "itemNameVerified": true,
+  "echoName": "Reaper’s Doom",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200695,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Reaper’s Doom when offered new Echoes. Reaper’s Doom: Dealing damage afflict the target with Reaper’s Doom. When it expires, it detonates dealing Shadow damage split between all enemies hit.",
+  "icon": "INTERFACE\\ICONS\\ability_bossgorefiend_touchofdoom"
+ },
+ {
+  "itemId": 300776,
+  "itemName": "Tome of Echo: Flame Vents",
+  "itemNameVerified": true,
+  "echoName": "Flame Vents",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200776,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Flame Vents when offered new Echoes. Flame Vents: Dodging and parrying unleashes flames, reduces damage taken and grants speed.",
+  "icon": "INTERFACE\\ICONS\\inv_111_flarendosflame_gallywix"
+ },
+ {
+  "itemId": 300780,
+  "itemName": "Tome of Echo: Brittle Forging",
+  "itemNameVerified": true,
+  "echoName": "Brittle Forging",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200780,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Brittle Forging when offered new Echoes. Brittle Forging: Fire damage builds Brittle, increasing crit chance and causing a fiery shatter.",
+  "icon": "INTERFACE\\ICONS\\achievement_boss_furyfurnace"
+ },
+ {
+  "itemId": 300786,
+  "itemName": "Tome of Echo: Harpoon Barrage",
+  "itemNameVerified": true,
+  "echoName": "Harpoon Barrage",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200786,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Harpoon Barrage when offered new Echoes. Harpoon Barrage: Periodically pulls distant enemies to you and increases your damage to them.",
+  "icon": "INTERFACE\\ICONS\\INV_Spear_11"
+ },
+ {
+  "itemId": 300792,
+  "itemName": "Tome of Echo: Exposed Heart",
+  "itemNameVerified": true,
+  "echoName": "Exposed Heart",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200792,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Exposed Heart when offered new Echoes. Exposed Heart: Attacks expose the target, increasing damage dealt and dealing area damage.",
+  "icon": "INTERFACE\\ICONS\\inv_ragnaros_heart"
+ },
+ {
+  "itemId": 300798,
+  "itemName": "Tome of Echo: Edict of the Iron Council",
+  "itemNameVerified": true,
+  "echoName": "Edict of the Iron Council",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200798,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Edict of the Iron Council when offered new Echoes. Edict of the Iron Council: Attacks cycle through Rune of Death, Overload, and Fusion Punch effects.",
+  "icon": "INTERFACE\\ICONS\\Achievement_Boss_TheIronCouncil_01"
+ },
+ {
+  "itemId": 300804,
+  "itemName": "Tome of Echo: Stone Shatter",
+  "itemNameVerified": true,
+  "echoName": "Stone Shatter",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200804,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Stone Shatter when offered new Echoes. Stone Shatter: First hits mark enemies, causing them to shatter on death.",
+  "icon": "INTERFACE\\ICONS\\spell_sandexplosion"
+ },
+ {
+  "itemId": 300808,
+  "itemName": "Tome of Echo: Sanctum Sentries",
+  "itemNameVerified": true,
+  "echoName": "Sanctum Sentries",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200808,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Sanctum Sentries when offered new Echoes. Sanctum Sentries: Summons two permanent guardians that fight and amplify your damage.",
+  "icon": "INTERFACE\\ICONS\\Ability_Mount_BlackPanther"
+ },
+ {
+  "itemId": 300818,
+  "itemName": "Tome of Echo: Eonar Seed",
+  "itemNameVerified": true,
+  "echoName": "Eonar’s Seed",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200818,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Eonarâ€™s Seed when offered new Echoes. Eonarâ€™s Seed: Overhealing is stored and blooms when the target is low.",
+  "icon": "INTERFACE\\ICONS\\inv_10_herb_seed_magiccolor2"
+ },
+ {
+  "itemId": 300822,
+  "itemName": "Tome of Echo: Frostfire Paradox",
+  "itemNameVerified": true,
+  "echoName": "Frostfire Paradox",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200822,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Frostfire Paradox when offered new Echoes. Frostfire Paradox: Frost damage builds stacks that Fire damage consumes in an icy explosion.",
+  "icon": "INTERFACE\\ICONS\\inv_10_blacksmithing_craftedbar_frostfirealloy"
+ },
+ {
+  "itemId": 300826,
+  "itemName": "Tome of Echo: Rocket Strike",
+  "itemNameVerified": true,
+  "echoName": "Rocket Strike",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200826,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Rocket Strike when offered new Echoes. Rocket Strike: Attacks can launch rockets, with more rockets from pets and guardians.",
+  "icon": "INTERFACE\\ICONS\\ability_racial_rocketbarrage"
+ },
+ {
+  "itemId": 300830,
+  "itemName": "Tome of Echo: Lightning Charged",
+  "itemNameVerified": true,
+  "echoName": "Lightning Charged",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200830,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Lightning Charged when offered new Echoes. Lightning Charged: Builds attack speed and empowers attacks into chain lightning.",
+  "icon": "INTERFACE\\ICONS\\spell_shaman_crashlightning"
+ },
+ {
+  "itemId": 300834,
+  "itemName": "Tome of Echo: Shadow Crash",
+  "itemNameVerified": true,
+  "echoName": "Shadow Crash",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200834,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Shadow Crash when offered new Echoes. Shadow Crash: Shadow damage-over-time can call down shadow impact blasts.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shadow_PainSpike"
+ },
+ {
+  "itemId": 300838,
+  "itemName": "Tome of Echo: Idol of Yogg-Saron",
+  "itemNameVerified": true,
+  "echoName": "Idol of Yogg-Saron",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200838,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Idol of Yogg-Saron when offered new Echoes. Idol of Yogg-Saron: Kills build stacks that summon a Thing from Beyond.",
+  "icon": "INTERFACE\\ICONS\\Achievement_Boss_HeraldVolazj"
+ },
+ {
+  "itemId": 300844,
+  "itemName": "Tome of Echo: Constellations",
+  "itemNameVerified": true,
+  "echoName": "Constellations",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200844,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Constellations when offered new Echoes. Constellations: Critical strikes call falling stars until a devastating Big Bang erupts.",
+  "icon": "INTERFACE\\ICONS\\artifactability_balancedruid_moonandstars"
+ },
+ {
+  "itemId": 300850,
+  "itemName": "Tome of Echo: Earthen Spike",
+  "itemNameVerified": true,
+  "echoName": "Earthen Spike",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200850,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Earthen Spike when offered new Echoes. Earthen Spike: Taking damage can hurl spikes back at attackers causing high threat.",
+  "icon": "INTERFACE\\ICONS\\ability_earthen_pillar"
+ },
+ {
+  "itemId": 300852,
+  "itemName": "Tome of Echo: Emberlord Gift",
+  "itemNameVerified": true,
+  "echoName": "Emberlord’s Gift",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200852,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Emberlordâ€™s Gift when offered new Echoes. Emberlordâ€™s Gift: Fire damage builds toward a powerful eruption and burn.",
+  "icon": "INTERFACE\\ICONS\\spell_fire_ragnaros_supernova"
+ },
+ {
+  "itemId": 300856,
+  "itemName": "Tome of Echo: Mana Infusion",
+  "itemNameVerified": true,
+  "echoName": "Mana Infusion",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200856,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Mana Infusion when offered new Echoes. Mana Infusion: Restoring mana also restores health.",
+  "icon": "INTERFACE\\ICONS\\ability_monk_healthsphere"
+ },
+ {
+  "itemId": 300858,
+  "itemName": "Tome of Echo: Permafrost Aura",
+  "itemNameVerified": true,
+  "echoName": "Permafrost Aura",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200858,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Permafrost Aura when offered new Echoes. Permafrost Aura: Constantly damages nearby enemies and slows their attack speed.",
+  "icon": "INTERFACE\\ICONS\\spell_frost_frozenorb"
+ },
+ {
+  "itemId": 300860,
+  "itemName": "Tome of Echo: Static Overflow",
+  "itemNameVerified": true,
+  "echoName": "Static Overflow",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200860,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Static Overflow when offered new Echoes. Static Overflow: Your next spell or ability also strikes nearby enemies with lightning.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shaman_StaticShock"
+ },
+ {
+  "itemId": 300864,
+  "itemName": "Tome of Echo: Unstable Missiles",
+  "itemNameVerified": true,
+  "echoName": "Unstable Missiles",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200864,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Unstable Missiles when offered new Echoes. Unstable Missiles: Direct spells can launch arcane missiles at the target.",
+  "icon": "INTERFACE\\ICONS\\inv_112_arcane_missile"
+ },
+ {
+  "itemId": 300866,
+  "itemName": "Tome of Echo: Hungering Curse",
+  "itemNameVerified": true,
+  "echoName": "Hungering Curse",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200866,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Hungering Curse when offered new Echoes. Hungering Curse: Periodically curses nearby enemies and heals you when they die.",
+  "icon": "INTERFACE\\ICONS\\ability_creature_cursed_03"
+ },
+ {
+  "itemId": 300870,
+  "itemName": "Tome of Echo: Relentless Energy",
+  "itemNameVerified": true,
+  "echoName": "Relentless Energy",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200870,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Relentless Energy when offered new Echoes. Relentless Energy: Low Energy boosts regeneration, high Energy boosts damage.",
+  "icon": "INTERFACE\\ICONS\\ability_rogue_energeticrecovery"
+ },
+ {
+  "itemId": 300874,
+  "itemName": "Tome of Echo: Raging Momentum",
+  "itemNameVerified": true,
+  "echoName": "Raging Momentum",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200874,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Raging Momentum when offered new Echoes. Raging Momentum: Low Rage boosts generation, high Rage boosts damage.",
+  "icon": "INTERFACE\\ICONS\\Ability_Warrior_EndlessRage"
+ },
+ {
+  "itemId": 300878,
+  "itemName": "Tome of Echo: Runic Momentum",
+  "itemNameVerified": true,
+  "echoName": "Runic Momentum",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200878,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Runic Momentum when offered new Echoes. Runic Momentum: Low Runic Power boosts generation, high Runic Power boosts damage.",
+  "icon": "INTERFACE\\ICONS\\inv_plate_raiddeathknightmythic_o_01buckle"
+ },
+ {
+  "itemId": 300882,
+  "itemName": "Tome of Echo: Arcane Density",
+  "itemNameVerified": true,
+  "echoName": "Arcane Density",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200882,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Arcane Density when offered new Echoes. Arcane Density: Converts part of your Armor into Spell Power.",
+  "icon": "INTERFACE\\ICONS\\ability_socererking_arcanefortification"
+ },
+ {
+  "itemId": 300884,
+  "itemName": "Tome of Echo: Fortress Soul",
+  "itemNameVerified": true,
+  "echoName": "Fortress Soul",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200884,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Fortress Soul when offered new Echoes. Fortress Soul: Greatly reduces damage taken, but heavily lowers damage dealt.",
+  "icon": "INTERFACE\\ICONS\\ability_racial_mountaineer"
+ },
+ {
+  "itemId": 300886,
+  "itemName": "Tome of Echo: The Last Wall",
+  "itemNameVerified": true,
+  "echoName": "The Last Wall",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200886,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover The Last Wall when offered new Echoes. The Last Wall: Greatly increases maximum health, but reduces healing received.",
+  "icon": "INTERFACE\\ICONS\\inv_shield_1h_earthendungeon_c_02"
+ },
+ {
+  "itemId": 300888,
+  "itemName": "Tome of Echo: Arcane Burn",
+  "itemNameVerified": true,
+  "echoName": "Arcane Burn",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200888,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Arcane Burn when offered new Echoes. Arcane Burn: Increases spell damage while making spells cost much more mana.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shadow_ManaBurn"
+ },
+ {
+  "itemId": 300890,
+  "itemName": "Tome of Echo: Crushing Finish",
+  "itemNameVerified": true,
+  "echoName": "Crushing Finish",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200890,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Crushing Finish when offered new Echoes. Crushing Finish: Damaging low-health enemies triggers powerful Execute strikes.",
+  "icon": "INTERFACE\\ICONS\\ability_xavius_crushingshadows"
+ },
+ {
+  "itemId": 300894,
+  "itemName": "Tome of Echo: Archmage Mark",
+  "itemNameVerified": true,
+  "echoName": "Archmage’s Mark",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200894,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Archmageâ€™s Mark when offered new Echoes. Archmageâ€™s Mark: Dealing Fire, Frost, and Arcane grants bonus damage.",
+  "icon": "INTERFACE\\ICONS\\inv_ability_mage_shiftingpower"
+ },
+ {
+  "itemId": 300896,
+  "itemName": "Tome of Echo: Entropic Fusion",
+  "itemNameVerified": true,
+  "echoName": "Entropic Fusion",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200896,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Entropic Fusion when offered new Echoes. Entropic Fusion: Dealing Fire and Shadow grants bonus damage.",
+  "icon": "INTERFACE\\ICONS\\inv_shadowflame_nova"
+ },
+ {
+  "itemId": 300898,
+  "itemName": "Tome of Echo: Battle Rhythm",
+  "itemNameVerified": true,
+  "echoName": "Battle Rhythm",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200898,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Battle Rhythm when offered new Echoes. Battle Rhythm: Critical Strike Rating increases your critical strike damage.",
+  "icon": "INTERFACE\\ICONS\\inv_axe_1h_dragonpvp_d_01"
+ },
+ {
+  "itemId": 300900,
+  "itemName": "Tome of Echo: Arcane Cadence",
+  "itemNameVerified": true,
+  "echoName": "Arcane Cadence",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200900,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Arcane Cadence when offered new Echoes. Arcane Cadence: Different offensive casts build stacking bonus damage.",
+  "icon": "INTERFACE\\ICONS\\ability_priest_cascade_shadow"
+ },
+ {
+  "itemId": 300902,
+  "itemName": "Tome of Echo: Healing Cadence",
+  "itemNameVerified": true,
+  "echoName": "Healing Cadence",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200902,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Healing Cadence when offered new Echoes. Healing Cadence: Different healing casts build stacking bonus healing.",
+  "icon": "INTERFACE\\ICONS\\ability_priest_cascade"
+ },
+ {
+  "itemId": 300904,
+  "itemName": "Tome of Echo: Battlefield Hazard",
+  "itemNameVerified": true,
+  "echoName": "Battlefield Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200904,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Battlefield Hazard when offered new Echoes. Battlefield Hazard: Increases warrior area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_plate_raidwarriormythic_o_01helm"
+ },
+ {
+  "itemId": 300908,
+  "itemName": "Tome of Echo: Sanctified Hazard",
+  "itemNameVerified": true,
+  "echoName": "Sanctified Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200908,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Sanctified Hazard when offered new Echoes. Sanctified Hazard: Increases paladin area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_plate_legionraid_d_01helm"
+ },
+ {
+  "itemId": 300912,
+  "itemName": "Tome of Echo: Blighted Hazard",
+  "itemNameVerified": true,
+  "echoName": "Blighted Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200912,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Blighted Hazard when offered new Echoes. Blighted Hazard: Increases death knight area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_plate_raiddeathknightgoblin_d_01_helm"
+ },
+ {
+  "itemId": 300916,
+  "itemName": "Tome of Echo: Hunting Hazard",
+  "itemNameVerified": true,
+  "echoName": "Hunting Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200916,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Hunting Hazard when offered new Echoes. Hunting Hazard: Increases hunter area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_mail_landhunter_c_01_helmet"
+ },
+ {
+  "itemId": 300920,
+  "itemName": "Tome of Echo: Storm Hazard",
+  "itemNameVerified": true,
+  "echoName": "Storm Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200920,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Storm Hazard when offered new Echoes. Storm Hazard: Increases shaman area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_mail_raidshamanemerald_d_01_helm"
+ },
+ {
+  "itemId": 300924,
+  "itemName": "Tome of Echo: Wild Hazard",
+  "itemNameVerified": true,
+  "echoName": "Wild Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200924,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Wild Hazard when offered new Echoes. Wild Hazard: Increases druid area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_leather_raiddruiddragon_d_01_helm"
+ },
+ {
+  "itemId": 300928,
+  "itemName": "Tome of Echo: Shadow Hazard",
+  "itemNameVerified": true,
+  "echoName": "Shadow Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200928,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Shadow Hazard when offered new Echoes. Shadow Hazard: Increases the area of effect damages of fan of knives against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_leather_raidrogue_p_01helm"
+ },
+ {
+  "itemId": 300932,
+  "itemName": "Tome of Echo: Arcane Hazard",
+  "itemNameVerified": true,
+  "echoName": "Arcane Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200932,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Arcane Hazard when offered new Echoes. Arcane Hazard: Increases mage area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_cloth_raidmageprogenitor_d_01_helm"
+ },
+ {
+  "itemId": 300936,
+  "itemName": "Tome of Echo: Holy Hazard",
+  "itemNameVerified": true,
+  "echoName": "Holy Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200936,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Holy Hazard when offered new Echoes. Holy Hazard: Increases priest area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_cloth_raidpriestprimalist_d_01_helm"
+ },
+ {
+  "itemId": 300940,
+  "itemName": "Tome of Echo: Fel Hazard",
+  "itemNameVerified": true,
+  "echoName": "Fel Hazard",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200940,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Fel Hazard when offered new Echoes. Fel Hazard: Increases warlock area damage against large groups.",
+  "icon": "INTERFACE\\ICONS\\inv_cloth_challengewarlock_d_01belt"
+ },
+ {
+  "itemId": 300944,
+  "itemName": "Tome of Echo: Crusader's Surge",
+  "itemNameVerified": true,
+  "echoName": "Crusader’s Surge",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200944,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Crusader's Surge when offered new Echoes. Crusader's Surge: Spells and abilities can make your next key spell instant.",
+  "icon": "INTERFACE\\ICONS\\inv_plate_scarletcrusade_c_01_helm"
+ },
+ {
+  "itemId": 300946,
+  "itemName": "Tome of Echo: Divine Surge",
+  "itemNameVerified": true,
+  "echoName": "Divine Surge",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200946,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Divine Surge when offered new Echoes. Divine Surge: Spells and abilities can make your next key spell instant.",
+  "icon": "Interface\\Icons\\Spell_Holy_SpiritualGuidence"
+ },
+ {
+  "itemId": 300948,
+  "itemName": "Tome of Echo: Storm Surge",
+  "itemNameVerified": true,
+  "echoName": "Storm Surge",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200948,
+    "quality": 2,
+    "classMask": 64
+   }
+  ],
+  "description": "Grants this character the ability to discover Storm Surge when offered new Echoes. Storm Surge: Spells and abilities can make your next key spell instant.",
+  "icon": "Interface\\Icons\\Spell_Nature_CallStorm"
+ },
+ {
+  "itemId": 300950,
+  "itemName": "Tome of Echo: Arcane Surge",
+  "itemNameVerified": true,
+  "echoName": "Arcane Surge",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200950,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Arcane Surge when offered new Echoes. Arcane Surge: Spells and abilities can make your next key spell instant.",
+  "icon": "INTERFACE\\ICONS\\inv_arcane_orb"
+ },
+ {
+  "itemId": 300952,
+  "itemName": "Tome of Echo: Fel Surge",
+  "itemNameVerified": true,
+  "echoName": "Fel Surge",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200952,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Fel Surge when offered new Echoes. Fel Surge: Spells and abilities can make your next key spell instant.",
+  "icon": "INTERFACE\\ICONS\\ability_felshieldemitter"
+ },
+ {
+  "itemId": 300954,
+  "itemName": "Tome of Echo: Nature Surge",
+  "itemNameVerified": true,
+  "echoName": "Nature’s Surge",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 200954,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Natureâ€™s Surge when offered new Echoes. Natureâ€™s Surge: Spells and abilities can make your next key spell instant.",
+  "icon": "INTERFACE\\ICONS\\ability_hunter_onewithnature"
+ },
+ {
+  "itemId": 300956,
+  "itemName": "Tome of Echo: Heavy Incantations",
+  "itemNameVerified": true,
+  "echoName": "Heavy Incantations",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200956,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Heavy Incantations when offered new Echoes. Heavy Incantations: Greatly increases the damage of long cast-time spells.",
+  "icon": "INTERFACE\\ICONS\\ability_evoker_eruption"
+ },
+ {
+  "itemId": 300958,
+  "itemName": "Tome of Echo: Weapon Mastery",
+  "itemNameVerified": true,
+  "echoName": "Weapon Mastery",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200958,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Weapon Mastery when offered new Echoes. Weapon Mastery: Allows all weapon types to be equipped.",
+  "icon": "INTERFACE\\ICONS\\inv_10_specialization_blacksmithing_weaponsmithing_color1"
+ },
+ {
+  "itemId": 300960,
+  "itemName": "Tome of Echo: Adaptive Power",
+  "itemNameVerified": true,
+  "echoName": "Adaptive Power",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200960,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Adaptive Power when offered new Echoes. Adaptive Power: Each unique Echo increases your damage.",
+  "icon": "INTERFACE\\ICONS\\inv__azerite empowered state"
+ },
+ {
+  "itemId": 300962,
+  "itemName": "Tome of Echo: Resonant Build",
+  "itemNameVerified": true,
+  "echoName": "Resonant Build",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 200962,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Resonant Build when offered new Echoes. Resonant Build: Multiple different base stat Echoes increase your damage.",
+  "icon": "INTERFACE\\ICONS\\Ability_Hunter_Resourcefulness"
+ },
+ {
+  "itemId": 301244,
+  "itemName": "Tome of Echo: Essence Tap",
+  "itemNameVerified": true,
+  "echoName": "Essence Tap",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 201244,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Essence Tap when offered new Echoes. Essence Tap: Your damage-over-time effects can restore resources to allies.",
+  "icon": "INTERFACE\\ICONS\\spell_azerite_essence_15"
+ },
+ {
+  "itemId": 301246,
+  "itemName": "Tome of Echo: Stored Momentum",
+  "itemNameVerified": true,
+  "echoName": "Stored Momentum",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 201246,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Stored Momentum when offered new Echoes. Stored Momentum: Resources you spend are stored to empower your next ability.",
+  "icon": "INTERFACE\\ICONS\\ability_rogue_deadlymomentum"
+ },
+ {
+  "itemId": 301250,
+  "itemName": "Tome of Echo: Echoing Tides",
+  "itemNameVerified": true,
+  "echoName": "Echoing Tides",
+  "quality": 3,
+  "echoes": [
+   {
+    "spellId": 201250,
+    "quality": 2,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Echoing Tides when offered new Echoes. Echoing Tides: Your periodic effects can trigger an additional tick.",
+  "icon": "INTERFACE\\ICONS\\spell_shaman_hightide"
+ },
+ {
+  "itemId": 301254,
+  "itemName": "Tome of Echo: Contagion",
+  "itemNameVerified": true,
+  "echoName": "Contagion",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201254,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Contagion when offered new Echoes. Contagion: Your damage-over-time effects can apply random class damage-over-time effects.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shadow_Contagion"
+ },
+ {
+  "itemId": 301256,
+  "itemName": "Tome of Echo: Pandemic",
+  "itemNameVerified": true,
+  "echoName": "Pandemic",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201256,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Pandemic when offered new Echoes. Pandemic: Your damage-over-time effects spread when affected enemies die.",
+  "icon": "INTERFACE\\ICONS\\spell_deathknight_necroticplague"
+ },
+ {
+  "itemId": 301258,
+  "itemName": "Tome of Echo: Demonic Awakening",
+  "itemNameVerified": true,
+  "echoName": "Demonic Awakening",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201258,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Demonic Awakening when offered new Echoes. Demonic Awakening: Falling below 35% health briefly transforms you into a Demon.",
+  "icon": "INTERFACE\\ICONS\\inv_ability_felscarreddemonhunter_demonsurge"
+ },
+ {
+  "itemId": 301262,
+  "itemName": "Tome of Echo: Accelerated Decay",
+  "itemNameVerified": true,
+  "echoName": "Accelerated Decay",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201262,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Accelerated Decay when offered new Echoes. Accelerated Decay: Your damage-over-time effects now benefit from Haste.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shadow_ConeOfSilence"
+ },
+ {
+  "itemId": 301264,
+  "itemName": "Tome of Echo: Inspiring Mending",
+  "itemNameVerified": true,
+  "echoName": "Inspiring Mending",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201264,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Inspiring Mending when offered new Echoes. Inspiring Mending: Your direct healing can grant allies increased attributes.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shaman_BlessingOfEternals"
+ },
+ {
+  "itemId": 301266,
+  "itemName": "Tome of Echo: Lingering Inspiration",
+  "itemNameVerified": true,
+  "echoName": "Lingering Inspiration",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201266,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Lingering Inspiration when offered new Echoes. Lingering Inspiration: Your periodic healing can grant allies increased attributes.",
+  "icon": "INTERFACE\\ICONS\\Spell_Shaman_BlessingOfTheEternals"
+ },
+ {
+  "itemId": 301268,
+  "itemName": "Tome of Echo: Overwhelming Restoration",
+  "itemNameVerified": true,
+  "echoName": "Overwhelming Restoration",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201268,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Overwhelming Restoration when offered new Echoes. Overwhelming Restoration: Your healing is greatly increased, but spells cost much more mana.",
+  "icon": "INTERFACE\\ICONS\\inv_112_restorationdruid_ancientoflore"
+ },
+ {
+  "itemId": 301270,
+  "itemName": "Tome of Echo: Armor Mastery",
+  "itemNameVerified": true,
+  "echoName": "Armor Mastery",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201270,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Armor Mastery when offered new Echoes. Armor Mastery: You can equip all armor types.",
+  "icon": "INTERFACE\\ICONS\\inv_armor_logosh_c_01_belt"
+ },
+ {
+  "itemId": 301272,
+  "itemName": "Tome of Echo: Ambidexterity",
+  "itemNameVerified": true,
+  "echoName": "Ambidexterity",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201272,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Ambidexterity when offered new Echoes. Ambidexterity: You can dual wield weapons.",
+  "icon": "INTERFACE\\ICONS\\inv_sword_1h_artifactskywall_d_06dual"
+ },
+ {
+  "itemId": 301274,
+  "itemName": "Tome of Echo: Titan's Grip",
+  "itemNameVerified": true,
+  "echoName": "Titan's Grip",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201274,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Titan's Grip when offered new Echoes. Titan's Grip: You can wield two-handed weapons in one hand.",
+  "icon": "Interface\\Icons\\Ability_Warrior_TitansGrip"
+ },
+ {
+  "itemId": 301276,
+  "itemName": "Tome of Echo: Sanguine Bulwark",
+  "itemNameVerified": true,
+  "echoName": "Sanguine Bulwark",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201276,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Sanguine Bulwark when offered new Echoes. Sanguine Bulwark: Your healing is reduced, but incoming damage is heavily reduced.",
+  "icon": "INTERFACE\\ICONS\\inv_shield_draenorraid_d_02"
+ },
+ {
+  "itemId": 301278,
+  "itemName": "Tome of Echo: Temporal Pressure",
+  "itemNameVerified": true,
+  "echoName": "Temporal Pressure",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201278,
+    "quality": 3,
+    "classMask": 1
+   },
+   {
+    "spellId": 201280,
+    "quality": 3,
+    "classMask": 2
+   },
+   {
+    "spellId": 201282,
+    "quality": 3,
+    "classMask": 32
+   },
+   {
+    "spellId": 201284,
+    "quality": 3,
+    "classMask": 4
+   },
+   {
+    "spellId": 201286,
+    "quality": 3,
+    "classMask": 64
+   },
+   {
+    "spellId": 201288,
+    "quality": 3,
+    "classMask": 1024
+   },
+   {
+    "spellId": 201290,
+    "quality": 3,
+    "classMask": 8
+   },
+   {
+    "spellId": 201292,
+    "quality": 3,
+    "classMask": 128
+   },
+   {
+    "spellId": 201294,
+    "quality": 3,
+    "classMask": 16
+   },
+   {
+    "spellId": 201296,
+    "quality": 3,
+    "classMask": 256
+   }
+  ],
+  "description": "Grants this character the ability to discover Temporal Pressure when offered new Echoes. Temporal Pressure: Haste now reduces the cooldown of select class abilities.",
+  "icon": "INTERFACE\\ICONS\\achievement_challengemode_templeofthejadeserpent_hourglass"
+ },
+ {
+  "itemId": 301298,
+  "itemName": "Tome of Echo: Quickened Tempo",
+  "itemNameVerified": true,
+  "echoName": "Quickened Tempo",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201298,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Quickened Tempo when offered new Echoes. Quickened Tempo: Haste now reduces your global cooldown.",
+  "icon": "INTERFACE\\ICONS\\inv_sword_1h_firelandsraid_d_02"
+ },
+ {
+  "itemId": 301300,
+  "itemName": "Tome of Echo: Impaler’s Tribute",
+  "itemNameVerified": true,
+  "echoName": "Impaler’s Tribute",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201300,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Impaler’s Tribute when offered new Echoes. Impaler’s Tribute: Repeated attacks skewer your target and splinter to nearby enemies.",
+  "icon": "INTERFACE\\ICONS\\Ability_Throw"
+ },
+ {
+  "itemId": 301304,
+  "itemName": "Tome of Echo: Slimebound Husk",
+  "itemNameVerified": true,
+  "echoName": "Slimebound Husk",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201304,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Slimebound Husk when offered new Echoes. Slimebound Husk: Taking direct damage builds toward a poisonous molt.",
+  "icon": "INTERFACE\\ICONS\\inv_sulfurelemental_slime"
+ },
+ {
+  "itemId": 301308,
+  "itemName": "Tome of Echo: Rage of the Colossus",
+  "itemNameVerified": true,
+  "echoName": "Rage of the Colossus",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201308,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Rage of the Colossus when offered new Echoes. Rage of the Colossus: Critical strikes build Momentum and unleash a Massive Crash.",
+  "icon": "INTERFACE\\ICONS\\inv_11_arenaboss_colossalclash"
+ },
+ {
+  "itemId": 301312,
+  "itemName": "Tome of Echo: Nether Lord’s Command",
+  "itemNameVerified": true,
+  "echoName": "Nether Lord’s Command",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201312,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Nether Lord’s Command when offered new Echoes. Nether Lord’s Command: Your attacks can open a Nether Portal that bombards your target.",
+  "icon": "INTERFACE\\ICONS\\achievement_boss_argus_femaleeredar"
+ },
+ {
+  "itemId": 301318,
+  "itemName": "Tome of Echo: Champion’s Rally",
+  "itemNameVerified": true,
+  "echoName": "Champion’s Rally",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201318,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Champion’s Rally when offered new Echoes. Champion’s Rally: Your healing builds Rally, culminating in a powerful restorative burst.",
+  "icon": "INTERFACE\\ICONS\\Achievement_Reputation_ArgentChampion"
+ },
+ {
+  "itemId": 301324,
+  "itemName": "Tome of Echo: Twilight Equilibrium",
+  "itemNameVerified": true,
+  "echoName": "Twilight Equilibrium",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201324,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Twilight Equilibrium when offered new Echoes. Twilight Equilibrium: Opposing spell schools build charges that unleash Light or Dark bursts.",
+  "icon": "INTERFACE\\ICONS\\ability_priest_innerlightandshadow"
+ },
+ {
+  "itemId": 301332,
+  "itemName": "Tome of Echo: Leeching Swarm",
+  "itemNameVerified": true,
+  "echoName": "Leeching Swarm",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201332,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Leeching Swarm when offered new Echoes. Leeching Swarm: While at low health, your attacks unleash a life-draining swarm.",
+  "icon": "INTERFACE\\ICONS\\inv_ability_druid_adaptiveswarm"
+ },
+ {
+  "itemId": 301336,
+  "itemName": "Tome of Echo: Broodmother’s Fury",
+  "itemNameVerified": true,
+  "echoName": "Broodmother’s Fury",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201336,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants this character the ability to discover Broodmother’s Fury when offered new Echoes. Broodmother’s Fury: Your attacks build Searing Cinders that trigger Deep Breath.",
+  "icon": "INTERFACE\\ICONS\\Achievement_Boss_Onyxia"
+ },
+ {
+  "itemId": 301340,
+  "itemName": "Tome of Echo: Cyclone of Cold Bones",
+  "itemNameVerified": false,
+  "echoName": "Cyclone of Cold Bones",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201340,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Cyclone of Cold Bones when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\spell_mage_icenova"
+ },
+ {
+  "itemId": 301344,
+  "itemName": "Tome of Echo: Deathwhisper’s Barrier",
+  "itemNameVerified": false,
+  "echoName": "Deathwhisper’s Barrier",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201344,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Deathwhisper’s Barrier when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\inv_shield_1h_artifactstormfist_d_05"
+ },
+ {
+  "itemId": 301348,
+  "itemName": "Tome of Echo: Gunship Barrage",
+  "itemNameVerified": false,
+  "echoName": "Gunship Barrage",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201348,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Gunship Barrage when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\ability_rogue_cannonballbarrage"
+ },
+ {
+  "itemId": 301354,
+  "itemName": "Tome of Echo: Scent of Blood",
+  "itemNameVerified": false,
+  "echoName": "Scent of Blood",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201354,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Scent of Blood when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\inv_shadebeastmount_red"
+ },
+ {
+  "itemId": 301356,
+  "itemName": "Tome of Echo: Inhaled Blight",
+  "itemNameVerified": false,
+  "echoName": "Inhaled Blight",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201356,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Inhaled Blight when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\spell_festergutgas"
+ },
+ {
+  "itemId": 301360,
+  "itemName": "Tome of Echo: Slime Spray",
+  "itemNameVerified": false,
+  "echoName": "Slime Spray",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201360,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Slime Spray when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\Spell_Fire_Felcano"
+ },
+ {
+  "itemId": 301366,
+  "itemName": "Tome of Echo: Malleable Goo",
+  "itemNameVerified": false,
+  "echoName": "Malleable Goo",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201366,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Malleable Goo when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\INV_Misc_Herb_EvergreenMoss"
+ },
+ {
+  "itemId": 301370,
+  "itemName": "Tome of Echo: Shock Vortex",
+  "itemNameVerified": false,
+  "echoName": "Shock Vortex",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201370,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Shock Vortex when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\spell_druid_ursolsvortex"
+ },
+ {
+  "itemId": 301378,
+  "itemName": "Tome of Echo: Dark Nucleus",
+  "itemNameVerified": false,
+  "echoName": "Dark Nucleus",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201378,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Dark Nucleus when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\inv_shadowflame_orb"
+ },
+ {
+  "itemId": 301382,
+  "itemName": "Tome of Echo: Conjured Flame",
+  "itemNameVerified": false,
+  "echoName": "Conjured Flame",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201382,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Conjured Flame when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\spell_fire_felflamering_red"
+ },
+ {
+  "itemId": 301388,
+  "itemName": "Tome of Echo: Blood Mirror",
+  "itemNameVerified": false,
+  "echoName": "Blood Mirror",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201388,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Blood Mirror when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\sanctum_features_transportationnetwork_revendreth"
+ },
+ {
+  "itemId": 301394,
+  "itemName": "Tome of Echo: Emerald Vigor",
+  "itemNameVerified": false,
+  "echoName": "Emerald Vigor",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201394,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Emerald Vigor when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\ability_evoker_emeraldblossom"
+ },
+ {
+  "itemId": 301398,
+  "itemName": "Tome of Echo: Permeating Chill",
+  "itemNameVerified": false,
+  "echoName": "Permeating Chill",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201398,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Permeating Chill when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\Ability_Mage_ColdAsIce"
+ },
+ {
+  "itemId": 301402,
+  "itemName": "Tome of Echo: Defile",
+  "itemNameVerified": false,
+  "echoName": "Defile",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201402,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Defile when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\Ability_Rogue_EnvelopingShadows"
+ },
+ {
+  "itemId": 301406,
+  "itemName": "Tome of Echo: Necrotic Plague",
+  "itemNameVerified": false,
+  "echoName": "Necrotic Plague",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201406,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Necrotic Plague when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\ability_maldraxxus_warlock"
+ },
+ {
+  "itemId": 301410,
+  "itemName": "Tome of Echo: Frostmourne Hungers",
+  "itemNameVerified": false,
+  "echoName": "Frostmourne Hungers",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201410,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Frostmourne Hungers when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\ability_deathknight_hungeringruneblade"
+ },
+ {
+  "itemId": 301416,
+  "itemName": "Tome of Echo: Blade Tempest",
+  "itemNameVerified": false,
+  "echoName": "Blade Tempest",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201416,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Blade Tempest when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\warrior_talent_icon_ravager"
+ },
+ {
+  "itemId": 301420,
+  "itemName": "Tome of Echo: Sundered Formation",
+  "itemNameVerified": false,
+  "echoName": "Sundered Formation",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201420,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Sundered Formation when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\ability_creature_felsunder"
+ },
+ {
+  "itemId": 301424,
+  "itemName": "Tome of Echo: Flame Beacon",
+  "itemNameVerified": false,
+  "echoName": "Flame Beacon",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201424,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Flame Beacon when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\inv_10_elementalspiritfoozles_purifiedshadowflame"
+ },
+ {
+  "itemId": 301428,
+  "itemName": "Tome of Echo: Twilight Combustion",
+  "itemNameVerified": false,
+  "echoName": "Twilight Combustion",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201428,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Twilight Combustion when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\inv_shadowflame_buff"
+ }
+]

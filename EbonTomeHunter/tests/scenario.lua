@@ -1,0 +1,1160 @@
+-- Offline scenario (validate_addon.py). Not listed in the .toc: never loaded in game.
+-- Uses the REAL tome data (TomeData.lua, extracted from the client) and replays an
+-- Auction House scan with real item links.
+
+local ns = EbonTomeHunter
+Check(ns ~= nil, "the addon namespace must be reachable")
+if not ns then return end
+
+-- The saved tables are replaced just before ADDON_LOADED (like the client): the
+-- defaults must have been applied to the saved ones.
+Check(type(EbonTomeHunterDB.tomes) == "table" and type(EbonTomeHunterDB.prices) == "table",
+    "saved tables completed on ADDON_LOADED")
+Check(type(EbonTomeHunterDB.options) == "table" and EbonTomeHunterDB.options.confirmBuy == true,
+    "options have their defaults")
+Check(type(EbonTomeHunterCharDB.wishlist) == "table", "per-character wishlist ready")
+
+-- --- Complete static catalogue -----------------------------------------------
+ns.Catalog.Build()
+Check(ns.Catalog.fromTomeData == true, "catalogue built from TomeData.lua")
+Check(ns.Catalog.Count() >= 148, "all 148 tomes listed, got " .. ns.Catalog.Count())
+
+local beast = ns.Catalog.Get(300569)
+Check(beast and beast.name == "Beast Bane", "tome 300569 is Beast Bane")
+Check(beast and beast.tomeName == "Tome of Echo: Beast Bane", "real auction name")
+Check(beast and beast.quality == "rare", "item quality mapped to a colour name")
+Check(ns.Catalog.FindBySpell(200569) == beast, "the echo spell id resolves to its tome")
+Check(beast and beast.desc and beast.desc:find("Beast Bane", 1, true), "tooltip description available")
+
+-- Item names that differ from spell names still resolve.
+Check(ns.Catalog.FindByTomeName("Tome of Echo: Eonar Seed") ~= nil, "item spelling 'Eonar Seed' matches")
+Check(ns.Catalog.FindByTomeName("Tome of Eonar's Seed") ~= nil, "spell spelling 'Eonar's Seed' matches too")
+
+-- Complete even when ProjectEbonhold is absent (no retry loop needed).
+local savedPE = ProjectEbonhold
+ProjectEbonhold = nil
+ns.Catalog.Build()
+Check(ns.Catalog.Count() >= 148, "complete without ProjectEbonhold loaded")
+ProjectEbonhold = savedPE
+
+-- --- Migration of keys saved by older versions (echo spell id -> tome item id) ---
+EbonTomeHunterCharDB.wishlist[200569] = { qty = 2 }
+EbonTomeHunterDB.prices[200569] = { min = 55555, listings = 1, at = 10, hist = {} }
+ns.Catalog.Build()
+Check(EbonTomeHunterCharDB.wishlist[200569] == nil and EbonTomeHunterCharDB.wishlist[300569] ~= nil,
+    "old wishlist key migrated to the tome item id")
+Check(EbonTomeHunterCharDB.wishlist[300569] and EbonTomeHunterCharDB.wishlist[300569].qty == 2, "quantity preserved")
+Check(EbonTomeHunterDB.prices[300569] and EbonTomeHunterDB.prices[300569].min == 55555, "old price migrated")
+ns.Wishlist.Remove(300569)
+EbonTomeHunterDB.prices[300569] = nil
+
+-- --- Auction House replay (real item links) -------------------------------------
+AuctionFrame:Show()   -- at an auctioneer (Blizzard windows start hidden, like in the game)
+local function Link(id, name, color)
+    return "|cff" .. (color or "0070dd") .. "|Hitem:" .. id .. ":0:0:0:0:0:0:0:80|h[" .. name .. "]|h|r"
+end
+local LISTINGS = {
+    { name = "Tome of Echo: Beast Bane", count = 1, buyout = 150000, link = Link(300569, "Tome of Echo: Beast Bane") },
+    { name = "Tome of Echo: Beast Bane", count = 1, buyout = 90000, link = Link(300569, "Tome of Echo: Beast Bane") },
+    -- item name differs from the spell name: matched by exact item id
+    { name = "Tome of Echo: DragonKin Bane", count = 2, buyout = 400000, link = Link(300570, "Tome of Echo: DragonKin Bane") },
+    { name = "Frostweave Cloth", count = 20, buyout = 10000, link = Link(33470, "Frostweave Cloth", "ffffff") },
+    -- a tome that does not exist in TomeData (future patch): learned
+    { name = "Tome of Echo: Mystery Power", count = 1, buyout = 777000, link = Link(399999, "Tome of Echo: Mystery Power") },
+}
+GetNumAuctionItems = function() return #LISTINGS, #LISTINGS end
+GetAuctionItemInfo = function(list, i)
+    local l = LISTINGS[i]
+    if not l then return nil end
+    return l.name, "", l.count, 3, true, 80, l.buyout, 1, l.buyout
+end
+GetAuctionItemLink = function(list, i) return LISTINGS[i] and LISTINGS[i].link end
+CanSendAuctionQuery = function() return true end
+local queried
+QueryAuctionItems = function(name) queried = name end
+
+ns.Scan.Start()
+Check(queried == "Tome of Echo", "AH query searches tomes, got " .. tostring(queried))
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Advance(1)
+Check(not ns.Scan.IsScanning(), "scan finished")
+Check(ns.Prices.GetMin(300569) == 90000, "cheapest Beast Bane = 90000, got " .. tostring(ns.Prices.GetMin(300569)))
+Check(ns.Prices.GetListings(300569) == 2, "two Beast Bane listings")
+Check(ns.Prices.GetMin(300570) == 200000, "DragonKin Bane matched by item id, per-unit price, got " .. tostring(ns.Prices.GetMin(300570)))
+
+local mystery = ns.Catalog.FindByTomeName("Tome of Echo: Mystery Power")
+Check(mystery and mystery.learned, "unknown tome learned from the scan")
+Check(mystery and mystery.name == "Mystery Power", "learned tome keeps its capitalisation")
+Check(mystery and ns.Prices.GetMin(mystery.itemId) == 777000, "learned tome priced")
+ns.Catalog.Build()
+Check(ns.Catalog.FindByTomeName("Tome of Echo: Mystery Power") ~= nil, "learned tome survives a rebuild")
+
+AuctionFrame:Hide()   -- the Auction House is closed again
+
+-- --- Wishlist ---------------------------------------------------------------------
+ns.Wishlist.Add(300569, 2)
+ns.Wishlist.Add(300570, 1)
+Check(ns.Wishlist.ComputeTotal() == 2 * 90000 + 200000, "wishlist total = 380000, got " .. tostring(ns.Wishlist.ComputeTotal()))
+ns.Wishlist.Remove(300569)
+ns.Wishlist.Remove(300570)
+
+-- The locked echoes import is gone (1.5.1): no button, no automatic import at login.
+Check(ns.Wishlist.ImportFromPE == nil and ns.Wishlist.AutoImport == nil, "no locked echoes import any more")
+Check(EbonTomeHunterCharDB.autoImported == nil, "its old per-character flag is cleared")
+
+-- --- Bags -------------------------------------------------------------------------
+GetContainerNumSlots = function(bag) return bag == 0 and 4 or 0 end
+GetContainerItemLink = function(bag, slot)
+    if bag == 0 and slot == 2 then return Link(399998, "Tome of Echo: Bag Find") end
+    return nil
+end
+Check(ns.Scan.ScanBags(false) == 1, "a tome in the bags is learned")
+
+-- --- World map (3.3.5a returns names as multiple values) ---------------------------
+GetMapContinents = function() return "Kalimdor", "Eastern Kingdoms", "Outland", "Northrend" end
+GetMapZones = function(ci)
+    if ci == 1 then return "Durotar", "Mulgore", "The Barrens" end
+    if ci == 2 then return "Elwynn Forest", "Westfall", "Duskwood" end
+    return "Hellfire Peninsula"
+end
+Check(#ns.WorldMap.Continents() == 4, "continents packed from varargs")
+Check(ns.WorldMap.FindZoneForPlace("Sentinel Hill, Westfall") == "Westfall", "zone resolved from a place name")
+Check(ns.WorldMap.FindZoneForPlace("Somewhere That Does Not Exist") == nil, "unknown place returns nil")
+
+-- --- Tome list: every tome reachable, sorting and filters --------------------------------
+local UI = ns.UI
+UI.Show()
+
+-- --- Guided tour: by itself the first time the window opens, then from "?" / /eth tuto ---
+local Tuto = ns.Tutorial
+-- the validator already opened the window (/eth) while booting: start from a new account
+UI.frame:Hide()
+Tuto.Stop()
+ns.DB.tutorialDone = 0
+ns.Fire("READY")
+Check(ChatContains(ns.L.TutoLoginHint), "login: the tutorial is announced in the chat")
+UI.Show()
+Advance(0.5)
+local bubble = EbonTomeHunterTutorial
+Check(Tuto.running and bubble and bubble:IsShown() and Tuto.index == 1, "first opening: the tour starts by itself")
+Check(bubble and bubble.title:GetText() == ns.L.TutoWelcomeTitle, "step 1: welcome")
+local lit = 0
+for i = 1, #Tuto.STEPS do
+    Check(Tuto.index == i and bubble.text:GetText() == Tuto.STEPS[i].text and bubble.title:GetText() ~= "",
+        "step " .. i .. " shown")
+    if EbonTomeHunterTutorialHighlight:IsShown() then lit = lit + 1 end
+    if i < #Tuto.STEPS then bubble.nextButton:GetScript("OnClick")(bubble.nextButton) end
+end
+Check(lit >= 9, "most steps light up a part of the window, got " .. lit)
+Check(bubble.nextButton:GetText() == ns.L.TutoDone, "last step: Finish")
+bubble.prevButton:GetScript("OnClick")(bubble.prevButton)
+Check(Tuto.index == #Tuto.STEPS - 1, "Back: previous step")
+bubble.skip:GetScript("OnClick")(bubble.skip)
+Check(not Tuto.running and not bubble:IsShown() and not EbonTomeHunterTutorialHighlight:IsShown()
+    and ns.DB.tutorialDone == 1, "Skip: tour over and remembered")
+UI.Toggle()
+UI.Toggle()
+Advance(0.5)
+Check(not Tuto.running and UI.frame:IsShown(), "it does not start by itself any more")
+UI.parts.help:GetScript("OnClick")(UI.parts.help)
+Check(Tuto.running and Tuto.index == 1 and bubble:IsShown(), "the ? button replays it")
+UI.frame:Hide()
+Check(not Tuto.running and not bubble:IsShown(), "closing the window ends the tour")
+Slash("/eth tuto")
+Check(Tuto.running and UI.frame:IsShown(), "/eth tuto opens the window on the tour")
+Tuto.Next()
+Tuto.Stop(true)
+Check(not Tuto.running and not bubble:IsShown() and UI.frame:IsShown(), "tour stopped, window kept")
+
+local scrollFrame = EbonTomeHunterListScroll
+local bar = EbonTomeHunterListScrollScrollBar
+local count = ns.Catalog.Count()
+local rows, rowH = UI.VISIBLE_ROWS, UI.ROW_H
+Check(#UI.list.items == count, "all " .. count .. " tomes listed, got " .. #UI.list.items)
+Check(scrollFrame:IsShown(), "scroll frame shown: more tomes than rows")
+local _, maxValue = bar:GetMinMaxValues()
+Check(maxValue == (count - rows) * rowH, "scroll range covers every tome, got " .. tostring(maxValue))
+local anchor, anchorTo, anchorToPoint = scrollFrame:GetPoint(1)
+Check(anchor == "TOPLEFT" and anchorTo ~= nil and anchorToPoint == "TOPLEFT",
+    "the scroll frame covers the rows (mouse wheel works over the list)")
+Check(scrollFrame:IsMouseWheelEnabled(), "mouse wheel enabled on the list")
+local firstBefore = EbonTomeHunterListRow1.item and EbonTomeHunterListRow1.item.itemId
+scrollFrame:GetScript("OnMouseWheel")(scrollFrame, -1)
+Check(FauxScrollFrame_GetOffset(scrollFrame) == 3, "one wheel notch scrolls 3 rows, got " .. tostring(FauxScrollFrame_GetOffset(scrollFrame)))
+Check(EbonTomeHunterListRow1.item and EbonTomeHunterListRow1.item.itemId ~= firstBefore, "rows redrawn after scrolling")
+bar:SetValue(maxValue)
+local lastRow = _G["EbonTomeHunterListRow" .. rows]
+Check(lastRow.item and lastRow.item.itemId == UI.list.items[count].itemId, "the last tome is reachable")
+UI.searchBox:SetText("bane")
+Check(FauxScrollFrame_GetOffset(scrollFrame) == 0, "a new search scrolls back to the top")
+Check(#UI.list.items > 0 and #UI.list.items < count, "the search filters the list")
+UI.searchBox:SetText("")
+
+ns.Opt().sortKey, ns.Opt().sortDesc = "price", false
+UI.Refresh()
+Check(UI.list.items[1].itemId == 300569, "sorted by price: the cheapest tome first (Beast Bane 9g)")
+ns.Opt().sortKey = "name"
+ns.Opt().onlyPriced = true
+UI.Refresh()
+local allListed = #UI.list.items > 0
+for _, data in ipairs(UI.list.items) do
+    if not ns.Prices.IsListed(data.itemId) then allListed = false end
+end
+Check(allListed, "the 'On sale' filter keeps only the listed tomes")
+ns.Opt().onlyPriced = false
+UI.Refresh()
+
+-- --- Minimap button ------------------------------------------------------------------------
+local minimapButton = EbonTomeHunterMinimapButton
+Check(minimapButton ~= nil and minimapButton:IsShown(), "minimap button created at login")
+Slash("/eth minimap")
+Check(not minimapButton:IsShown() and ns.Opt().minimap.hide, "/eth minimap hides it")
+Slash("/eth minimap")
+Check(minimapButton:IsShown(), "and shows it again")
+EbonTomeHunterFrame:Hide()
+minimapButton:GetScript("OnClick")(minimapButton, "LeftButton")
+Check(EbonTomeHunterFrame:IsShown(), "left-click opens the window")
+minimapButton:GetScript("OnClick")(minimapButton, "LeftButton")
+Check(not EbonTomeHunterFrame:IsShown(), "and closes it")
+
+-- --- Tomes learned by this character (ProjectEbonhold discovery list) ---------------------------
+if ProjectEbonhold then
+    -- discovery list = echo spell ids; tome item id == echo id + 100000
+    ProjectEbonhold.PerkService = ProjectEbonhold.PerkService or {}
+    ProjectEbonhold.PerkService.GetDiscoveredEchoes = function() return { [200569] = 2, [200570] = 1 } end
+    ProjectEbonhold.PerkService.IsTomeEchoDisabled = function(echoId) return echoId == 200570 end
+    Check(ns.Known.IsKnown(300569) == true, "Beast Bane learned (echo 200569 discovered)")
+    Check(ns.Known.IsKnown(300022) == false, "a tome whose echo is not discovered is not learned")
+    Check(ns.Known.State(300570) == "disabled", "DragonKin Bane learned but switched off")
+    local known, total = ns.Known.Count()
+    Check(known == 2 and total == ns.Catalog.Count(), "2 tomes learned, got " .. tostring(known))
+
+    UI.Show()
+    ns.Opt().onlyUnknown = true
+    UI.Refresh()
+    local onlyUnknown = #UI.list.items > 0
+    for _, data in ipairs(UI.list.items) do
+        if ns.Known.IsKnown(data.itemId) then onlyUnknown = false end
+    end
+    Check(onlyUnknown and #UI.list.items == ns.Catalog.Count() - 2, "'To learn' filter hides the 2 learned tomes")
+    ns.Opt().onlyUnknown = false
+    UI.searchBox:SetText("beast bane")
+    local badge = false
+    for i = 1, rows do
+        local row = _G["EbonTomeHunterListRow" .. i]
+        if row:IsShown() and row.item and row.item.itemId == 300569 then badge = row.icon.badge:IsShown() end
+    end
+    Check(badge, "learned badge shown on the tome icon")
+    UI.searchBox:SetText("")
+
+    local refreshed = false
+    ns.On("KNOWN_CHANGED", function() refreshed = true end)
+    Fire("CHAT_MSG_ADDON", "AAM0x9", "530\t200569:2,200570:1", "WHISPER", "Tester")
+    Advance(1)
+    Check(refreshed, "the server discovery message (530) refreshes the learned state")
+    refreshed = false
+    Fire("CHAT_MSG_ADDON", "AAM0x9", "800\t1;2", "WHISPER", "Tester")
+    Advance(1)
+    Check(not refreshed, "other server messages are ignored")
+else
+    Check(ns.Known.IsKnown(300569) == nil and ns.Known.Count() == nil, "without ProjectEbonhold the learned state is unknown")
+end
+
+-- --- Share a wishlist as a string ------------------------------------------------------------
+for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
+ns.Wishlist.SetQty(300569, 2)
+ns.Wishlist.SetQty(300570, 1)
+local shared, sharedCount, sharedCopies = ns.Share.ExportWishlist()
+Check(shared:find("^ETH1:Tester:") and sharedCount == 2 and sharedCopies == 3, "export string: " .. tostring(shared))
+Check(shared:find("569x2,570:", 1, true) ~= nil, "tomes encoded compactly, sorted by id")
+ns.Wishlist.Remove(300569)
+ns.Wishlist.Remove(300570)
+local parsed = ns.Share.Decode("Voici ma liste : " .. shared .. " merci !")
+Check(parsed and #parsed.items == 2 and parsed.author == "Tester" and parsed.copies == 3,
+    "the string is found inside other text")
+ns.Share.Import(parsed, "merge")
+Check(ns.Wishlist.Get(300569) and ns.Wishlist.Get(300569).qty == 2 and ns.Wishlist.Get(300570).qty == 1,
+    "round trip: same wishlist")
+ns.Wishlist.SetQty(300569, 5)
+ns.Share.Import(parsed, "merge")
+Check(ns.Wishlist.Get(300569).qty == 5, "merge keeps the larger quantity")
+ns.Wishlist.SetQty(300022, 1)
+ns.Share.Import(parsed, "replace")
+Check(not ns.Wishlist.Has(300022) and ns.Wishlist.Get(300569).qty == 2, "replace drops the other tomes")
+
+local damaged = shared:gsub("569x2", "569x3")
+local nothing, why = ns.Share.Decode(damaged)
+Check(nothing == nil and why == "ShareCorrupt", "an edited string is refused")
+Check(select(2, ns.Share.Decode("hello")) == "ShareNoString", "no string at all")
+Check(select(2, ns.Share.Decode("ETH9:Bob:1:abcdef")) == "ShareVersion", "string of a future version")
+local readme = ns.Share.Decode("ETH1:Bob:22x3,569x2,570:3f38d1")   -- example of the README
+Check(readme and #readme.items == 3 and readme.copies == 6 and readme.author == "Bob", "README example decodes")
+local legacy = ns.Share.Decode("ETP1:Bob:22x3,569x2,570:c062c3")   -- EbonTomePrices 1.x string
+Check(legacy and #legacy.items == 3 and legacy.copies == 6, "strings of the former EbonTomePrices still import")
+local withUnknown = ns.Share.Encode({ { itemId = 300569, qty = 1 }, { itemId = 399999, qty = 2 } }, "Bob")
+local p2 = ns.Share.Decode(withUnknown)
+Check(p2 and #p2.items == 1 and p2.unknown == 1 and p2.author == "Bob", "unknown tomes are counted and skipped")
+
+-- the dialog
+Slash("/eth share")
+Check(EbonTomeHunterShareFrame:IsShown(), "/eth share opens the dialog")
+Check(ns.Share.exportBox:GetText() == ns.Share.ExportWishlist(), "the export box holds the string")
+ns.Share.exportBox:SetText("typed over")
+Check(ns.Share.exportBox:GetText() == ns.Share.ExportWishlist(), "the export box is read only")
+ns.Share.importBox:SetText(withUnknown)
+Check((ns.Share.previewText:GetText() or ""):find("Bob", 1, true) ~= nil, "preview names the author")
+local realPopup = StaticPopup_Show
+local asked
+StaticPopup_Show = function(which, a1, a2, data)
+    asked = { which = which, data = data }
+    return CreateFrame("Frame")
+end
+ns.Share.replaceButton:GetScript("OnClick")(ns.Share.replaceButton)
+Check(asked and asked.which == "EBONTOMEHUNTER_REPLACE_WISHLIST", "replacing a non-empty wishlist asks first")
+StaticPopupDialogs.EBONTOMEHUNTER_REPLACE_WISHLIST.OnAccept(nil, asked.data)
+Check(ns.Wishlist.Count() == 1 and ns.Wishlist.Get(300569).qty == 1, "the wishlist is now the imported one")
+Check(ns.Share.importBox:GetText() == "", "the import box is cleared")
+StaticPopup_Show = realPopup
+ns.Share.importBox:SetText("ETH1:x:12,oops:000000")
+Check(not ns.Share.mergeButton:IsEnabled(), "merge disabled for an invalid string")
+EbonTomeHunterShareFrame:Hide()
+
+-- --- World map: a marker where the tome drops ------------------------------------------------
+-- Farm places as EbonholdHub gives them: percentages of ITS map images (real coordinates).
+EbonholdHub = { EchoMapData = { Locations = {
+    ["eastern-kingdoms"] = {
+        { name = "Beast Bane", x = 46.5, y = 9.3, placeName = "Hearthglen", mobs = { "Scarlet Paladins" } },
+        -- just past the east edge of the Burning Steppes map in the source data
+        { name = "Entropic Fusion", x = 64.9, y = 63.8, placeName = "Burning Steppes - Dreadmaul Rock", mobs = { "Flamekin Spitter" } },
+    },
+    ["kalimdor"] = {
+        { name = "Beast Bane", x = 53.5, y = 7.0, placeName = "Unknown location", mobs = {} },
+        { name = "Dragonkin Bane", x = 62.3, y = 70.9, placeName = "Dustwallow Marsh - Outside Ony raid", mobs = { "Dragonkins" } },
+        { name = "Arcane Hazard", x = 65.6, y = 7.5, placeName = "Unknown location", mobs = {} },
+    },
+    ["northrend"] = {
+        { name = "Beast Bane", x = 51.3, y = 42.9, placeName = "Crystalsong Forest - Forlorn Woods", mobs = { "Sinewy Wolf" } },
+    },
+} } }
+for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
+ns.Catalog.Build()
+local bane = ns.Catalog.Get(300569)
+Check(bane and bane.locations and #bane.locations == 3, "every drop place kept (3 for Beast Bane)")
+Check(bane and bane.location and bane.location.placeName == "Hearthglen", "main place = first one with a map point")
+Check(bane and bane.locations and bane.locations[3].placeName == "Unknown location", "places without a map point come last")
+
+local zoneFile, _, zx, zy = ns.WorldMap.BestZone(bane.locations[1])
+Check(zoneFile == "WesternPlaguelands", "Hearthglen drawn on Western Plaguelands, got " .. tostring(zoneFile))
+Check(zx and math.abs(zx - 0.45) < 0.03 and math.abs(zy - 0.13) < 0.03, format("Hearthglen at 45,13 (got %.2f, %.2f)", zx or -1, zy or -1))
+local csFile, _, csx, csy = ns.WorldMap.BestZone(bane.locations[2])
+Check(csFile == "CrystalsongForest" and math.abs(csx - 0.49) < 0.03 and math.abs(csy - 0.54) < 0.03,
+    "Forlorn Woods at Crystalsong Forest 49,54")
+
+-- A small world map: GetMapInfo() names the shown map, SetMapByID(WorldMapArea id) changes it.
+local shownMap = "Elwynn"
+local fileById = {}
+for file, info in pairs(ns.MapData.maps) do fileById[info.id] = file end
+GetMapInfo = function() return shownMap, 668 end
+SetMapByID = function(id) shownMap = fileById[id] or shownMap; Fire("WORLD_MAP_UPDATE") end
+ShowUIPanel = function(f) f:Show() end
+HideUIPanel = function(f) f:Hide() end
+WorldMapButton:SetSize(1002, 668)
+WorldMapFrame:Hide()
+local function ShownPins()
+    local out = {}
+    for i = 1, 50 do
+        local pin = _G["EbonTomeHunterPin" .. i]
+        if not pin then break end
+        if pin:IsShown() then out[#out + 1] = pin end
+    end
+    return out
+end
+local function ShowMap(file) shownMap = file; Fire("WORLD_MAP_UPDATE") end
+
+ns.WorldMap.Locate(300569)
+Check(WorldMapFrame:IsShown(), "Locate opens the world map")
+Check(shownMap == "WesternPlaguelands", "Locate shows the zone of the first place, got " .. tostring(shownMap))
+local pins = ShownPins()
+Check(#pins == 1 and pins[1]._etp.current, "one highlighted marker on Western Plaguelands, got " .. #pins)
+if pins[1] then
+    local _, rel, relPoint, ox, oy = pins[1]:GetPoint(1)
+    Check(rel == WorldMapButton and relPoint == "TOPLEFT", "marker anchored to the map's top-left corner")
+    Check(math.abs(ox - 0.45 * 1002) < 30 and math.abs(oy + 0.13 * 668) < 30, format("marker drawn on Hearthglen (%.0f, %.0f)", ox, oy))
+end
+Check(ChatContains("Western Plaguelands") and ChatContains("Scarlet Paladins"), "chat gives the zone, coordinates and mobs")
+
+ns.WorldMap.Locate(300569)
+Check(shownMap == "CrystalsongForest", "Locate again: next place (Crystalsong Forest), got " .. tostring(shownMap))
+pins = ShownPins()
+Check(#pins == 1 and math.abs(pins[1]._etp.x - 0.49) < 0.03, "marker on the Forlorn Woods")
+ns.WorldMap.Locate(300569)
+Check(shownMap == "WesternPlaguelands", "places without a map point are skipped when cycling")
+
+ShowMap("Azeroth")
+Check(#ShownPins() == 1, "Eastern Kingdoms continent map shows the Hearthglen marker")
+ShowMap("Kalimdor")
+Check(#ShownPins() == 0, "an 'Unknown location' placeholder is never drawn")
+ShowMap("Elwynn")
+Check(#ShownPins() == 0, "no marker on a zone without drop place")
+
+ns.Wishlist.Add(300570, 1)
+ShowMap("Dustwallow")
+pins = ShownPins()
+Check(#pins == 1 and pins[1]._etp.itemId == 300570 and not pins[1]._etp.focus, "wishlist tomes are marked too (Dustwallow Marsh)")
+ns.SetOption("mapPins", false)
+Check(#ShownPins() == 0, "option off: no wishlist marker")
+ns.SetOption("mapPins", true)
+Check(#ShownPins() == 1, "option on again")
+ns.Wishlist.Remove(300570)
+
+WorldMapFrame:Hide()
+Check(#ShownPins() == 0, "markers hidden with the map")
+local hazard = ns.Catalog.byName["arcane hazard"]
+Check(hazard ~= nil, "Arcane Hazard is a known tome")
+if hazard then
+    ns.WorldMap.Locate(hazard.itemId)
+    Check(not WorldMapFrame:IsShown(), "a tome without precise place: told in chat, no map opened")
+end
+
+local fusion = ns.Catalog.byName["entropic fusion"]
+Check(fusion ~= nil, "Entropic Fusion is a known tome")
+if fusion then
+    ns.WorldMap.Locate(fusion.itemId)
+    Check(shownMap == "BurningSteppes", "Dreadmaul Rock shown on Burning Steppes, got " .. tostring(shownMap))
+    pins = ShownPins()
+    Check(#pins == 1 and pins[1]._etp.x == 1, "a place just past the map edge keeps its marker, against the edge")
+end
+
+ns.WorldMap.Locate(300569)
+pins = ShownPins()
+if pins[1] then
+    pins[1]:GetScript("OnClick")(pins[1])
+    Check(not WorldMapFrame:IsShown(), "clicking a marker closes the map")
+    local visible = false
+    for i = 1, rows do
+        local row = _G["EbonTomeHunterListRow" .. i]
+        if row:IsShown() and row.item and row.item.itemId == 300569 then visible = true end
+    end
+    Check(visible, "the clicked tome is scrolled into view in the list")
+end
+-- --- Wowhead links (WotLK Classic section) ---------------------------------------------------
+local WH = ns.Wowhead
+Check(WH.NpcURL(21405, "Ethereal Arcanist") == "https://www.wowhead.com/wotlk/npc=21405/ethereal-arcanist",
+    "NPC link in the WotLK format of wowhead.com")
+Check(WH.SearchURL("Scarlet Paladin") == "https://www.wowhead.com/wotlk/search?q=Scarlet+Paladin", "WotLK search link")
+Check(WH.Slug("Mosh'Ogg Brute") == "moshogg-brute", "slug without apostrophe")
+Check(WH.NpcIdFromGUID("0xF130005F4E0005B1") == 24398, "NPC id read from a 3.3.5a creature GUID")
+Check(WH.NpcIdFromGUID("0x0000000000ABCDEF") == nil, "a player GUID is not an NPC")
+local split = WH.SplitMobs("Bloodsail Mage/Raider")
+Check(split[1] == "Bloodsail Mage" and split[2] == "Bloodsail Raider", "grouped mob names are split")
+Check(WH.SplitMobs("Blackrock Stronghold mobs")[1] == "Blackrock Stronghold", "'mobs' suffix dropped")
+
+local links = WH.Links(300569)
+Check(#links >= 2 and links[1].url:find("^https://www%.wowhead%.com/wotlk/search%?q=") ~= nil,
+    "unknown NPC id: WotLK search link")
+-- the mob is moused over: its id is learned (only for mobs of the drop places)
+local unitState = {}
+UnitExists = function(unit) return unitState[unit] ~= nil end
+UnitIsPlayer = function() return false end
+UnitIsDead = function(unit) return unitState[unit] and unitState[unit].dead or false end
+UnitName = function(unit)
+    if unit == "player" then return "Tester" end
+    return unitState[unit] and unitState[unit].name or nil
+end
+UnitGUID = function(unit) return unitState[unit] and unitState[unit].guid or nil end
+unitState.mouseover = { name = "Scarlet Paladin", guid = "0xF13000125A000001" }
+Fire("UPDATE_MOUSEOVER_UNIT")
+Check(WH.NpcId("Scarlet Paladins") == 4698, "NPC id learned from a mouseover (plural name matched)")
+unitState.mouseover = { name = "Random Critter", guid = "0xF1300000AA000001" }
+Fire("UPDATE_MOUSEOVER_UNIT")
+Check(WH.NpcId("Random Critter") == nil, "mobs unrelated to tomes are not stored")
+unitState.mouseover = nil
+links = WH.Links(300569)
+local exact = false
+for _, link in ipairs(links) do
+    if link.url == "https://www.wowhead.com/wotlk/npc=4698/scarlet-paladins" then exact = true end
+end
+Check(exact, "the learned id gives an exact NPC link")
+local opened
+EbonholdOpenURL = function(url) opened = url end
+Check(WH.Show(300569) >= 2 and EbonTomeHunterSourcesFrame:IsShown(), "Sources window opened (Wowhead links, teleports)")
+local sourceRow = EbonTomeHunterSourcesListRow1
+Check(sourceRow and sourceRow:IsShown() and sourceRow.wowhead:IsShown(), "a source row with its Wowhead button")
+sourceRow.wowhead:GetScript("OnClick")(sourceRow.wowhead)
+Check(opened and opened:find("^https://www%.wowhead%.com/wotlk/") ~= nil, "Wowhead opens a WotLK page: " .. tostring(opened))
+EbonTomeHunterSourcesFrame:Hide()
+local customUrl, customId, isCustom = WH.LinkFor("Echo Wraith", { npcIds = { ["Echo Wraith"] = 190001 } })
+Check(customUrl == nil and customId == 190001 and isCustom, "a creature made for Ebonhold (id 190001) gets no Wowhead link")
+for _, link in ipairs(WH.Links(300569)) do
+    Check(not link.url:find("item=", 1, true), "never an item page (Ebonhold tomes are not on Wowhead)")
+end
+
+-- --- Loot: wishlist alert, drop place shared with the network --------------------------------
+local sentChat = {}
+SendChatMessage = function(msg, chatType, language, channel)
+    sentChat[#sentChat + 1] = { msg = msg, chatType = chatType, channel = channel }
+end
+GetChannelName = function(id)
+    if id == "ebontomehunter" or id == 5 then return 5, "ebontomehunter" end
+    return 0, nil
+end
+GetRealZoneText = function() return "Crystalsong Forest" end
+GetSubZoneText = function() return "Forlorn Woods" end
+GetPlayerMapPosition = function(unit) return 0.49, 0.54 end
+WorldMapFrame:Hide()
+shownMap = "CrystalsongForest"
+ns.Net.Join()
+for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
+ns.Wishlist.SetQty(300569, 1)
+
+unitState.target = { name = "Sinewy Wolf", guid = "0xF130006F12000042", dead = true }
+Fire("LOOT_OPENED")
+Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300569, "Tome of Echo: Beast Bane")))
+Check(ChatContains(format(ns.L.AlertSelf, "Beast Bane")), "alert: wishlist tome looted")
+local mine = ns.DB.sightings[300569] and ns.DB.sightings[300569][1]
+Check(mine and mine.mapFile == "CrystalsongForest" and mine.npcId == 28434 and mine.mob == "Sinewy Wolf"
+    and math.abs(mine.x - 0.49) < 0.001, "drop place recorded (zone map, position, mob)")
+Advance(1)
+local sentDrop = sentChat[#sentChat]
+Check(sentDrop and sentDrop.chatType == "CHANNEL" and sentDrop.channel == 5
+    and sentDrop.msg:find("^ETHN1~D~300569%^CrystalsongForest%^490%^540%^28434%^Sinewy Wolf%^") ~= nil,
+    "drop sent on the hidden channel: " .. tostring(sentDrop and sentDrop.msg))
+Check(WH.NpcId("Sinewy Wolf") == 28434, "the looted mob's id is learned too")
+unitState.target = nil
+
+-- a tome listed as "Unknown location": another user drops it -> real place for everybody
+local hazardRow = ns.Catalog.byName["arcane hazard"]
+Check(hazardRow and not ns.WorldMap.WorldPosition(hazardRow.location), "Arcane Hazard has no map point yet")
+local function ChannelMessage(text, author)
+    Fire("CHAT_MSG_CHANNEL", text, author, "", "5. ebontomehunter", "", "", 0, 5, "ebontomehunter")
+end
+local found = ns.Net.Encode({ itemId = hazardRow.itemId, mapFile = "Tanaris", x = 0.512, y = 0.498, npcId = 5420,
+    mob = "Wastewander Bandit", zone = "Tanaris:Wavestrider Beach", at = time(), by = "Bob" })
+ns.Wishlist.SetQty(hazardRow.itemId, 1)
+ChannelMessage("ETHN1~D~" .. found, "Bob")
+Check(ChatContains("Bob") and ChatContains("Wastewander Bandit"), "wishlist tome found by another user: told in chat")
+Advance(2)
+Check(hazardRow.location and hazardRow.location.mapFile == "Tanaris" and hazardRow.location.source == "net",
+    "the catalogue now places Arcane Hazard where Bob looted it")
+local hzFile, _, hzx, hzy = ns.WorldMap.BestZone(hazardRow.location)
+Check(hzFile == "Tanaris" and math.abs(hzx - 0.512) < 0.001, "its zone and coordinates")
+ns.WorldMap.Locate(hazardRow.itemId)
+Check(WorldMapFrame:IsShown() and shownMap == "Tanaris", "Locate now opens Tanaris")
+WorldMapFrame:Hide()
+ChannelMessage("ETHN1~D~" .. found:gsub("%^Bob$", "^Carl"), "Carl")
+Advance(2)
+Check(#ns.DB.sightings[hazardRow.itemId] == 1 and hazardRow.location.notes:find("2", 1, true) ~= nil,
+    "same spot from a second player: confirmed, not duplicated")
+ChannelMessage("ETHN1~D~399999^Tanaris^500^500^^Bandit^Tanaris^" .. time() .. "^Eve", "Eve")
+ChannelMessage("ETHN1~D~" .. hazardRow.itemId .. "^Tanaris^5000^500^^Bandit^Tanaris^" .. time() .. "^Eve", "Eve")
+Advance(2)
+Check(ns.DB.sightings[399999] == nil and #ns.DB.sightings[hazardRow.itemId] == 1, "unknown tome or bad position ignored")
+Fire("CHAT_MSG_CHANNEL", "ETHN1~D~" .. found, "Mallory", "", "1. General", "", "", 0, 1, "General")
+Check(#ns.DB.sightings[hazardRow.itemId] == 1, "other channels are ignored")
+
+-- sync: a user who comes online asks what they missed; the first to answer wins
+local before = #sentChat
+ChannelMessage("ETHN1~Q~ab12^0", "Newbie")
+Advance(8)
+local answered = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~S~ab12~") then answered = true end
+end
+Check(answered, "sync request answered with the known drops")
+before = #sentChat
+ChannelMessage("ETHN1~Q~cd34^0", "Newbie2")
+ChannelMessage("ETHN1~S~cd34~0~" .. found, "Dan")
+Advance(8)
+local duplicate = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~S~cd34~") then duplicate = true end
+end
+Check(not duplicate, "no answer when another user already answered")
+ns.DB.lastSync = 0
+Check(ns.Net.RequestSync() and not ns.Net.RequestSync(), "sync request, then a 10 min cooldown")
+Advance(6)
+
+-- names are cut to a byte length, never in the middle of a French character
+local function ZoneField(zone)
+    return ({ strsplit("^", ns.Net.Encode({ itemId = 300569, zone = zone, at = time() })) })[7]
+end
+local eAcute = string.char(195, 169)   -- "é" in UTF-8
+Check(ZoneField(string.rep("a", 59) .. eAcute) == string.rep("a", 59), "a 2-byte character is not cut in two")
+Check(ZoneField(string.rep("a", 58) .. eAcute) == string.rep("a", 58) .. eAcute, "a character that fits is kept")
+
+-- large backlog: answered oldest first, 30 at a time, with the "more" flag
+-- (catalogue rows of tomes whose item id is still unknown are keyed by name: skipped)
+local tomeIds = {}
+for _, row in ipairs(ns.Catalog.rows) do
+    if type(row.itemId) == "number" then tomeIds[#tomeIds + 1] = row.itemId end
+end
+local keptSightings = ns.DB.sightings
+ns.DB.sightings = {}
+local base = time() - 5000
+for i = 1, 35 do
+    ns.Net.Add({ itemId = tomeIds[i], mapFile = "Durotar", x = 0.5, y = 0.5, mob = "Mob" .. i,
+        zone = "Durotar", at = base + i, by = "P" .. i })
+end
+before = #sentChat
+ChannelMessage("ETHN1~Q~ef56^" .. (base + 2), "Newbie3")
+Advance(10)
+local times, flags, inOrder = {}, {}, true
+for i = before + 1, #sentChat do
+    local more, body = sentChat[i].msg:match("^ETHN1~S~ef56~(%d)~(.*)$")
+    if body then
+        flags[more] = true
+        for encoded in body:gmatch("[^;]+") do
+            local record = ns.Net.Decode(encoded)
+            times[#times + 1] = record and (record.at - base) or -1
+            if times[#times] ~= #times + 2 then inOrder = false end
+        end
+    end
+end
+Check(#times == 30 and inOrder and flags["1"] and not flags["0"],
+    "backlog: the 30 oldest after the asked time, in order, flagged 'more' (" .. #times .. " sent)")
+
+-- our own request: asks again from the last record received while there are more
+ns.DB.syncFrom, ns.DB.lastSync = nil, 0
+before = #sentChat
+Check(ns.Net.RequestSync(), "sync requested")
+Advance(1)
+local qid, since = tostring(sentChat[#sentChat].msg):match("^ETHN1~Q~(%x+)%^(%d+)$")
+Check(qid and tonumber(since) == base + 35 - 600, "asks from the newest record we have, minus a margin")
+local function Rec(i, at)
+    return ns.Net.Encode({ itemId = tomeIds[i], mapFile = "Barrens", x = 0.3, y = 0.3,
+        mob = "Quilboar", zone = "The Barrens", at = at, by = "Vet" })
+end
+ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(40, base + 100), "Vet")
+ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(41, base + 101), "Vet")
+Advance(6)
+local qid2, since2 = tostring(sentChat[#sentChat].msg):match("^ETHN1~Q~(%x+)%^(%d+)$")
+Check(qid2 and tonumber(since2) == base + 101 and ns.DB.syncFrom == base + 101,
+    "more to come: asks again from the last record received, kept for the next login")
+ChannelMessage("ETHN1~S~" .. qid2 .. "~0~" .. Rec(42, base + 102), "Vet")
+Advance(6)
+Check(ns.DB.syncFrom == nil and #ns.DB.sightings[tomeIds[42]] == 1,
+    "answer complete: up to date")
+ns.DB.sightings = keptSightings
+ns.Fire("SIGHTINGS_CHANGED")
+
+-- group loot of a wishlist tome
+ns.Wishlist.SetQty(300570, 1)
+Fire("CHAT_MSG_LOOT", format(LOOT_ITEM, "Groupie", Link(300570, "Tome of Echo: DragonKin Bane")))
+Check(ChatContains("Groupie"), "a group member looted a wishlist tome: told in chat")
+
+-- network off: nothing leaves any more
+shownMap = "CrystalsongForest"   -- the zone map of the zone texts (Locate had left Tanaris)
+ns.SetOption("netEnabled", false)
+before = #sentChat
+unitState.target = { name = "Sinewy Wolf", guid = "0xF130006F12000042", dead = true }
+GetPlayerMapPosition = function(unit) return 0.20, 0.30 end
+Fire("LOOT_OPENED")
+Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300569, "Tome of Echo: Beast Bane")))
+Advance(2)
+Check(#sentChat == before and #ns.DB.sightings[300569] == 2, "network off: kept locally, not sent")
+ns.SetOption("netEnabled", true)
+unitState.target = nil
+
+-- the corpse under the mouse wins over the target
+unitState.target = { name = "Sinewy Wolf", guid = "0xF130006F12000042", dead = true }
+unitState.mouseover = { name = "Crystalline Ice Giant", guid = "0xF13000714B000007", dead = true }
+GetPlayerMapPosition = function(unit) return 0.70, 0.70 end
+Fire("LOOT_OPENED")
+Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300570, "Tome of Echo: DragonKin Bane")))
+local drops570 = ns.DB.sightings[300570] or {}
+Check(#drops570 == 1 and drops570[1].mob == "Crystalline Ice Giant" and drops570[1].npcId == 0x714B,
+    "the corpse under the mouse is the source, not the target")
+Fire("LOOT_CLOSED")
+unitState.target, unitState.mouseover = nil, nil
+-- an item won in a roll long after the window closed may come from another corpse
+GetPlayerMapPosition = function(unit) return 0.10, 0.90 end
+Advance(10)
+Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300570, "Tome of Echo: DragonKin Bane")))
+Check(#ns.DB.sightings[300570] == 1, "tome received after the loot window closed: place not reported")
+-- chest, or bag opened from the inventory (possibly in town): no dead mob
+Fire("LOOT_OPENED")
+Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300570, "Tome of Echo: DragonKin Bane")))
+Check(#ns.DB.sightings[300570] == 1, "loot without a dead mob (chest, bag): place not reported")
+Fire("LOOT_CLOSED")
+Advance(2)
+
+-- Greedy Scavenger: the pet loots the corpses by itself and puts the items in the bags WITHOUT
+-- any chat line: a tome appearing in the bags is detected; its mob = the kills of the last minute
+local savedNumSlots, savedItemLink, savedItemInfo = GetContainerNumSlots, GetContainerItemLink, GetContainerItemInfo
+local bagSlots = {}
+GetContainerNumSlots = function(bag) return bag == 0 and 16 or 0 end
+GetContainerItemLink = function(bag, slot) return bag == 0 and bagSlots[slot] and bagSlots[slot].link or nil end
+GetContainerItemInfo = function(bag, slot)
+    local item = bag == 0 and bagSlots[slot]
+    if item then return "Interface\\Icons\\INV_Misc_Book_09", item.count end
+end
+local alerts = {}
+local realAlert = ns.Loot.Alert
+ns.Loot.Alert = function(text)
+    alerts[#alerts + 1] = text
+    realAlert(text)
+end
+local function BagsChanged()
+    Fire("BAG_UPDATE", 0)
+    Advance(2)
+end
+local function Kill(guid, name)
+    CLEU("SWING_DAMAGE", "0x0000000000000042", "Tester", 0x511, guid, name, 0xa48, 250)
+    CLEU("UNIT_DIED", nil, nil, 0, guid, name, 0xa48)
+end
+Advance(6)                         -- the last loot window is long closed
+shownMap = "CrystalsongForest"
+GetPlayerMapPosition = function(unit) return 0.33, 0.44 end
+BagsChanged()
+Check(#alerts == 0, "first reading of the bags: nothing announced")
+
+local wolfGUID = "0xF1300071BE000099"
+CLEU("UNIT_DIED", nil, nil, 0, "0xF1300071C0000077", "Other Player's Kill", 0xa48)
+Kill(wolfGUID, "Snowblind Wolf")
+Advance(3)
+ns.Wishlist.SetQty(300022, 1)
+bagSlots[3] = { link = Link(300022, "Tome of Echo: Earthen Snap"), count = 1 }
+BagsChanged()
+Check(#alerts == 1 and alerts[1] == format(ns.L.AlertSelf, "Earthen Snap"),
+    "Scavenger: wishlist tome appearing in the bags, alert without any chat line")
+local scav = ns.DB.sightings[300022] and ns.DB.sightings[300022][1]
+Check(scav and scav.mob == "Snowblind Wolf" and scav.npcId == tonumber("0071BE", 16) and scav.mapFile == "CrystalsongForest"
+    and math.abs(scav.x - 0.33) < 0.001, "its drop place: the wolf just killed (not a mob we never fought), where we stand")
+
+Kill("0xF1300071C0000012", "Frostbite Bear")
+GetPlayerMapPosition = function(unit) return 0.60, 0.20 end
+bagSlots[4] = { link = Link(300025, "Tome of Echo: Frost Bite"), count = 1 }
+BagsChanged()
+local mixed = ns.DB.sightings[300025] and ns.DB.sightings[300025][1]
+Check(mixed and mixed.mob == nil and mixed.mapFile == "CrystalsongForest" and math.abs(mixed.x - 0.60) < 0.001,
+    "two kinds of mobs killed in the last minute: the place only")
+ChannelMessage("ETHN1~D~" .. ns.Net.Encode({ itemId = 300025, mapFile = "CrystalsongForest", x = 0.61, y = 0.21,
+    npcId = tonumber("0071C0", 16), mob = "Frostbite Bear", zone = "Crystalsong Forest", at = time(), by = "Zed" }), "Zed")
+Check(#ns.DB.sightings[300025] == 1 and ns.DB.sightings[300025][1].mob == "Frostbite Bear",
+    "a player who knows the mob confirms that spot: merged, the mob is now known")
+
+Advance(61)
+bagSlots[5] = { link = Link(300436, "Tome of Echo: Shielded Steps"), count = 1 }
+BagsChanged()
+Check(ns.DB.sightings[300436] == nil, "nothing killed in the last minute: no drop place")
+
+local mailbox = CreateFrame("Frame", "MailFrame")
+mailbox:Show()
+ns.Wishlist.SetQty(300437, 1)
+local alertsBefore = #alerts
+bagSlots[6] = { link = Link(300437, "Tome of Echo: Steady Casting"), count = 1 }
+BagsChanged()
+mailbox:Hide()
+BagsChanged()
+Check(#alerts == alertsBefore and ns.DB.sightings[300437] == nil, "a tome taken from the mailbox is not loot")
+
+Advance(11)
+unitState.mouseover = { name = "Snowblind Wolf", guid = wolfGUID, dead = true }
+Fire("LOOT_OPENED")
+ns.Wishlist.SetQty(300438, 1)
+alertsBefore = #alerts
+Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300438, "Tome of Echo: Subtle Presence")))
+bagSlots[7] = { link = Link(300438, "Tome of Echo: Subtle Presence"), count = 1 }
+BagsChanged()
+Fire("LOOT_CLOSED")
+unitState.mouseover = nil
+Check(#alerts == alertsBefore + 1, "looted by hand: the chat line and the bag increase make one alert, got "
+    .. (#alerts - alertsBefore))
+
+Fire("PLAYER_ENTERING_WORLD")
+Kill(wolfGUID, "Snowblind Wolf")
+ns.Wishlist.SetQty(300439, 1)
+alertsBefore = #alerts
+bagSlots[8] = { link = Link(300439, "Tome of Echo: Provoking Presence"), count = 1 }
+BagsChanged()
+Check(#alerts == alertsBefore, "just after a loading screen the bags are read again: nothing announced")
+ns.Loot.Alert = realAlert
+GetContainerNumSlots, GetContainerItemLink, GetContainerItemInfo = savedNumSlots, savedItemLink, savedItemInfo
+
+-- --- Teleport: nearest checkpoint to the mobs (ProjectEbonhold checkpoints) ------------------
+local T = ns.Travel
+local usedCheckpoints, listRequests, dismounts = {}, 0, 0
+Dismount = function() dismounts = dismounts + 1 end
+IsMounted = function() return false end
+IsFlying = function() return false end
+WorldMapFrame:Hide()
+shownMap = "Elwynn"                      -- the player is far away, in Elwynn Forest
+GetPlayerMapPosition = function(unit) return 0.5, 0.5 end
+-- real definitions of ProjectEbonhold (checkpoint_service.lua), plus states and factions
+local CHECKPOINTS = {
+    { id = 66, name = "Chillwind Camp, Western Plaguelands", mapId = 23, serverMapId = 0, x = 0.42948, y = 0.84954, factionAllowed = true, unlocked = true },
+    { id = 383, name = "Thondoril River, Western Plaguelands", mapId = 23, serverMapId = 0, x = 0.69206, y = 0.49679, factionAllowed = true, unlocked = false },
+    { id = 67, name = "Light's Hope Chapel, Eastern Plaguelands", mapId = 24, serverMapId = 0, x = 0.7574078, y = 0.5332380, factionAllowed = true, unlocked = true },
+    { id = 68, name = "Light's Hope Chapel, Eastern Plaguelands", mapId = 24, serverMapId = 0, x = 0.7440347, y = 0.5122817, factionAllowed = false, unlocked = true },
+    { id = 336, name = "Windrunner's Overlook, Crystalsong Forest", mapId = 511, serverMapId = 571, x = 0.7211788, y = 0.8081377, factionAllowed = true, unlocked = true },
+    { id = 310, name = "Dalaran", mapId = 511, serverMapId = 571, x = 0.3652774, y = 0.3792568, factionAllowed = true, unlocked = true },
+    { id = 39, name = "Gadgetzan, Tanaris", mapId = 162, serverMapId = 1, x = 0.5095420, y = 0.2932543, factionAllowed = true, unlocked = true },
+    { id = 10019, name = "Zul'Farrak", mapId = 162, serverMapId = 1, x = 0.3857, y = 0.2066, factionAllowed = true, unlocked = true, kind = "MEETINGSTONE" },
+    { id = 10019, name = "Zul'Farrak", mapId = 202, serverMapId = 1, x = 0.9225, y = 0.3481, factionAllowed = true, unlocked = true, kind = "MEETINGSTONE" },
+    { id = 83, name = "Tranquillien, Ghostlands", mapId = 464, serverMapId = 530, x = 0.4548355, y = 0.3055438, factionAllowed = true, unlocked = true },
+}
+local function RowOf(itemId)
+    ns.UI.Show(itemId)
+    for _, row in ipairs(ns.UI.list.rows) do
+        if row:IsShown() and row.item and row.item.itemId == itemId then return row end
+    end
+end
+if ProjectEbonhold then
+    ProjectEbonhold.CheckpointService = {
+        GetCheckpoints = function() return CHECKPOINTS end,
+        UseCheckpoint = function(id) usedCheckpoints[#usedCheckpoints + 1] = id end,
+        RequestCheckpoints = function() listRequests = listRequests + 1 end,
+    }
+    local count = {}
+    for _, c in ipairs(T.Checkpoints()) do count[c.id] = (count[c.id] or 0) + 1 end
+    Check(count[68] == nil, "checkpoints of the other faction left out")
+    Check(count[10019] == 1, "a meeting stone listed on two zone maps counts once")
+    Check(count[310] == 1 and count[39] == 1 and count[83] == 1, "checkpoints placed on their continent (Ghostlands too)")
+
+    -- one place: the nearest unlocked checkpoint, and a nearer one still locked
+    local hearthglen = ns.Catalog.Get(300569).locations[1]
+    local near = T.Nearest(hearthglen)
+    Check(near and near.checkpoint and near.checkpoint.id == 66, "Hearthglen: Chillwind Camp, nearest unlocked checkpoint")
+    Check(near and near.locked and near.locked.id == 383 and near.lockedDistance < near.distance,
+        "a nearer checkpoint not unlocked yet is reported (Thondoril River)")
+
+    -- several sources (Hearthglen, Crystalsong...): the one with the nearest checkpoint wins
+    local best, sources = T.Best(300569)
+    Check(#sources >= 3 and best and best.near.checkpoint.id == 310,
+        "Beast Bane: Dalaran, nearest checkpoint among all its sources, got " .. tostring(best and best.near.checkpoint.id))
+    Check(sources[#sources].near == nil, "sources without a position come last")
+
+    -- a drop found in Ghostlands (zone drawn on the Eastern Kingdoms map, on map 530)
+    ns.Net.Add({ itemId = 300570, mapFile = "Ghostlands", x = 0.47, y = 0.33, mob = "Mummified Headhunter",
+        zone = "Ghostlands", at = time(), by = "Elfy" })
+    ns.Fire("SIGHTINGS_CHANGED")
+    Advance(1)
+    local ghost = T.Best(300570)
+    Check(ghost and ghost.near.checkpoint.id == 83 and ghost.near.distance < 150,
+        "Ghostlands drop: Tranquillien, a few steps away")
+
+    -- the list button teleports at once (no confirmation by default: the player's choice)
+    local baneRow = RowOf(300569)
+    Check(baneRow and baneRow.travel:IsEnabled(), "teleport button enabled on the tome's row")
+    baneRow.travel:GetScript("OnEnter")(baneRow.travel)
+    GameTooltip:Hide()
+    baneRow.travel:GetScript("OnClick")(baneRow.travel)
+    Check(usedCheckpoints[1] == 310 and ChatContains("Dalaran"), "one click: teleport to Dalaran")
+    T.GoBest(300569)
+    Check(#usedCheckpoints == 1 and ChatContains(ns.L.TravelWait), "a second request right after is ignored")
+    Advance(4)
+
+    IsMounted = function() return true end
+    T.GoBest(300569)
+    Check(dismounts == 1 and usedCheckpoints[2] == 310, "mounted on the ground: dismounted first")
+    IsMounted = function() return false end
+    Advance(4)
+
+    Player.combat = true
+    Check(not T.GoBest(300569) and #usedCheckpoints == 2 and ChatContains(ns.L.TravelCombat), "no teleport in combat")
+    Player.combat = false
+
+    -- standing next to the mobs: the list button does not teleport, the Sources window does
+    shownMap = "CrystalsongForest"
+    GetPlayerMapPosition = function(unit) return 0.49, 0.54 end
+    Check(not T.GoBest(300569) and #usedCheckpoints == 2, "already closer than any checkpoint: no teleport")
+    Check(ns.Sources.Show(300569) >= 3 and EbonTomeHunterSourcesFrame:IsShown(), "Sources window")
+    local first = EbonTomeHunterSourcesListRow1
+    Check(first.item and first.item.near.checkpoint.id == 310 and first.tp:IsEnabled() and first.item.you
+        and first.item.you < 150, "first source: Dalaran, with the player's own distance")
+    first.tp:GetScript("OnClick")(first.tp)
+    Check(usedCheckpoints[3] == 310, "Sources window: teleports even when already close")
+    Advance(4)
+    local lockedShown = false
+    for _, row in ipairs(EbonTomeHunterSourcesList.rows) do
+        if row:IsShown() and row.item and not row.item.near then
+            Check(not row.tp:IsEnabled(), "a source without a position has no teleport")
+        end
+        if row:IsShown() and row.item and row.item.near and row.item.near.checkpoint then lockedShown = true end
+    end
+    Check(lockedShown, "sources listed with their checkpoints")
+    EbonTomeHunterSourcesFrame:Hide()
+    shownMap = "Elwynn"
+    GetPlayerMapPosition = function(unit) return 0.5, 0.5 end
+
+    -- confirmation (option)
+    ns.SetOption("confirmTeleport", true)
+    local asked
+    local popupSaved = StaticPopup_Show
+    StaticPopup_Show = function(which, a1, a2, data)
+        asked = { which = which, a1 = a1, a2 = a2, data = data }
+        return CreateFrame("Frame")
+    end
+    T.GoBest(300569)
+    Check(asked and asked.which == "EBONTOMEHUNTER_TRAVEL" and asked.a1 == "Dalaran" and #usedCheckpoints == 3,
+        "option on: asks before teleporting")
+    StaticPopupDialogs.EBONTOMEHUNTER_TRAVEL.OnAccept(nil, asked.data)
+    Check(usedCheckpoints[4] == 310, "accepted: teleport")
+    StaticPopup_Show = popupSaved
+    ns.SetOption("confirmTeleport", false)
+    Advance(4)
+
+    -- map marker: Ctrl-click teleports near that very place
+    ShowUIPanel(WorldMapFrame)
+    ns.WorldMap.Invalidate()
+    ShowMap("WesternPlaguelands")
+    local hearthPin
+    for _, pin in ipairs(ShownPins()) do
+        if pin._etp.itemId == 300569 and pin._etp.loc == hearthglen then hearthPin = pin end
+    end
+    Check(hearthPin ~= nil, "Hearthglen marker shown for the wishlist tome")
+    if hearthPin then
+        IsControlKeyDown = function() return true end
+        hearthPin:GetScript("OnClick")(hearthPin)
+        IsControlKeyDown = function() return nil end
+        Check(usedCheckpoints[5] == 66 and not WorldMapFrame:IsShown(), "Ctrl-click on the marker: Chillwind Camp")
+    end
+    Advance(4)
+
+    -- /eth tp <tome>
+    Slash("/eth tp beast bane")
+    Check(usedCheckpoints[6] == 310, "/eth tp <tome name>")
+    Advance(4)
+    Slash("/eth tp bane")
+    Check(ChatContains("Beast Bane") and #usedCheckpoints == 6, "several tomes match: listed, no teleport")
+    Slash("/eth tp zzzz")
+    Check(ChatContains(format(ns.L.TravelUnknownTome, "zzzz")), "unknown tome")
+
+    -- nothing unlocked in Northrend: the next best source; nothing unlocked at all: list asked again
+    for _, c in ipairs(CHECKPOINTS) do
+        if c.serverMapId == 571 then c.unlocked = false end
+    end
+    best = T.Best(300569)
+    Check(best and best.near.checkpoint.id == 66, "Northrend locked: Hearthglen via Chillwind Camp")
+    for _, c in ipairs(CHECKPOINTS) do c.unlocked = false end
+    Check(not T.GoBest(300569) and listRequests == 1 and ChatContains(ns.L.TravelNoData),
+        "nothing unlocked (list not received?): asked again")
+    for _, c in ipairs(CHECKPOINTS) do c.unlocked = true end
+else
+    Check(not T.Available() and not T.GoBest(300569) and ChatContains(ns.L.TravelNoPE), "without ProjectEbonhold: no teleport")
+    local baneRow = RowOf(300569)
+    Check(baneRow and not baneRow.travel:IsEnabled(), "without ProjectEbonhold: teleport button disabled")
+    Check(ns.Sources.Show(300569) >= 3 and not EbonTomeHunterSourcesListRow1.tp:IsEnabled(), "Sources: no TP either")
+    EbonTomeHunterSourcesFrame:Hide()
+end
+
+-- --- Sending a wishlist to a player (addon whisper) ------------------------------------------
+local addonSent = {}
+SendAddonMessage = function(prefix, msg, chatType, target)
+    addonSent[#addonSent + 1] = { prefix = prefix, msg = msg, chatType = chatType, target = target }
+end
+Check(not ns.Comm.SendWishlist(""), "no name: nothing sent")
+Check(not ns.Comm.SendWishlist("tester"), "not to oneself")
+Check(ns.Comm.SendWishlist("bob"), "wishlist sent to Bob")
+Advance(1)
+local wl = addonSent[1]
+Check(wl and wl.prefix == "ETH" and wl.chatType == "WHISPER" and wl.target == "Bob"
+    and wl.msg:find("^WL:%x+:1:1:ETH1:Tester:") ~= nil, "whisper addon message to Bob: " .. tostring(wl and wl.msg))
+local sendId = wl and wl.msg:match("^WL:(%x+):")
+Fire("CHAT_MSG_ADDON", "ETH", "WLA:" .. tostring(sendId) .. ":3", "WHISPER", "Bob")
+Check(ChatContains(format(ns.L.SendDelivered, "Bob", 3)), "Bob's addon confirmed")
+ns.Comm.SendWishlist("Carl")
+Advance(13)
+Check(ChatContains(format(ns.L.SendNoAnswer, "Carl")), "no answer: told after a while")
+
+-- receiving one (in two slices)
+local offer
+local popupBefore = StaticPopup_Show
+StaticPopup_Show = function(which, a1, a2, data)
+    offer = { which = which, from = a1, count = a2, data = data }
+    return CreateFrame("Frame")
+end
+local incoming = ns.Share.Encode({ { itemId = 300022, qty = 2 }, { itemId = 300569, qty = 1 } }, "Dave")
+addonSent = {}
+Fire("CHAT_MSG_ADDON", "ETH", "WL:beef:1:2:" .. incoming:sub(1, 10), "WHISPER", "Dave")
+Check(offer == nil, "waits for every slice")
+Fire("CHAT_MSG_ADDON", "ETH", "WL:beef:2:2:" .. incoming:sub(11), "WHISPER", "Dave")
+Check(offer and offer.which == "EBONTOMEHUNTER_WISHLIST_OFFER" and offer.from == "Dave" and offer.count == 2,
+    "offer shown when the wishlist is complete")
+Advance(1)
+Check(addonSent[1] and addonSent[1].msg == "WLA:beef:2" and addonSent[1].target == "Dave", "reception confirmed to Dave")
+StaticPopupDialogs.EBONTOMEHUNTER_WISHLIST_OFFER.OnAccept(nil, offer.data)
+Check(EbonTomeHunterShareFrame:IsShown() and ns.Share.importBox:GetText() == incoming,
+    "View: the share dialog opens with Dave's wishlist ready to import")
+Check((ns.Share.previewText:GetText() or ""):find("Dave", 1, true) ~= nil, "its preview")
+EbonTomeHunterShareFrame:Hide()
+ns.SetOption("receiveWishlists", false)
+offer, addonSent = nil, {}
+Fire("CHAT_MSG_ADDON", "ETH", "WL:f00d:1:1:" .. incoming, "WHISPER", "Eve")
+Advance(1)
+Check(offer == nil and addonSent[1] and addonSent[1].msg == "WLN:f00d", "option off: refused politely")
+ns.SetOption("receiveWishlists", true)
+local floodOffers = 0
+StaticPopup_Show = function() floodOffers = floodOffers + 1 return CreateFrame("Frame") end
+for i = 1, 5 do
+    Fire("CHAT_MSG_ADDON", "ETH", format("WL:%04x:1:1:%s", i, incoming), "WHISPER", "Spammer")
+end
+Check(floodOffers == 3, "at most 3 offers a minute from the same player, got " .. floodOffers)
+StaticPopup_Show = popupBefore
+Slash("/eth send Bob")
+Slash("/eth net")
+Check(ChatContains(ns.Net.StatusText():sub(1, 12)), "/eth net prints the network status")
+Check(EbonTomeHunterNetPanel ~= nil, "network options sub-panel registered")
+for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
+
+EbonholdHub = nil
+ns.Catalog.Build()
+
+-- --- Auction House tabs: search and buy ------------------------------------------------------
+AuctionFrame:Show()
+-- Blizzard_AuctionUI is load-on-demand: the tabs appear with its ADDON_LOADED.
+AuctionFrameTab_OnClick = function(self) AuctionFrame.selectedTab = self:GetID() end
+Fire("ADDON_LOADED", "Blizzard_AuctionUI")
+local AH = ns.AH
+local tomesTab, wishTab = AH.tabs.tomes, AH.tabs.wish
+Check(tomesTab and tomesTab:GetID() == 4 and AuctionFrameTab4 == tomesTab, "Tomes tab added after Blizzard's three tabs")
+Check(wishTab and wishTab:GetID() == 5 and AuctionFrameTab5 == wishTab, "Wishlist tab is the fifth")
+AuctionFrameTab_OnClick(tomesTab)
+Check(EbonTomeHunterAHPanel:IsShown() and AH.mode == "tomes", "clicking the Tomes tab shows the panel")
+Check(AuctionFrame.selectedTab == 4, "Blizzard's tab handler still runs (tab selected)")
+AuctionFrameTab_OnClick(AuctionFrameTab1)
+Check(not EbonTomeHunterAHPanel:IsShown() and AH.mode == nil, "another tab hides the panel")
+AuctionFrameTab_OnClick(tomesTab)
+
+local function Auction(count, buyout, owner, bid)
+    return { name = "Tome of Echo: Beast Bane", count = count, buyout = buyout, owner = owner, bid = bid or 0,
+             link = Link(300569, "Tome of Echo: Beast Bane") }
+end
+local AH_PAGE = {
+    Auction(1, 120000, "Seller1"),
+    Auction(2, 160000, "Seller2"),          -- 80000 per tome: cheapest that we can buy
+    Auction(1, 0, "Seller3", 50000),        -- bid only
+    Auction(1, 70000, "Tester"),            -- ours (UnitName("player") == "Tester")
+}
+GetNumAuctionItems = function() return #AH_PAGE, #AH_PAGE end
+GetAuctionItemInfo = function(list, i)
+    local a = AH_PAGE[i]
+    if not a then return nil end
+    return a.name, "", a.count, 3, true, 80, a.bid, 100, a.buyout, 0, nil, a.owner
+end
+GetAuctionItemLink = function(list, i) return AH_PAGE[i] and AH_PAGE[i].link end
+GetAuctionItemTimeLeft = function() return 4 end
+local bids = {}
+PlaceAuctionBid = function(list, index, amount) bids[#bids + 1] = { list = list, index = index, amount = amount } end
+GetMoney = function() return 10000000 end
+local queries = {}
+QueryAuctionItems = function(name, _, _, _, _, _, page) queries[#queries + 1] = { name = name, page = page } end
+
+-- click Beast Bane in the tome list
+local baneRow
+for i = 1, 20 do
+    local row = _G["EbonTomeHunterAHTomesRow" .. i]
+    if row and row.item and row.item.itemId == 300569 then baneRow = row end
+end
+Check(baneRow ~= nil, "Beast Bane is in the Tomes tab list (listed at the last scan)")
+if baneRow then baneRow:GetScript("OnClick")(baneRow, "LeftButton") end
+Check(#queries == 1 and queries[1].name == "Tome of Echo: Beast Bane" and queries[1].page == 0,
+    "clicking a tome searches its exact name")
+Fire("AUCTION_ITEM_LIST_UPDATE")
+local result = ns.Scan.Results(300569)
+Check(result and #result.listings == 4, "4 Beast Bane listings found")
+Check(result and result.listings[1].unit == 70000 and result.listings[4].buyout == 0,
+    "listings sorted by unit price, bid-only last")
+Check(ns.Prices.GetMin(300569) == 70000, "the search updates the saved price")
+local chosen = AH.selectedListing
+Check(chosen and chosen.owner == "Seller2" and chosen.count == 2, "the cheapest listing that is not ours is preselected")
+Check(EbonTomeHunterAHListingsRow1:IsShown() and EbonTomeHunterAHListingsRow4:IsShown(), "listings shown on the right")
+
+-- safety checks
+Check(not ns.Buy.Check(result.listings[1]), "cannot buy our own auction")
+Check(not ns.Buy.Check(result.listings[4]), "cannot buy a bid-only auction")
+GetMoney = function() return 100 end
+Check(not ns.Buy.Check(chosen), "not enough gold: refused")
+GetMoney = function() return 10000000 end
+
+-- buy the preselected listing: confirmation first
+ns.Wishlist.SetQty(300569, 3)
+local popup
+StaticPopup_Show = function(which, a1, a2, data)
+    popup = { which = which, text = a1, data = data }
+    return CreateFrame("Frame")
+end
+EbonTomeHunterAHBuy:GetScript("OnClick")(EbonTomeHunterAHBuy)
+Check(popup and popup.which == "EBONTOMEHUNTER_BUY" and popup.data == chosen, "Buy asks for a confirmation first")
+Check(#bids == 0, "nothing bought before the confirmation")
+StaticPopupDialogs.EBONTOMEHUNTER_BUY.OnAccept(nil, popup.data)
+Check(#bids == 1 and bids[1].list == "list" and bids[1].index == 2 and bids[1].amount == 160000,
+    "buyout placed on the right auction at the right price")
+Fire("CHAT_MSG_SYSTEM", ERR_AUCTION_BID_PLACED)
+Check(ns.Wishlist.Get(300569) and ns.Wishlist.Get(300569).qty == 1, "the 2 bought tomes are deducted from the wishlist (3 -> 1)")
+Check(ChatContains("x2"), "purchase reported in chat")
+Check(ns.Buy.pending == nil, "purchase settled")
+local stillThere = false
+for _, listing in ipairs(ns.Scan.Results(300569).listings) do
+    if listing == chosen then stillThere = true end
+end
+Check(not stillThere, "the bought listing leaves the list")
+
+-- the page changed under our feet: never buy another auction than the one shown
+local seller1
+for _, listing in ipairs(ns.Scan.Results(300569).listings) do
+    if listing.owner == "Seller1" then seller1 = listing end
+end
+AH_PAGE[1].buyout = 999999
+ns.Buy.Execute(seller1)
+Check(#bids == 1, "a changed auction is not bought")
+Check(ns.Scan.IsBusy(), "the tome is searched again instead")
+AH_PAGE[1].buyout = 120000
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Check(not ns.Scan.IsBusy(), "list refreshed")
+
+-- another query replaced the list (Browse tab): the page is loaded again before buying
+ns.Scan.loaded = nil
+queries = {}
+popup = nil
+ns.Buy.Request(seller1)
+Check(#queries == 1 and queries[1].page == 0, "its page is loaded again first")
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Check(popup and popup.data and popup.data.owner == "Seller1", "then the purchase is confirmed")
+StaticPopupDialogs.EBONTOMEHUNTER_BUY.OnAccept(nil, popup.data)
+Check(#bids == 2 and bids[2].index == 1 and bids[2].amount == 120000, "and it is bought")
+Fire("UI_ERROR_MESSAGE", ERR_NOT_ENOUGH_MONEY)
+Check(ns.Buy.pending == nil and ns.Wishlist.Get(300569).qty == 1, "a server error cancels it (wishlist untouched)")
+Check(ns.Scan.IsBusy(), "and the tome is searched again")
+Fire("AUCTION_ITEM_LIST_UPDATE")
+
+-- no confirmation when the option is off
+ns.SetOption("confirmBuy", false)
+popup = nil
+local seller1b
+for _, listing in ipairs(ns.Scan.Results(300569).listings) do
+    if listing.owner == "Seller1" then seller1b = listing end
+end
+ns.Buy.Request(seller1b)
+Check(popup == nil and #bids == 3, "option off: bought at once")
+Fire("CHAT_MSG_SYSTEM", ERR_AUCTION_BID_PLACED)
+Check(not ns.Wishlist.Has(300569), "wishlist quantity reached: the tome leaves the wishlist")
+ns.SetOption("confirmBuy", true)
+
+-- Wishlist tab: search every wished tome in turn
+ns.Wishlist.Add(300569, 1)
+ns.Wishlist.Add(300570, 1)
+AuctionFrameTab_OnClick(wishTab)
+Check(AH.mode == "wish" and EbonTomeHunterAHPanel:IsShown(), "Wishlist tab shows the panel in wishlist mode")
+queries = {}
+Check(AH.SearchWishlist() == 2, "two wishlist tomes queued")
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Check(#queries == 2 and queries[1].name ~= queries[2].name, "each wishlist tome searched in turn")
+Check(not ns.Scan.IsBusy(), "all searches done")
+Check(ns.Scan.Results(300570) and #ns.Scan.Results(300570).listings == 0, "a tome with nothing for sale gets an empty result")
+
+-- closing the AH stops everything
+ns.Scan.SearchMany({ 300569, 300570 })
+Fire("AUCTION_HOUSE_CLOSED")
+Check(not ns.Scan.IsBusy(), "closing the Auction House cancels the searches")
+
+-- options: tabs can be removed
+ns.SetOption("ahTabs", false)
+Check(not tomesTab:IsShown() and not wishTab:IsShown(), "option off: tabs hidden")
+ns.SetOption("ahTabs", true)
+Check(tomesTab:IsShown(), "option on: tabs back")
+
+Slash("/eth")
+Slash("/eth rebuild")
+Note("EbonTomeHunter scenario: " .. ns.Catalog.Count() .. " tomes, " .. ns.Prices.PricedCount() .. " priced")

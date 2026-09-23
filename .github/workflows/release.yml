@@ -1,0 +1,70 @@
+name: Release
+
+# Push a tag vX.Y.Z (the version of the .toc) to publish a release:
+# the zip for manual installs, its SHA-256, and the CHANGELOG entry as notes.
+# Ebonhold Addon Manager does not use releases: it installs the main branch.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install lupa (Lua 5.1 for the validator)
+        run: pip install lupa
+
+      - name: Validator, test scenario and locale (enUS and frFR)
+        run: python tools/check.py
+
+      - name: The tag is the version of the .toc
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          toc="$(sed -n 's/^## Version: *//p' EbonTomeHunter/EbonTomeHunter.toc | tr -d '\r')"
+          if [ "$version" != "$toc" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, but EbonTomeHunter.toc says $toc"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Package
+        run: python tools/package.py
+
+      - name: SHA-256
+        working-directory: dist
+        run: sha256sum "EbonTomeHunter-$VERSION.zip" > "EbonTomeHunter-$VERSION.zip.sha256"
+
+      - name: Release notes (CHANGELOG entry)
+        run: |
+          awk -v v="$VERSION" '
+            index($0, "## " v " ") == 1 || $0 == "## " v { on = 1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::no entry for $VERSION in CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/EbonTomeHunter-$VERSION.zip" \
+            "dist/EbonTomeHunter-$VERSION.zip.sha256" \
+            --title "EbonTomeHunter $VERSION" \
+            --notes-file release-notes.md \
+            --verify-tag

@@ -1,0 +1,58 @@
+name: Bug report / Signaler un bug
+description: Something does not work as expected in EbonTomeHunter. / Quelque chose ne marche pas comme prévu.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Please remove account names, passwords and other personal data.
+        Merci pour le signalement ! Retire les noms de compte, mots de passe et autres données personnelles.
+  - type: input
+    id: version
+    attributes:
+      label: Addon version / Version de l'addon
+      description: Top of the addon options panel, or `## Version` in EbonTomeHunter.toc. / En haut du panneau d'options, ou `## Version` dans EbonTomeHunter.toc.
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: locale
+    attributes:
+      label: Game client language / Langue du client
+      options:
+        - English (enUS)
+        - Français (frFR)
+        - Other / Autre
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Que s'est-il passé ?
+      description: What you did, what you expected, what happened instead. / Ce que tu as fait, ce que tu attendais, ce qui s'est passé.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Étapes pour reproduire
+      placeholder: |
+        1. /eth
+        2. ...
+        3. ...
+  - type: textarea
+    id: lua-error
+    attributes:
+      label: Lua error / Erreur Lua
+      description: Turn Lua errors on with `/console scriptErrors 1`, reproduce, and paste the whole error. / Active les erreurs avec `/console scriptErrors 1`, reproduis, et colle l'erreur complète.
+      render: text
+  - type: textarea
+    id: addons
+    attributes:
+      label: Other addons / Autres addons
+      description: Especially ProjectEbonhold, EbonholdHub, Auctionator, Auction House, map or chat addons. / Surtout ProjectEbonhold, EbonholdHub, Auctionator, et les addons d'hôtel des ventes, de carte ou de chat.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, anything else / Captures, autre chose

@@ -1,0 +1,28 @@
+name: Feature request / Suggestion
+description: Suggest an idea or an improvement for EbonTomeHunter. / Proposer une idée ou une amélioration.
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Problème
+      description: What problem would this solve? / Quel problème cela résoudrait-il ?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution / Solution proposée
+      description: How do you picture it in game? / Comment l'imagines-tu en jeu ?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered / Alternatives envisagées
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else / Autre chose
+      description: Examples, screenshots, other addons doing something similar. / Exemples, captures, autres addons qui font quelque chose de proche.

@@ -1,0 +1,6 @@
+# Line endings: LF in the repository, native on checkout.
+* text=auto
+
+# Left out of the branch archive (git archive). Ebonhold Addon Manager installs the
+# EbonTomeHunter/ folder of that archive: the test scenario must not reach players.
+EbonTomeHunter/tests export-ignore
