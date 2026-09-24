@@ -41,6 +41,7 @@ EbonTomeHunter/           L'ADDON = ce qui est copié dans Interface/AddOns/Ebon
   TomeData.lua MapData.lua  GÉNÉRÉS depuis le client (tools/extract_ebonhold_data.py) : ne pas éditer
   tests/scenario.lua      scénario de test hors jeu (jamais installé ni publié dans le zip)
 tools/                    validation, tests, installation, publication, extraction de données
+  dev/EbonTomeHunterDev/  addon de dev (relevés en jeu, /ethdev), jamais publié : tools/install_dev.py
 reference/data/           données extraites du client (régénérables) + itemcache_seen.json (à garder)
 docs/                     documentation détaillée (index ci-dessous)
 ```

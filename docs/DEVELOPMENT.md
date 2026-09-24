@@ -22,6 +22,21 @@
 | `python tools/migrate_savedvariables.py [--dry-run]` | migration unique des sauvegardes de l'ancien nom (EbonTomePrices), jeu fermé |
 | `tools/build_whitelist.py` | a produit `api_globals_335.txt` à partir du FrameXML 3.3.5a (rarement utile) |
 
+## Relever des données en jeu (addon de dev)
+
+`tools/dev/EbonTomeHunterDev/` : petit addon **pour l'utilisateur seul**, jamais publié (hors du
+dossier de l'addon, donc ni dans le zip ni dans l'archive installée par Ebonhold Addon Manager).
+- Installation : `python tools/install_dev.py --wow <dossier du jeu>`, puis **redémarrage complet**.
+- `/ethdev dump` : photo en lecture seule (Echos de ProjectEbonhold + infobulles des Echos et des
+  tomes, Echos appris, checkpoints, services de ProjectEbonhold et leurs fonctions).
+- `/ethdev log on|off` : journal (cadavres ouverts avec id du monstre et position, tomes obtenus,
+  codes des messages serveur `AAM0x9`). `/ethdev clear` vide tout.
+- Le jeu n'écrit le fichier qu'au `/reload` ou à la déconnexion. À lire ensuite :
+  `WTF/Account/<compte>/SavedVariables/EbonTomeHunterDev.lua` (données personnelles : ne jamais
+  les copier dans le dépôt).
+- La sauvegarde de l'addon lui-même (`SavedVariables/EbonTomeHunter.lua`) se lit de la même façon
+  (lieux du réseau, compteurs de cadavres, ids de monstres), par exemple avec `lupa`.
+
 Sur GitHub, le workflow `Check` (`.github/workflows/check.yml`) lance `tools/check.py` sous Linux à
 chaque push et pull request, et le workflow `Release` construit la release à chaque tag `vX.Y.Z`
 (voir `docs/RELEASING.md`).

@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: EbonTomeHunter Dev
+## Notes: Development helper of EbonTomeHunter: records game data into SavedVariables for analysis. Not for players.
+## Author: AxFeed-Wow
+## Version: 1.0.0
+## SavedVariables: EbonTomeHunterDevDB
+## OptionalDeps: ProjectEbonhold, EbonTomeHunter
+EbonTomeHunterDev.lua
