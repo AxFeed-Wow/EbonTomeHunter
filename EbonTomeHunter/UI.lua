@@ -135,6 +135,8 @@ local function RowTooltip(row)
     if tome.desc and tome.desc ~= "" then
         GameTooltip:AddLine(tome.desc, 1, 0.82, 0, true)
     end
+    local hint = ns.Catalog.DropHint(tome)
+    if hint then GameTooltip:AddLine(L.HintLabel .. " : " .. hint, 0.55, 0.8, 1, true) end
     local locations = ns.WorldMap.Locations(tome)
     for i, loc in ipairs(locations) do
         if i > 4 then
@@ -148,7 +150,7 @@ local function RowTooltip(row)
         if mobs then
             GameTooltip:AddLine("   " .. L.MobsLabel .. " : " .. mobs, 0.7, 0.7, 0.7, true)
         end
-        if loc.source == "net" and loc.notes then
+        if (loc.source == "net" or loc.source == "raid") and loc.notes then
             GameTooltip:AddLine("   " .. loc.notes, 0.45, 0.75, 1, true)   -- found by a player
         end
     end
@@ -283,7 +285,7 @@ local function UpdateRow(row, data)
     row.name:SetTextColor(r, g, b)
     -- a tome no source lists at all still says so (it used to show nothing)
     local place = tome.location and (tome.location.placeName or L.LocationUnknown)
-        or ("|cff888888" .. L.LocationUnknown .. "|r")
+        or ("|cff888888" .. (ns.Catalog.DropHint(tome) or L.LocationUnknown) .. "|r")
     local extra = tome.locations and (#tome.locations - 1) or 0
     if extra > 0 then place = place .. " |cff888888(+" .. extra .. ")|r" end
     row.place:SetText(place)

@@ -9,10 +9,13 @@
     sans tome (ignorés), avec leurs noms ; les listes complètes s'affichent dans le chat.
   - Une case « Ajouter aussi les tomes déjà appris » permet de les mettre quand même en wishlist.
 - Une chaîne de wishlist fabriquée à la main (code de contrôle faux) reste refusée.
+- **Indices du serveur** : la phrase « Can be found on … » du journal des Echos de ProjectEbonhold
+  s'affiche dans la bulle d'aide et la fenêtre Sources.
 - **Tomes de raid** : les 20 tomes qu'EbonholdHub ne place nulle part sont rattachés aux boss de la
-  Citadelle de la Couronne de glace et du Sanctum rubis (source supposée : chaque Echo reprend une
-  capacité du boss), avec lien Wowhead et téléportation vers l'entrée du raid.
-- Un tome sans aucun lieu affiche « inconnu » dans la liste au lieu de rien.
+  Citadelle de la Couronne de glace et du Sanctum rubis que nomme ce journal, avec lien Wowhead et
+  téléportation vers l'entrée du raid.
+- Un tome sans aucun lieu affiche l'indice du serveur, sinon « inconnu », au lieu de rien.
+- Correction : une ligne de tome dont l'id d'objet est encore inconnu ne provoque plus d'erreur.
 
 ## 2.1.0 — 2026-09-24
 

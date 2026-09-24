@@ -39,6 +39,15 @@ Cette source appartient au serveur : lecture locale uniquement, **jamais commit�
 - `requiredSpell` = sort (et item) du tome qui débloque l'Echo.
 - Utilisé seulement si `TomeData.lua` manque.
 
+### PerkDropSources (indices de source) — `Catalog.DropHint`
+`ProjectEbonhold.PerkDropSources[echoSpellId] = "Can be found on Mage-type enemies"` : l'indice que
+montre le journal des Echos de ProjectEbonhold (`modules/perks/perks_data.lua`, lu par
+`echo_journal.lua`). **148 entrées, une par tome** (l'Echo = id du tome − 100 000), en anglais :
+types d'ennemis (« Mage-type », « enemies that cast Fear »), ou boss (« Lord Marrowgar », « the
+Blood Prince Council », « in the Gunship Battle »). `PerkDropSourceByGroup[groupId]` est la même
+chose par groupe d'Echos. L'addon le lit en jeu (bulle d'aide, fenêtre Sources, tome sans lieu) :
+jamais copié. Il confirme les 20 boss de raid de `Catalog.RAID_BOSSES`.
+
 ### CheckpointService (téléportation) — `Travel.lua`
 - `GetCheckpoints()` → liste de `{ id, name, kind, mapId, serverMapId, x, y, faction, factionAllowed,
   unlocked }` :

@@ -147,6 +147,7 @@ local function Build()
     hint:SetPoint("TOPLEFT", urlBox, "BOTTOMLEFT", 0, -8)
     hint:SetWidth(WIDTH - 24)
     hint:SetJustifyH("LEFT")
+    S.hintText = hint
 end
 
 local function Collect(itemId)
@@ -171,6 +172,8 @@ function S.Show(itemId)
     S.itemId, S.sources = itemId, sources
     frame.titleText:SetText(L.SourcesTitle .. " - " .. (row and row.name or "?"))
     local hintText = type(EbonholdOpenURL) == "function" and L.SourcesHintOpen or L.SourcesHintCopy
+    local dropHint = ns.Catalog.DropHint(row)
+    if dropHint then hintText = "|cff8cccff" .. L.HintLabel .. " : " .. dropHint .. "|r\n" .. hintText end
     if not ns.Travel.Available() then hintText = hintText .. "\n" .. L.TravelNoPE end
     hint:SetText(hintText)
     urlBox.url = nil

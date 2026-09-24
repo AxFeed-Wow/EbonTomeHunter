@@ -302,11 +302,9 @@ local function LocationsByEchoName()
     return out
 end
 
--- Tomes of raid bosses, for which EbonholdHub lists no place. Our own finding: their item
--- ids follow the encounters of Icecrown Citadel then of the Ruby Sanctum, and every echo
--- copies an ability of its boss (Mana Barrier of Lady Deathwhisper, Warborn Reflection of
--- Baltharus, Harvest Soul of the Lich King...). A supposed source, at the raid entrance,
--- until a drop place of the network shows the real one.
+-- Tomes of raid bosses, for which EbonholdHub lists no place. The boss is the one named by
+-- ProjectEbonhold's Echo journal (PerkDropSources: "Can be found on Lord Marrowgar"); the
+-- place shown is the raid entrance, with the boss's NPC id (Wowhead, stale sources).
 local ICC = { mapFile = "IcecrownGlacier", x = 0.537, y = 0.872, place = L.RaidICC }
 local RS = { mapFile = "Dragonblight", x = 0.599, y = 0.545, place = L.RaidRS }
 local RAID_BOSSES = {
@@ -317,9 +315,10 @@ local RAID_BOSSES = {
     [301356] = { ICC, { "Festergut", 36626 } },
     [301360] = { ICC, { "Rotface", 36627 } },
     [301366] = { ICC, { "Professor Putricide", 36678 } },
-    [301370] = { ICC, { "Prince Valanar", 37970 } },
-    [301378] = { ICC, { "Prince Keleseth", 37972 } },
-    [301382] = { ICC, { "Prince Taldaram", 37973 } },
+    -- "the Blood Prince Council": the loot lies on the last of the three princes killed
+    [301370] = { ICC, { "Prince Valanar", 37970 }, { "Prince Keleseth", 37972 }, { "Prince Taldaram", 37973 } },
+    [301378] = { ICC, { "Prince Valanar", 37970 }, { "Prince Keleseth", 37972 }, { "Prince Taldaram", 37973 } },
+    [301382] = { ICC, { "Prince Valanar", 37970 }, { "Prince Keleseth", 37972 }, { "Prince Taldaram", 37973 } },
     [301388] = { ICC, { "Blood-Queen Lana'thel", 37955 } },
     [301394] = { ICC, { "Valithria Dreamwalker", 36789 } },
     [301398] = { ICC, { "Sindragosa", 36853 } },
@@ -332,6 +331,21 @@ local RAID_BOSSES = {
     [301428] = { RS, { "Halion", 39863 } },
 }
 Cat.RAID_BOSSES = RAID_BOSSES
+
+-- The server's own hint for a tome, read in game in ProjectEbonhold's Echo journal data
+-- ("Can be found on Mage-type enemies"); nil without ProjectEbonhold.
+function Cat.DropHint(row)
+    local hints = type(row) == "table" and ns.PE.Service("PerkDropSources")
+    if not hints then return nil end
+    local echoes = type(row.echoes) == "table" and row.echoes or {}
+    for i = 0, #echoes do
+        -- tome id - 100000 = its echo (a tome whose id is still unknown is keyed by its name)
+        local echoId = i == 0 and tonumber(row.itemId) and (tonumber(row.itemId) - 100000) or echoes[i]
+        local text = echoId and hints[echoId]
+        if type(text) == "string" and text ~= "" then return text end
+    end
+    return nil
+end
 
 function Cat.RaidLocations(itemId)
     local entry = RAID_BOSSES[tonumber(itemId)]

@@ -20,13 +20,15 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 - **Lieux de drop :** ils sont lus en jeu dans **EbonholdHub** (ou EbonCompletionist) et convertis en
   coordonnées de la vraie carte. S'y ajoutent les lieux trouvés par les joueurs (§11). Sans aucun de
   ces deux addons, seuls les lieux du réseau existent.
-- **Tomes de raid** (20 tomes qu'EbonholdHub ne place nulle part) : l'addon les rattache lui-même
-  aux boss de la **Citadelle de la Couronne de glace** et du **Sanctum rubis**. Leurs ids suivent
-  l'ordre des rencontres, et chaque Echo reprend une capacité du boss (Mana Barrier de Lady
-  Deathwhisper, Warborn Reflection de Baltharus, Harvest Soul du roi-liche…). Ils sont notés « source
-  supposée », à l'entrée du raid, avec l'id du boss (lien Wowhead exact, TP vers le checkpoint le
-  plus proche), jusqu'à ce qu'un drop du réseau montre le vrai lieu.
-- **Aucun lieu du tout :** la liste affiche « inconnu » (elle n'affichait rien).
+- **Indice du serveur :** le journal des Echos de ProjectEbonhold donne pour chaque tome une phrase
+  « Can be found on … » (type d'ennemis ou boss). L'addon la lit en jeu et l'affiche dans la bulle
+  d'aide de la liste et en haut de la fenêtre Sources.
+- **Tomes de raid** (20 tomes qu'EbonholdHub ne place nulle part) : rattachés aux boss de la
+  **Citadelle de la Couronne de glace** et du **Sanctum rubis** que nomme ce journal (le conseil des
+  princes de sang : les trois princes). Le lieu affiché est l'entrée du raid, avec l'id du boss (lien
+  Wowhead exact, TP vers le checkpoint le plus proche, sources périmées).
+- **Aucun lieu du tout :** la liste affiche l'indice du serveur en gris, sinon « inconnu » (elle
+  n'affichait rien).
 
 ## 3. La fenêtre principale
 

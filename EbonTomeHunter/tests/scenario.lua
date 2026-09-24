@@ -932,6 +932,38 @@ for id in pairs(ns.Catalog.RAID_BOSSES) do
 end
 Check(raidCount == 20, "the 20 raid tomes are all in the catalogue, got " .. raidCount)
 Check(ns.Catalog.Get(300569).location.source ~= "raid", "a tome with EbonholdHub places keeps them")
+Check(#ns.Travel.Sources(301370) == 3, "Shock Vortex: the three princes of the Blood Prince Council")
+
+-- the server's hints (ProjectEbonhold.PerkDropSources, read in game)
+if type(ProjectEbonhold) == "table" then
+    local keptHints = ProjectEbonhold.PerkDropSources
+    local lonely
+    for _, row in ipairs(ns.Catalog.rows) do
+        if not row.location and tonumber(row.itemId) then lonely = row break end
+    end
+    ProjectEbonhold.PerkDropSources = { [200569] = "Can be found on Beast-type enemies" }
+    if lonely then ProjectEbonhold.PerkDropSources[lonely.itemId - 100000] = "Can be found on Test-type enemies" end
+    Check(ns.Catalog.DropHint(ns.Catalog.Get(300569)) == "Can be found on Beast-type enemies",
+        "the Echo journal hint of a tome is read (echo = tome id - 100000)")
+    Check(WH.Show(300569) > 0 and (ns.Sources.hintText:GetText() or ""):find("Beast-type", 1, true) ~= nil,
+        "the Sources window shows the hint")
+    EbonTomeHunterSourcesFrame:Hide()
+    if lonely then
+        if not EbonTomeHunterFrame:IsShown() then UI.Toggle() end
+        UI.searchBox:SetText(lonely.name)
+        local placeText
+        for i = 1, UI.VISIBLE_ROWS do
+            local r = _G["EbonTomeHunterListRow" .. i]
+            if r and r:IsShown() and r.item and r.item.itemId == lonely.itemId then placeText = r.place:GetText() end
+        end
+        Check(placeText and placeText:find("Test-type", 1, true), "a tome without place shows its hint instead of 'unknown'")
+        UI.searchBox:SetText("")
+        EbonTomeHunterFrame:Hide()
+    end
+    ProjectEbonhold.PerkDropSources = keptHints
+else
+    Check(ns.Catalog.DropHint(ns.Catalog.Get(300569)) == nil, "without ProjectEbonhold: no hint, no error")
+end
 
 -- a tome that no source lists at all says "unknown" in the list (it showed nothing)
 local noPlace
