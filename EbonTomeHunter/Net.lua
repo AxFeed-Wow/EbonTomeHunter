@@ -23,7 +23,11 @@ local L = ns.L
 -- A find made while no other user is online waits in an outbox and is sent again
 -- (qid "0") when one shows up.
 --   H  data check (2.2.0):  r^qid  asks the users online for the fingerprint of their data;
---                           a^qid^version^places^tomes^fingerprint  is each one's answer.
+--                           a^qid^version^places^tomes^fingerprint^newest^ownFinds  answers;
+--                           d^qid^name  asks one user for its places (/eth net compare), who
+--                           answers k^qid^part^parts^ownFinds^newest^key,key,...
+--   I  version (2.2.0):     the addon version, sent at login; users with a newer version
+--                           answer with theirs, and an older addon tells its player to update.
 ns.Net = {}
 local Net = ns.Net
 
@@ -51,6 +55,8 @@ local REASK_MAX = 10         -- per session of play
 local SYNC_BATCHES_FULL = 20 -- /eth net sync: everything again
 local CHECK_WAIT = 6         -- seconds to collect the answers of /eth net check
 local CHECK_GAP = 30
+local COMPARE_WAIT = 12      -- seconds to collect the parts of /eth net compare
+local COMPARE_KEYS = 20      -- keys per message
 local OLD_PLACE = 90 * 86400  -- a place nobody found again for 90 days comes after the others
 
 local channelIndex
@@ -67,6 +73,10 @@ local reasks, lastReask = 0, -math.huge
 local checking               -- our /eth net check: { qid, answers = { [name] = answer }, order }
 local lastCheck = -math.huge
 local answeredChecks = {}    -- [qid] = true: a check request is answered once
+local comparing              -- our /eth net compare: { qid, target, parts, count, own, newest }
+local lastCompare, lastCompareAnswer = -math.huge, -math.huge
+local newerSeen              -- highest version heard from another user, when newer than ours
+local versionReplyPending    -- a version answer we are about to send (cancelled if someone does)
 
 local function Opt() return ns.Opt() end
 
@@ -668,18 +678,32 @@ function Net.Digest()
     return format("%06x", h), #keys
 end
 
+-- Our own finds (places where we are a finder) and the newest time a place was found.
+local function OwnStats()
+    local me, own, newest = UnitName("player"), 0, 0
+    for _, list in pairs(Store()) do
+        for _, r in ipairs(list) do
+            if r.by == me or (type(r.finders) == "table" and r.finders[me]) then own = own + 1 end
+            newest = math.max(newest, tonumber(r.at) or 0)
+        end
+    end
+    return own, newest
+end
+
 local function ReportCheck(current)
     local digest = Net.Digest()
     local places = Net.Count()
-    ns.Print(L.NetCheckMine, places, digest)
+    local own, newest = OwnStats()
+    ns.Print(L.NetCheckMine, places, digest, ns.Ago(newest) or "-", own)
     local differ = false
     for _, name in ipairs(current.order) do
         local a = current.answers[name]
+        local latest = ns.Ago(a.newest) or "-"
         if a.digest == digest then
-            ns.Print(L.NetCheckSame, name, a.version, a.places)
+            ns.Print(L.NetCheckSame, name, a.version, a.places, latest, a.own or 0)
         else
             differ = true
-            ns.Print(L.NetCheckDiff, name, a.version, a.places, places)
+            ns.Print(L.NetCheckDiff, name, a.version, a.places, latest, a.own or 0, places, name)
         end
     end
     local silent = {}
@@ -719,6 +743,190 @@ function Net.Check()
     return true
 end
 
+------------------------------------------------------------------------
+-- Compare with one user (/eth net compare <name>)
+------------------------------------------------------------------------
+-- Short key of a place: tome (id - 300000) and a hash of its map and mob, e.g. "1402.a3f".
+local function ShortKey(itemId, r)
+    local base = tonumber(itemId) and tonumber(itemId) - 300000
+    if not base or base < 0 or base > 99999 then return nil end
+    local tail = tostring(r.mapFile or r.zone or "") .. ":" .. tostring(r.npcId or strlower(tostring(r.mob or "")))
+    local h = 0
+    for i = 1, #tail do h = (h * 31 + tail:byte(i)) % 65521 end
+    return format("%d.%x", base, h)
+end
+
+local function MyKeys()
+    local keys = {}
+    for itemId, list in pairs(Store()) do
+        for _, r in ipairs(list) do
+            local key = ShortKey(itemId, r)
+            if key then keys[key] = tonumber(itemId) end
+        end
+    end
+    return keys
+end
+
+-- A user asked for our places: answered at most every 30 s.
+function Net.AnswerCompare(author, qid, rest)
+    local target = rest:match("^%^(.+)$")
+    if not target or strlower(target) ~= strlower(UnitName("player") or "") then return end
+    if GetTime() - lastCompareAnswer < CHECK_GAP then return end
+    lastCompareAnswer = GetTime()
+    local list = {}
+    for key in pairs(MyKeys()) do list[#list + 1] = key end
+    table.sort(list)
+    local own, newest = OwnStats()
+    local parts = math.max(1, math.ceil(#list / COMPARE_KEYS))
+    for part = 1, parts do
+        local chunk = {}
+        for i = (part - 1) * COMPARE_KEYS + 1, math.min(#list, part * COMPARE_KEYS) do chunk[#chunk + 1] = list[i] end
+        Queue("H", table.concat({ "k", qid, part, parts, own, newest, table.concat(chunk, ",") }, "^"))
+    end
+end
+
+local function TomeNames(itemIds)
+    local names, seen = {}, {}
+    for _, itemId in ipairs(itemIds) do
+        local row = ns.Catalog.Get(itemId)
+        local name = row and row.name or ("#" .. itemId)
+        if not seen[name] then
+            seen[name] = true
+            names[#names + 1] = name
+        end
+    end
+    table.sort(names)
+    if #names > 8 then
+        local more = #names - 8
+        for i = #names, 9, -1 do names[i] = nil end
+        names[#names + 1] = format(L.NetCompareMore, more)
+    end
+    return table.concat(names, ", ")
+end
+
+local function ReportCompare(current)
+    comparing = nil
+    if current.count == 0 then
+        ns.Print(L.NetCompareNoAnswer, current.target)
+        return
+    end
+    local theirs, mine = {}, MyKeys()
+    for _, part in pairs(current.parts) do
+        for key in part:gmatch("[^,]+") do theirs[key] = tonumber(key:match("^(%d+)")) + 300000 end
+    end
+    local onlyThem, onlyMe, nTheirs, nMine = {}, {}, 0, 0
+    for key, itemId in pairs(theirs) do
+        nTheirs = nTheirs + 1
+        if not mine[key] then onlyThem[#onlyThem + 1] = itemId end
+    end
+    for key, itemId in pairs(mine) do
+        nMine = nMine + 1
+        if not theirs[key] then onlyMe[#onlyMe + 1] = itemId end
+    end
+    ns.Print(L.NetCompareHead, current.target, nTheirs, current.own or 0, ns.Ago(current.newest) or "-", nMine)
+    if current.count < current.total then ns.Print(L.NetCompareIncomplete, current.count, current.total) end
+    if #onlyThem == 0 and #onlyMe == 0 then
+        ns.Print(L.NetCompareSame)
+        return
+    end
+    if #onlyThem > 0 then ns.Print(L.NetCompareTheyHave, #onlyThem, TomeNames(onlyThem)) end
+    if #onlyMe > 0 then ns.Print(L.NetCompareYouHave, #onlyMe, TomeNames(onlyMe)) end
+    ns.Print(L.NetCheckHint)
+end
+
+-- A part of the places of the user we compare with.
+function Net.OnComparePart(author, qid, rest)
+    local current = comparing
+    if not (current and current.qid == qid and strlower(author) == strlower(current.target)) then return end
+    local part, total, own, newest, keys = rest:match("^%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(.*)$")
+    part, total = tonumber(part), tonumber(total)
+    if not part or current.parts[part] then return end
+    current.parts[part] = keys
+    current.count, current.total = current.count + 1, total
+    current.own, current.newest = tonumber(own), tonumber(newest)
+    current.target = author   -- the name as the game writes it
+    if current.count >= total then ReportCompare(current) end
+end
+
+-- /eth net compare <name>: that user sends the short keys of its places.
+function Net.Compare(name)
+    name = strtrim(tostring(name or ""))
+    if name == "" then
+        ns.Print(L.NetCompareUsage)
+        return false
+    end
+    if not (Opt().netEnabled and FindChannel()) then
+        ns.Print(Net.StatusText())
+        return false
+    end
+    if GetTime() - lastCompare < CHECK_GAP then
+        ns.Print(L.NetCheckWait)
+        return false
+    end
+    lastCompare = GetTime()
+    local current = { qid = format("%05x", math.random(0, 0xFFFFF)), target = name, parts = {}, count = 0, total = 0 }
+    if not Queue("H", "d^" .. current.qid .. "^" .. name) then return false end
+    comparing = current
+    ns.Print(L.NetCompareStart, name)
+    ns.Timer.After(COMPARE_WAIT, function()
+        if comparing == current then ReportCompare(current) end
+    end)
+    return true
+end
+
+------------------------------------------------------------------------
+-- Addon version (I): tell the player when a newer EbonTomeHunter exists
+------------------------------------------------------------------------
+local function ParseVersion(text)
+    local a, b, c = tostring(text or ""):match("^(%d+)%.(%d+)%.(%d+)$")
+    if not a then return nil end
+    return { tonumber(a), tonumber(b), tonumber(c) }
+end
+
+-- 1 when a is newer than b, -1 when older, 0 when the same (nil: not a version).
+function Net.CompareVersions(a, b)
+    local va, vb = ParseVersion(a), ParseVersion(b)
+    if not (va and vb) then return nil end
+    for i = 1, 3 do
+        if va[i] ~= vb[i] then return va[i] > vb[i] and 1 or -1 end
+    end
+    return 0
+end
+
+-- A version heard from another user: newer than ours -> told once per version.
+function Net.SeeVersion(version)
+    local mine = ParseVersion(ns.version)
+    local v = ParseVersion(version)
+    -- a forged "99.0.0" should not nag everybody: one major version ahead at most
+    if not (v and mine) or v[1] > mine[1] + 1 then return end
+    if Net.CompareVersions(version, ns.version) ~= 1 then return end
+    if newerSeen and Net.CompareVersions(version, newerSeen) ~= 1 then return end
+    newerSeen = version
+    ns.Print(L.NewVersion, version, ns.version)
+end
+
+function Net.NewerVersion()
+    return newerSeen
+end
+
+local function OnVersion(author, version)
+    if not ParseVersion(version) then return end
+    Net.SeeVersion(version)
+    local older = Net.CompareVersions(version, ns.version) == -1
+    if versionReplyPending and Net.CompareVersions(version, ns.version) >= 0 then
+        versionReplyPending.cancelled = true   -- someone already told it
+    end
+    if older and not versionReplyPending then
+        -- this user runs an older addon: one of the users online tells it
+        local pending = {}
+        versionReplyPending = pending
+        ns.Timer.After(1 + math.random() * 4, function()
+            versionReplyPending = nil
+            if not pending.cancelled then Queue("I", ns.version) end
+        end)
+    end
+end
+
 local function OnCheck(author, payload)
     local kind, qid, rest = payload:match("^(%a)%^(%x+)(.*)$")
     if kind == "r" then
@@ -727,14 +935,22 @@ local function OnCheck(author, payload)
         ns.Timer.After(0.5 + math.random() * 2.5, function()
             local digest = Net.Digest()
             local places, tomes = Net.Count()
-            Queue("H", table.concat({ "a", qid, ns.version, places, tomes, digest }, "^"))
+            local own, newest = OwnStats()
+            Queue("H", table.concat({ "a", qid, ns.version, places, tomes, digest, newest, own }, "^"))
         end)
     elseif kind == "a" and checking and checking.qid == qid and not checking.answers[author] then
-        local version, places, tomes, digest = rest:match("^%^([%w%.%-]+)%^(%d+)%^(%d+)%^(%x+)$")
+        local version, places, tomes, digest, extra = rest:match("^%^([%w%.%-]+)%^(%d+)%^(%d+)%^(%x+)(.*)$")
         if version then
-            checking.answers[author] = { version = version, places = tonumber(places), tomes = tonumber(tomes), digest = digest }
+            local newest, own = extra:match("^%^(%d+)%^(%d+)$")
+            checking.answers[author] = { version = version, places = tonumber(places), tomes = tonumber(tomes),
+                digest = digest, newest = tonumber(newest), own = tonumber(own) }
             checking.order[#checking.order + 1] = author
+            Net.SeeVersion(version)
         end
+    elseif kind == "d" then
+        Net.AnswerCompare(author, qid, rest)
+    elseif kind == "k" then
+        Net.OnComparePart(author, qid, rest)
     end
 end
 
@@ -800,6 +1016,8 @@ ns.RegisterEvent("CHAT_MSG_CHANNEL", function(text, author, _, channelString, _,
         if mySync and mySync.qid == qid then OnOwnAnswer(author, more == "1", newest, fresh) end
     elseif msgType == "H" then
         if author ~= me then OnCheck(author, payload) end
+    elseif msgType == "I" then
+        if author ~= me then OnVersion(author, payload) end
     elseif author ~= me then
         ns.Fire("NET_MESSAGE", msgType, payload, author)   -- Evidence.lua: K, V
     end
@@ -825,6 +1043,7 @@ ns.On("LOGIN", function()
         if not Opt().netEnabled then return end
         Net.Join()
         ns.Timer.After(5, Net.RequestSync)
+        ns.Timer.After(6, function() Queue("I", ns.version) end)
     end)
 end)
 

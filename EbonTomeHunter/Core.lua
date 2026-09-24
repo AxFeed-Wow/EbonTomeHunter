@@ -328,6 +328,8 @@ SlashCmdList["EBONTOMEHUNTER"] = function(input)
             ns.Net.Check()
         elseif sub == "sync" then
             ns.Net.ForceSync()
+        elseif sub:match("^compare") then
+            ns.Net.Compare((argument or ""):match("^%S+%s*(.*)$"))
         else
             ns.Print(ns.Net.StatusText())
         end

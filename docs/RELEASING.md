@@ -61,6 +61,13 @@ Sans GitHub (essai local) : `python tools/package.py` → `dist/EbonTomeHunter-x
 `python tools/install.py` chez l'utilisateur. Nouveau fichier dans le `.toc` → **redémarrage complet**
 du jeu, sinon un `/reload` suffit.
 
+## Prévenir les joueurs d'une nouvelle version
+
+Depuis la 2.2.0, chaque addon annonce sa version sur le réseau caché (message `I`) : un joueur resté
+sur une version plus ancienne voit « Une nouvelle version d'EbonTomeHunter est disponible » dès qu'il
+croise un utilisateur à jour. Rien à faire à la publication : il suffit que des joueurs aient la
+nouvelle version. Les 2.0.0 et 2.1.0 ne connaissent pas ce message.
+
 ## Intégration continue
 
 - `.github/workflows/check.yml` : `python tools/check.py` sur Ubuntu, à chaque push et pull request.

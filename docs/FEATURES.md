@@ -220,11 +220,21 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 - **Compatibilité :** les versions 2.0.0 et 2.1.0 se comprennent. Une version 2.0.0 reçoit les
   réponses comme avant (par date de trouvaille, une seule réponse).
 - **`/eth net check`** : demande aux utilisateurs connectés (2.2.0 et plus) l'empreinte de leurs
-  données, puis affiche pour chacun sa version, son nombre de lieux et s'il est **synchronisé** avec
+  données, puis affiche pour chacun sa version, son nombre de lieux, sa **dernière info** (date du
+  lieu le plus récent), le nombre de **ses propres trouvailles**, et s'il est **synchronisé** avec
   toi ou **différent**. Les utilisateurs entendus récemment qui ne répondent pas sont listés (version
   plus ancienne). Au plus une vérification toutes les 30 s.
 - **`/eth net sync`** : synchro complète pour toi seul : tu redemandes tout depuis le début, sans
   l'attente de 10 min et avec jusqu'à 20 lots de 30 lieux.
+- **`/eth net compare <nom>`** : ce joueur (connecté, 2.2.0 et plus) t'envoie la liste compacte de
+  ses lieux. Le chat montre ses lieux, ses trouvailles, sa dernière info, puis les tomes des lieux
+  **qu'il a et pas toi**, et ceux **que tu as et pas lui** (8 noms au plus, puis « N de plus »). Il
+  répond au plus toutes les 30 s.
+- **Nouvelle version de l'addon :** chaque addon annonce sa version sur le réseau à la connexion. Si
+  un utilisateur a une version plus récente, le chat le dit une fois (« Une nouvelle version
+  d'EbonTomeHunter est disponible : 2.3.0 (vous avez 2.2.0)… »), avec Ebonhold Addon Manager et
+  GitHub. Un utilisateur plus récent répond à l'annonce d'une version plus ancienne (un seul le
+  fait). Une version plus d'une version majeure en avance est ignorée (fausse annonce).
 - `/eth net` affiche l'état réel : connecté, ou canal caché non rejoint. Le réseau se coupe dans
   les options (sous-panneau « Réseau et alertes »).
 - **Limites :**

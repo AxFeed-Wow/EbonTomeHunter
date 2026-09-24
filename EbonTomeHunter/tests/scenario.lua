@@ -696,7 +696,14 @@ ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, 0
 before = #sentChat
 Check(ns.Net.RequestSync(), "sync requested")
 Advance(1)
-local qid, since = tostring(sentChat[#sentChat].msg):match("^ETHN1~Q~(%x+)%^(%d+)$")
+-- the last sync request sent (other messages, like the version announcement, may follow it)
+local function LastQ()
+    for i = #sentChat, 1, -1 do
+        local q, s = sentChat[i].msg:match("^ETHN1~Q~(%x+)%^(%d+)$")
+        if q then return q, s end
+    end
+end
+local qid, since = LastQ()
 Check(qid and #qid == 5 and tonumber(since) == 0, "never synced: asks for everything (2.1.0 request)")
 local function Rec(i, at)
     return ns.Net.Encode({ itemId = tomeIds[i], mapFile = "Barrens", x = 0.3, y = 0.3,
@@ -705,7 +712,7 @@ end
 ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(40, base + 100), "Vet")
 ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(41, base + 101), "Vet")
 Advance(6)
-local qid2, since2 = tostring(sentChat[#sentChat].msg):match("^ETHN1~Q~(%x+)%^(%d+)$")
+local qid2, since2 = LastQ()
 Check(qid2 and tonumber(since2) == base + 101 and ns.DB.syncFrom == base + 101,
     "more to come: asks again from the last record received, kept for the next login")
 ChannelMessage("ETHN1~S~" .. qid2 .. "~0~" .. Rec(42, base + 102), "Vet")
@@ -760,7 +767,7 @@ ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, now - 3600
 before = #sentChat
 Check(ns.Net.RequestSync(), "sync requested (last complete sync an hour ago)")
 Advance(1)
-local q3, s3 = tostring(sentChat[#sentChat].msg):match("^ETHN1~Q~(%x+)%^(%d+)$")
+local q3, s3 = LastQ()
 Check(q3 and tonumber(s3) == now - 3600 - 600, "asks what was learned since the last complete sync, minus a margin")
 local fromDee = ns.Net.Encode({ itemId = tomeIds[3], mapFile = "Mulgore", x = 0.5, y = 0.5, mob = "Plainstrider",
     zone = "Mulgore", at = now - 30, by = "Dee" })
@@ -800,6 +807,7 @@ Check(ns.Net.StatusText():find(ns.L.NetNoChannel, 1, true) ~= nil and not ns.Net
 GetChannelName = realChannelName
 Check(ns.Net.StatusText():find(ns.L.NetOn, 1, true) ~= nil and ns.Net.IsJoined(), "in the channel: connected")
 
+do
 -- /eth net check: who has the same data
 local myDigest = ns.Net.Digest()
 local myPlaces = ns.Net.Count()
@@ -809,7 +817,7 @@ ChannelMessage("ETHN1~H~r^e0000", "Omar")
 Advance(4)
 local checkAnswers = {}
 for i = before + 1, #sentChat do
-    local version, digest = sentChat[i].msg:match("^ETHN1~H~a%^e0000%^([^%^]+)%^%d+%^%d+%^(%x+)$")
+    local version, digest = sentChat[i].msg:match("^ETHN1~H~a%^e0000%^([^%^]+)%^%d+%^%d+%^(%x+)%^%d+%^%d+$")
     if version then checkAnswers[#checkAnswers + 1] = { version = version, digest = digest } end
 end
 Check(#checkAnswers == 1 and checkAnswers[1].version == ns.version and checkAnswers[1].digest == myDigest,
@@ -823,8 +831,8 @@ Check(checkQid ~= nil and ChatContains(ns.L.NetCheckStart), "/eth net check asks
 ChannelMessage("ETHN1~H~a^" .. checkQid .. "^2.2.0^" .. myPlaces .. "^3^" .. myDigest, "Pia")
 ChannelMessage("ETHN1~H~a^" .. checkQid .. "^2.2.0^9^7^abcdef", "Quin")
 Advance(7)
-Check(ChatContains(format(ns.L.NetCheckSame, "Pia", "2.2.0", myPlaces)), "same fingerprint: in sync")
-Check(ChatContains(format(ns.L.NetCheckDiff, "Quin", "2.2.0", 9, myPlaces)) and ChatContains(ns.L.NetCheckHint),
+Check(ChatContains(format(ns.L.NetCheckSame, "Pia", "2.2.0", myPlaces, "-", 0)), "same fingerprint: in sync")
+Check(ChatContains(format(ns.L.NetCheckDiff, "Quin", "2.2.0", 9, "-", 0, myPlaces, "Quin")) and ChatContains(ns.L.NetCheckHint),
     "different fingerprint: told, with the command to fix it")
 Check(ChatContains(ns.L.NetCheckSilent:match("^(.-)%%s")) and ChatContains("Gus"),
     "users heard recently who did not answer are listed (older version)")
@@ -841,7 +849,68 @@ for i = before + 1, #sentChat do
     if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^0$") then fullAsked = true end
 end
 Check(fullAsked and ChatContains(ns.L.NetSyncFull), "/eth net sync asks for everything, even within the 10 min")
+end
 Advance(15)
+
+do
+-- /eth net compare: another user asks for our places (the test character is "Tester")
+before = #sentChat
+ChannelMessage("ETHN1~H~d^f0000^Tester", "Rex")
+ChannelMessage("ETHN1~H~d^f0001^Somebody", "Rex")
+Advance(3)
+local ourKeys, notForUs = {}, false
+for i = before + 1, #sentChat do
+    local keys = sentChat[i].msg:match("^ETHN1~H~k%^f0000%^%d+%^%d+%^%d+%^%d+%^(.*)$")
+    if keys then for key in keys:gmatch("[^,]+") do ourKeys[#ourKeys + 1] = key end end
+    if sentChat[i].msg:find("^ETHN1~H~k%^f0001") then notForUs = true end
+end
+Check(#ourKeys == ns.Net.Count() and not notForUs, "asked for our places: all their short keys sent, only when we are named")
+-- we compare with Sam: one place in common, one we lack
+local lacking
+for i = #tomeIds, 1, -1 do
+    if not ns.DB.sightings[tomeIds[i]] then lacking = tomeIds[i] break end
+end
+Slash("/eth net compare Sam")
+Advance(1)
+local cq
+for i = before + 1, #sentChat do cq = cq or sentChat[i].msg:match("^ETHN1~H~d%^(%x+)%^Sam$") end
+Check(cq ~= nil and ChatContains(format(ns.L.NetCompareStart, "Sam")), "/eth net compare asks that user")
+ChannelMessage("ETHN1~H~k^" .. cq .. "^1^1^4^" .. time() .. "^" .. ourKeys[1] .. "," .. (lacking - 300000) .. ".1", "Sam")
+Advance(1)
+Check(ChatContains(format(ns.L.NetCompareHead, "Sam", 2, 4, ns.L.JustNow, #ourKeys)), "the comparison: their places, finds, latest")
+Check(ChatContains(format(ns.L.NetCompareTheyHave, 1, ns.Catalog.Get(lacking).name)), "what they have that we don't")
+Check(ChatContains(ns.L.NetCompareYouHave:match("^(.-)%%d")), "what we have that they don't")
+Advance(31)
+Slash("/eth net compare Nobody")
+Advance(13)
+Check(ChatContains(format(ns.L.NetCompareNoAnswer, "Nobody")), "nobody answers: said so")
+
+-- addon versions: a newer one is announced, a forged one ignored, an older user told
+local major, minor = ns.version:match("^(%d+)%.(%d+)")
+local newer = major .. "." .. (tonumber(minor) + 1) .. ".0"
+ChannelMessage("ETHN1~I~99.0.0", "Troll")
+Check(ns.Net.NewerVersion() == nil and not ChatContains("99.0.0"), "a forged far-away version is ignored")
+ChannelMessage("ETHN1~I~" .. newer, "Uma")
+Check(ChatContains(format(ns.L.NewVersion, newer, ns.version)) and ns.Net.NewerVersion() == newer,
+    "a user with a newer addon: the player is told to update")
+before = #sentChat
+ChannelMessage("ETHN1~I~2.0.0", "Vic")
+Advance(6)
+local toldVic = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg == "ETHN1~I~" .. ns.version then toldVic = true end
+end
+Check(toldVic, "a user with an older addon: we tell it our version")
+before = #sentChat
+ChannelMessage("ETHN1~I~2.0.0", "Wes")
+ChannelMessage("ETHN1~I~" .. ns.version, "Xan")
+Advance(6)
+local toldWes = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg == "ETHN1~I~" .. ns.version then toldWes = true end
+end
+Check(not toldWes, "another user already told it: we stay silent")
+end
 ns.DB.sightings = keptSightings
 ns.Fire("SIGHTINGS_CHANGED")
 
