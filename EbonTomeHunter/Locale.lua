@@ -51,7 +51,7 @@ local L = {
     DaysAgo = "%d d ago",
 
     -- slash / minimap
-    Help = "/eth: window  -  /eth share: share / import a wishlist  -  /eth send <name>  -  /eth net: network  -  /eth tp <tome>: teleport near it  -  /eth tuto: tutorial  -  /eth options  -  /eth minimap  -  /eth scan (Auction House open)  -  /eth rebuild  -  /eth bags",
+    Help = "/eth: window  -  /eth share: share / import a wishlist  -  /eth send <name>  -  /eth net: network (check: who is in sync, sync: ask everything again)  -  /eth tp <tome>: teleport near it  -  /eth tuto: tutorial  -  /eth options  -  /eth minimap  -  /eth scan (Auction House open)  -  /eth rebuild  -  /eth bags",
     MinimapHidden = "Minimap button hidden (/eth minimap to show it again).",
     MinimapShown = "Minimap button shown.",
     MinimapLeft = "Left-click: open / close the window",
@@ -283,6 +283,15 @@ local L = {
     NetJoining = "joining the hidden channel",
     NetNoChannel = "not connected (hidden channel not joined: 10 chat channels at most, see /chatlist)",
     NetSynced = "Network: %d new drop place(s) received.",
+    NetSyncFull = "Network: full sync asked (everything the users online know).",
+    NetCheckStart = "Network check: asking the users online for their data...",
+    NetCheckWait = "Network check: wait a few seconds before asking again.",
+    NetCheckMine = "Network check: your data, %d drop place(s) (fingerprint %s).",
+    NetCheckSame = "  %s (v%s): %d place(s), in sync with you.",
+    NetCheckDiff = "  %s (v%s): %d place(s), different from yours (%d).",
+    NetCheckSilent = "  No answer from: %s (EbonTomeHunter older than 2.2.0?).",
+    NetCheckNobody = "  Nobody answered: no other EbonTomeHunter 2.2.0 user online.",
+    NetCheckHint = "Different data: /eth net sync asks the users online for everything again.",
 
     -- sending a wishlist
     SendTo = "Send to:",
@@ -380,7 +389,7 @@ local fr = {
     HoursAgo = "il y a %d h",
     DaysAgo = "il y a %d j",
 
-    Help = "/eth : fenêtre  -  /eth share : partager / importer une wishlist  -  /eth send <nom>  -  /eth net : réseau  -  /eth tp <tome> : s'y téléporter  -  /eth tuto : tutoriel  -  /eth options  -  /eth minimap  -  /eth scan (HV ouvert)  -  /eth rebuild  -  /eth bags",
+    Help = "/eth : fenêtre  -  /eth share : partager / importer une wishlist  -  /eth send <nom>  -  /eth net : réseau (check : qui est synchronisé, sync : tout redemander)  -  /eth tp <tome> : s'y téléporter  -  /eth tuto : tutoriel  -  /eth options  -  /eth minimap  -  /eth scan (HV ouvert)  -  /eth rebuild  -  /eth bags",
     MinimapHidden = "Bouton de la minimap masqué (/eth minimap pour le réafficher).",
     MinimapShown = "Bouton de la minimap affiché.",
     MinimapLeft = "Clic gauche : ouvrir / fermer la fenêtre",
@@ -602,6 +611,15 @@ local fr = {
     NetJoining = "connexion au canal caché",
     NetNoChannel = "non connecté (canal caché non rejoint : 10 canaux de discussion au plus, voir /chatlist)",
     NetSynced = "Réseau : %d nouveau(x) lieu(x) de drop reçu(s).",
+    NetSyncFull = "Réseau : synchro complète demandée (tout ce que savent les utilisateurs connectés).",
+    NetCheckStart = "Vérification réseau : demande de leurs données aux utilisateurs connectés...",
+    NetCheckWait = "Vérification réseau : attendez quelques secondes avant de redemander.",
+    NetCheckMine = "Vérification réseau : vos données, %d lieu(x) de drop (empreinte %s).",
+    NetCheckSame = "  %s (v%s) : %d lieu(x), synchronisé avec vous.",
+    NetCheckDiff = "  %s (v%s) : %d lieu(x), différent des vôtres (%d).",
+    NetCheckSilent = "  Pas de réponse de : %s (EbonTomeHunter antérieur à la 2.2.0 ?).",
+    NetCheckNobody = "  Personne n'a répondu : aucun autre utilisateur d'EbonTomeHunter 2.2.0 en ligne.",
+    NetCheckHint = "Données différentes : /eth net sync redemande tout aux utilisateurs connectés.",
 
     SendTo = "Envoyer à :",
     SendButton = "Envoyer",

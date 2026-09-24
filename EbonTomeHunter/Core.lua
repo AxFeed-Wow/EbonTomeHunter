@@ -323,7 +323,14 @@ SlashCmdList["EBONTOMEHUNTER"] = function(input)
             ns.Share.ShowDialog()
         end
     elseif command == "net" then
-        ns.Print(ns.Net.StatusText())
+        local sub = strlower(argument or "")
+        if sub == "check" then
+            ns.Net.Check()
+        elseif sub == "sync" then
+            ns.Net.ForceSync()
+        else
+            ns.Print(ns.Net.StatusText())
+        end
     elseif command == "tp" or command == "travel" then
         ns.Travel.Command(argument)
     elseif command == "tuto" or command == "tutorial" or command == "guide" then

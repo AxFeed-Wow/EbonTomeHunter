@@ -799,6 +799,49 @@ Check(ns.Net.StatusText():find(ns.L.NetNoChannel, 1, true) ~= nil and not ns.Net
     "channel refused by the game: the status says so")
 GetChannelName = realChannelName
 Check(ns.Net.StatusText():find(ns.L.NetOn, 1, true) ~= nil and ns.Net.IsJoined(), "in the channel: connected")
+
+-- /eth net check: who has the same data
+local myDigest = ns.Net.Digest()
+local myPlaces = ns.Net.Count()
+before = #sentChat
+ChannelMessage("ETHN1~H~r^e0000", "Omar")
+ChannelMessage("ETHN1~H~r^e0000", "Omar")
+Advance(4)
+local checkAnswers = {}
+for i = before + 1, #sentChat do
+    local version, digest = sentChat[i].msg:match("^ETHN1~H~a%^e0000%^([^%^]+)%^%d+%^%d+%^(%x+)$")
+    if version then checkAnswers[#checkAnswers + 1] = { version = version, digest = digest } end
+end
+Check(#checkAnswers == 1 and checkAnswers[1].version == ns.version and checkAnswers[1].digest == myDigest,
+    "a check request is answered once, with our version and fingerprint")
+before = #sentChat
+Slash("/eth net check")
+Advance(1)
+local checkQid
+for i = before + 1, #sentChat do checkQid = checkQid or sentChat[i].msg:match("^ETHN1~H~r%^(%x+)$") end
+Check(checkQid ~= nil and ChatContains(ns.L.NetCheckStart), "/eth net check asks the users online")
+ChannelMessage("ETHN1~H~a^" .. checkQid .. "^2.2.0^" .. myPlaces .. "^3^" .. myDigest, "Pia")
+ChannelMessage("ETHN1~H~a^" .. checkQid .. "^2.2.0^9^7^abcdef", "Quin")
+Advance(7)
+Check(ChatContains(format(ns.L.NetCheckSame, "Pia", "2.2.0", myPlaces)), "same fingerprint: in sync")
+Check(ChatContains(format(ns.L.NetCheckDiff, "Quin", "2.2.0", 9, myPlaces)) and ChatContains(ns.L.NetCheckHint),
+    "different fingerprint: told, with the command to fix it")
+Check(ChatContains(ns.L.NetCheckSilent:match("^(.-)%%s")) and ChatContains("Gus"),
+    "users heard recently who did not answer are listed (older version)")
+Slash("/eth net check")
+Check(ChatContains(ns.L.NetCheckWait), "a second check right away: wait")
+
+-- /eth net sync: everything again, right away, just for the player
+ns.DB.lastSync = time()
+before = #sentChat
+Slash("/eth net sync")
+Advance(1)
+local fullAsked = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^0$") then fullAsked = true end
+end
+Check(fullAsked and ChatContains(ns.L.NetSyncFull), "/eth net sync asks for everything, even within the 10 min")
+Advance(15)
 ns.DB.sightings = keptSightings
 ns.Fire("SIGHTINGS_CHANGED")
 

@@ -16,6 +16,8 @@
   téléportation vers l'entrée du raid.
 - Un tome sans aucun lieu affiche l'indice du serveur, sinon « inconnu », au lieu de rien.
 - Correction : une ligne de tome dont l'id d'objet est encore inconnu ne provoque plus d'erreur.
+- **`/eth net check`** : qui, parmi les utilisateurs connectés, a les mêmes données que toi.
+- **`/eth net sync`** : synchro complète pour toi seul (tout redemander, tout de suite).
 
 ## 2.1.0 — 2026-09-24
 

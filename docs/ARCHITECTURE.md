@@ -241,6 +241,12 @@ Un tome peut arriver de deux façons.
     depuis 30 min se manifeste (5 s après, au plus une par minute, 10 par session de jeu).
 - **État** : `Net.IsJoined()` et `/eth net` regardent si le canal est vraiment rejoint (le jeu le
   refuse au-delà de 10 canaux).
+- **Vérification** (`/eth net check`, type `H`, 2.2.0) : `r^qid` demande ; chaque client répond une
+  fois `a^qid^version^lieux^tomes^empreinte` après 0,5 à 3 s. Empreinte (`Net.Digest`) : clés
+  `tome:carte:npcId|mob` dédoublonnées, triées, hachées (même hachage que la chaîne de partage) ;
+  indépendante des coordonnées exactes. Rapport au bout de 6 s ; les pairs entendus depuis 30 min sans
+  réponse sont listés. Les versions antérieures ignorent `H`.
+- **Synchro complète** (`/eth net sync`) : `RequestSync(true, true)`, depuis 0, 20 lots au plus.
 
 ### Evidence.lua (sources périmées)
 - **Source** = un monstre listé pour un tome (EbonholdHub, ou lieu du réseau). Clé du monstre :

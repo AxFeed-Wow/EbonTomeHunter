@@ -219,6 +219,12 @@ Distances : en « mètres » du jeu (= yards du client anglais).
     une fois par minute).
 - **Compatibilité :** les versions 2.0.0 et 2.1.0 se comprennent. Une version 2.0.0 reçoit les
   réponses comme avant (par date de trouvaille, une seule réponse).
+- **`/eth net check`** : demande aux utilisateurs connectés (2.2.0 et plus) l'empreinte de leurs
+  données, puis affiche pour chacun sa version, son nombre de lieux et s'il est **synchronisé** avec
+  toi ou **différent**. Les utilisateurs entendus récemment qui ne répondent pas sont listés (version
+  plus ancienne). Au plus une vérification toutes les 30 s.
+- **`/eth net sync`** : synchro complète pour toi seul : tu redemandes tout depuis le début, sans
+  l'attente de 10 min et avec jusqu'à 20 lots de 30 lieux.
 - `/eth net` affiche l'état réel : connecté, ou canal caché non rejoint. Le réseau se coupe dans
   les options (sous-panneau « Réseau et alertes »).
 - **Limites :**

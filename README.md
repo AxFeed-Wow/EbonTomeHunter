@@ -68,7 +68,7 @@ Coming from *EbonTomePrices* (the former name): delete its folder, otherwise bot
 | `/eth tp <tome>` | teleport to the checkpoint nearest to where the tome drops |
 | `/eth share` | share / import a wishlist (also an Echo Builder link or build) |
 | `/eth send <name>` | send your wishlist to a player |
-| `/eth net` | network status |
+| `/eth net` | network status (`check`: who is in sync with you, `sync`: ask everything again) |
 | `/eth tuto` | show the tutorial again |
 | `/eth options` | options (also in Interface > AddOns) |
 | `/eth help` | every command |
@@ -188,7 +188,7 @@ Ancienne version (*EbonTomePrices*) : supprimer son dossier, sinon les deux se c
 | `/eth tp <tome>` | se téléporter au checkpoint le plus proche de là où le tome tombe |
 | `/eth share` | partager / importer une wishlist (aussi un lien ou un build Echo Builder) |
 | `/eth send <nom>` | envoyer sa wishlist à un joueur |
-| `/eth net` | état du réseau |
+| `/eth net` | état du réseau (`check` : qui est synchronisé avec toi, `sync` : tout redemander) |
 | `/eth tuto` | revoir le tutoriel |
 | `/eth options` | options (aussi dans Interface > AddOns) |
 | `/eth help` | toutes les commandes |

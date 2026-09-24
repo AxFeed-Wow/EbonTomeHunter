@@ -22,6 +22,8 @@ local L = ns.L
 --     far lacked, then the asker sends what it learned since <since> and nobody said.
 -- A find made while no other user is online waits in an outbox and is sent again
 -- (qid "0") when one shows up.
+--   H  data check (2.2.0):  r^qid  asks the users online for the fingerprint of their data;
+--                           a^qid^version^places^tomes^fingerprint  is each one's answer.
 ns.Net = {}
 local Net = ns.Net
 
@@ -46,6 +48,9 @@ local PUSH_MAX = 60          -- places the asker adds at the end of its sync
 local REASK_DELAY = 5
 local REASK_GAP = 60
 local REASK_MAX = 10         -- per session of play
+local SYNC_BATCHES_FULL = 20 -- /eth net sync: everything again
+local CHECK_WAIT = 6         -- seconds to collect the answers of /eth net check
+local CHECK_GAP = 30
 local OLD_PLACE = 90 * 86400  -- a place nobody found again for 90 days comes after the others
 
 local channelIndex
@@ -59,6 +64,9 @@ local mySync                 -- our request waiting for its answer (one round of
 local lastSession            -- our last sync (several rounds when the backlog is large)
 local pushed = setmetatable({}, { __mode = "k" })   -- [place] = its learned time when we last added it to a sync
 local reasks, lastReask = 0, -math.huge
+local checking               -- our /eth net check: { qid, answers = { [name] = answer }, order }
+local lastCheck = -math.huge
+local answeredChecks = {}    -- [qid] = true: a check request is answered once
 
 local function Opt() return ns.Opt() end
 
@@ -573,7 +581,8 @@ local function OnOwnAnswer(author, more, newest, fresh)
         end
         if resume then
             ns.DB.syncFrom = resume   -- kept for the next login if the batches run out
-            if sync.batches < SYNC_BATCHES and SendSyncRequest(resume, sync.batches + 1, session) then return end
+            if sync.batches < (session.maxBatches or SYNC_BATCHES)
+                and SendSyncRequest(resume, sync.batches + 1, session) then return end
         else
             ns.DB.syncFrom = nil      -- up to date with the users online
             ns.DB.syncedAt = session.startedAt
@@ -609,15 +618,124 @@ end
 -- `force`: a user showed up after our last sync went unanswered). Answers come oldest
 -- first, 30 at most: while there are more, we ask again from the last one received (a
 -- few times, then at the next login: ns.DB.syncFrom).
-function Net.RequestSync(force)
+function Net.RequestSync(force, full)
     if not Opt().netEnabled then return false end
     if not force and time() - (ns.DB.lastSync or 0) < SYNC_COOLDOWN then return false end
-    local since = WindowStart()
+    local since = full and 0 or WindowStart()
     ns.DB.lastSync = time()
-    local session = { since = since, startedAt = time(), qids = {}, fresh = 0 }
+    local session = { since = since, startedAt = time(), qids = {}, fresh = 0,
+        maxBatches = full and SYNC_BATCHES_FULL or SYNC_BATCHES }
     if not SendSyncRequest(since, 1, session) then return false end
     lastSession = session
     return true
+end
+
+-- /eth net sync: asks the users online for everything they know (from the start, more
+-- batches than a login sync, no 10 min wait). Only the player asks: the others answer.
+function Net.ForceSync()
+    if not (Opt().netEnabled and FindChannel()) then
+        ns.Print(Net.StatusText())
+        return false
+    end
+    local ok = Net.RequestSync(true, true)
+    if ok then ns.Print(L.NetSyncFull) end
+    return ok
+end
+
+------------------------------------------------------------------------
+-- Data check (/eth net check)
+------------------------------------------------------------------------
+-- Fingerprint of our drop places: one key per place (tome, map, mob), sorted and hashed.
+-- Two users who know the same places have the same one, whatever the exact coordinates.
+function Net.Digest()
+    local keys, seen = {}, {}
+    for itemId, list in pairs(Store()) do
+        for _, r in ipairs(list) do
+            local key = itemId .. ":" .. tostring(r.mapFile or r.zone or "") .. ":"
+                .. tostring(r.npcId or strlower(tostring(r.mob or "")))
+            if not seen[key] then
+                seen[key] = true
+                keys[#keys + 1] = key
+            end
+        end
+    end
+    table.sort(keys)
+    local h = 0
+    for _, key in ipairs(keys) do
+        for i = 1, #key do h = (h * 31 + key:byte(i)) % 16777213 end
+        h = (h * 31 + 59) % 16777213   -- separator
+    end
+    return format("%06x", h), #keys
+end
+
+local function ReportCheck(current)
+    local digest = Net.Digest()
+    local places = Net.Count()
+    ns.Print(L.NetCheckMine, places, digest)
+    local differ = false
+    for _, name in ipairs(current.order) do
+        local a = current.answers[name]
+        if a.digest == digest then
+            ns.Print(L.NetCheckSame, name, a.version, a.places)
+        else
+            differ = true
+            ns.Print(L.NetCheckDiff, name, a.version, a.places, places)
+        end
+    end
+    local silent = {}
+    for name, seen in pairs(peers) do
+        if GetTime() - seen < PEER_TIMEOUT and not current.answers[name] then silent[#silent + 1] = name end
+    end
+    table.sort(silent)
+    if #silent > 0 then ns.Print(L.NetCheckSilent, table.concat(silent, ", ")) end
+    if #current.order == 0 then
+        ns.Print(L.NetCheckNobody)
+    elseif differ then
+        ns.Print(L.NetCheckHint)
+    end
+end
+
+-- /eth net check: every user online (2.2.0 or later) answers with its version, its number of
+-- places and their fingerprint; after a few seconds the chat shows who has the same data.
+function Net.Check()
+    if not (Opt().netEnabled and FindChannel()) then
+        ns.Print(Net.StatusText())
+        return false
+    end
+    if GetTime() - lastCheck < CHECK_GAP then
+        ns.Print(L.NetCheckWait)
+        return false
+    end
+    lastCheck = GetTime()
+    local current = { qid = format("%05x", math.random(0, 0xFFFFF)), answers = {}, order = {} }
+    if not Queue("H", "r^" .. current.qid) then return false end
+    checking = current
+    ns.Print(L.NetCheckStart)
+    ns.Timer.After(CHECK_WAIT, function()
+        if checking ~= current then return end
+        checking = nil
+        ReportCheck(current)
+    end)
+    return true
+end
+
+local function OnCheck(author, payload)
+    local kind, qid, rest = payload:match("^(%a)%^(%x+)(.*)$")
+    if kind == "r" then
+        if answeredChecks[qid] then return end
+        answeredChecks[qid] = true
+        ns.Timer.After(0.5 + math.random() * 2.5, function()
+            local digest = Net.Digest()
+            local places, tomes = Net.Count()
+            Queue("H", table.concat({ "a", qid, ns.version, places, tomes, digest }, "^"))
+        end)
+    elseif kind == "a" and checking and checking.qid == qid and not checking.answers[author] then
+        local version, places, tomes, digest = rest:match("^%^([%w%.%-]+)%^(%d+)%^(%d+)%^(%x+)$")
+        if version then
+            checking.answers[author] = { version = version, places = tonumber(places), tomes = tonumber(tomes), digest = digest }
+            checking.order[#checking.order + 1] = author
+        end
+    end
 end
 
 -- Another user shows up (first message after 30 min of silence): our finds made alone
@@ -680,6 +798,8 @@ ns.RegisterEvent("CHAT_MSG_CHANNEL", function(text, author, _, channelString, _,
             end
         end
         if mySync and mySync.qid == qid then OnOwnAnswer(author, more == "1", newest, fresh) end
+    elseif msgType == "H" then
+        if author ~= me then OnCheck(author, payload) end
     elseif author ~= me then
         ns.Fire("NET_MESSAGE", msgType, payload, author)   -- Evidence.lua: K, V
     end
