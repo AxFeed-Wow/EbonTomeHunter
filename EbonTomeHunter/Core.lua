@@ -333,6 +333,8 @@ SlashCmdList["EBONTOMEHUNTER"] = function(input)
         else
             ns.Print(ns.Net.StatusText())
         end
+    elseif command == "history" or command == "log" then
+        ns.History.Toggle()
     elseif command == "tp" or command == "travel" then
         ns.Travel.Command(argument)
     elseif command == "tuto" or command == "tutorial" or command == "guide" then

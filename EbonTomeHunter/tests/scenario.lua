@@ -1068,6 +1068,48 @@ ns.DB.corpses, ns.DB.evidence, ns.DB.reports = {}, {}, {}
 ns.Fire("SIGHTINGS_CHANGED")
 Advance(2)
 
+-- --- Drop history window (/eth history) ------------------------------------------------------
+do
+    local entries = ns.History.Entries(false)
+    local sorted, bob = true, nil
+    for i, e in ipairs(entries) do
+        if i > 1 and e.at > entries[i - 1].at then sorted = false end
+        if e.by == "Bob" then bob = e end
+    end
+    Check(#entries == ns.Net.Count() and sorted, "history: every shared drop, the most recent first")
+    Check(bob and bob.mob == "Wastewander Bandit" and bob.others == 1 and bob.place:find("Tanaris", 1, true),
+        "who (Bob, confirmed by 1 more player), where and which mob")
+    local mine = ns.History.Entries(true)
+    local onlyMine = #mine > 0
+    for _, e in ipairs(mine) do
+        if e.by ~= "Tester" then
+            local r = ns.DB.sightings[e.itemId]
+            onlyMine = onlyMine and r ~= nil
+        end
+    end
+    Check(onlyMine and #mine < #entries, "'my finds only' keeps the player's finds")
+    Slash("/eth history")
+    Check(EbonTomeHunterHistoryFrame:IsShown() and EbonTomeHunterHistoryListRow1:IsShown()
+        and (ns.History.countText:GetText() or ""):find(tostring(#entries), 1, true),
+        "/eth history opens the window with its rows and count")
+    local first = EbonTomeHunterHistoryListRow1
+    Check(first.item and first.who:GetText() and first.where:GetText() and first.mob:GetText(), "a row shows who, where, mob")
+    first:GetScript("OnClick")(first)
+    Check(EbonTomeHunterSourcesFrame:IsShown(), "a click on a row opens the Sources of that tome")
+    EbonTomeHunterSourcesFrame:Hide()
+    ns.History.onlyMine:SetChecked(true)
+    ns.History.onlyMine:GetScript("OnClick")(ns.History.onlyMine)
+    Check((ns.History.countText:GetText() or ""):find(tostring(#mine), 1, true), "the box filters the list")
+    ns.History.onlyMine:SetChecked(false)
+    Slash("/eth history")
+    Check(not EbonTomeHunterHistoryFrame:IsShown(), "the command closes it again")
+    if not EbonTomeHunterFrame:IsShown() then UI.Toggle() end
+    UI.historyButton:GetScript("OnClick")(UI.historyButton)
+    Check(EbonTomeHunterHistoryFrame:IsShown(), "the History button of the main window opens it")
+    EbonTomeHunterHistoryFrame:Hide()
+    EbonTomeHunterFrame:Hide()
+end
+
 -- --- Raid tomes: Icecrown Citadel and Ruby Sanctum bosses (no EbonholdHub place) ------------
 local defile = ns.Catalog.Get(301402)
 local raidLoc = defile and defile.location

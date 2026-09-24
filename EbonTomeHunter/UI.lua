@@ -451,6 +451,10 @@ function UI.Init()
     local shareButton = W.Button(frame, L.Share, 100, 24, function() ns.Share.ShowDialog() end)
     shareButton:SetPoint("LEFT", tabWish, "RIGHT", 8, 0)
     shareButton:SetTip(L.Share, L.ShareTip)
+    local historyButton = W.Button(frame, L.HistoryButton, 80, 24, function() ns.History.Toggle() end)
+    historyButton:SetPoint("LEFT", shareButton, "RIGHT", 4, 0)
+    historyButton:SetTip(L.HistoryTitle, L.HistoryTip)
+    UI.historyButton = historyButton
 
     local optionsButton = W.Button(frame, L.Options, 80, 24, function()
         if ns.OpenOptions then ns.OpenOptions() end
