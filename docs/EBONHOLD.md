@@ -113,6 +113,11 @@ Familier (compagnon) de ProjectEbonhold qui **ramasse lui-même le butin des cad
   sacs. EbonTomeHunter fait pareil (`Loot.lua`).
 - Il « parle » dans le chat (« Greedy Scavenger gnaws on the corpse »). EbonClearance sait le rendre
   muet et le ré-invoquer quand il se perd.
+- **Aucun signal par cadavre** (confirmé par l'utilisateur, 2026-09-24) : il ramasse comme si le
+  joueur avait looté, sans message. On ne sait donc pas quels cadavres il a fouillés : ses kills ne
+  comptent pas comme « cadavres sans le tome » (`Evidence.lua`), sinon des sources encore bonnes
+  seraient grisées à tort. Ses tomes, eux, sont détectés (sacs) et envoyés comme lieux de drop, ce
+  qui rétablit la source.
 
 ## Fenêtres de ProjectEbonhold qui font entrer des objets dans les sacs
 
