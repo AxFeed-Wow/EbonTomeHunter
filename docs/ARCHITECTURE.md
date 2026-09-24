@@ -282,6 +282,16 @@ Format `ETH1:<auteur>:<entrées>:<contrôle>` :
 Les chaînes `ETP1:` de l'ancien nom sont encore lues. Une chaîne tronquée ou modifiée est refusée.
 Exemple : `ETH1:Bob:22x3,569x2,570:3f38d1`.
 
+**Build Echo Builder** (`S.DecodeEchoBuild`, essayé avant la chaîne `ETH1`) : on cherche
+`echo-builder…?b=` dans le texte (lien, ou texte « Copy build » qui finit par le lien), sinon un build
+seul `2xxxxx[-…]`. `%21`, `%2D`, `%2E` sont décodés. Partie avant `!` (après : Echos verrouillés,
+ignorés), jetons `id` ou `id.piles`, ids de 200000 à 299999, chacun une fois. `Catalog.FindBySpell(id)`
+(id exact de l'Echo débloqué par un tome) → tome à ajouter (1 exemplaire, dédoublonné), ou déjà appris
+(`Known.IsKnown`) ; pas de tome → Echo de base, nommé par `GetSpellInfo`. `c=` donne la classe
+affichée. Résultat marqué `echoBuild` ; l'aperçu et `S.Import` affichent les trois groupes.
+Données de référence du site : `https://project-ebonhold.com/assets/dbc/echoes.json` (546 Echos,
+dont 157 avec un tome, tous dans `TomeData.lua`).
+
 ### UI.lua / AuctionHouse.lua / Tutorial.lua
 - **Fenêtre principale** (780×540, 16 lignes de 24 px, liste virtuelle `W.List`).
   - `UI.parts` expose ses éléments au tutoriel.

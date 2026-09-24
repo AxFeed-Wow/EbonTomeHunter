@@ -157,6 +157,17 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 - **Robustesse :** un texte tronqué ou modifié est refusé (code de contrôle). Le texte est retrouvé
   même au milieu d'un message. Les tomes inconnus sont ignorés et comptés. Les chaînes `ETP1:` de
   l'ancien nom (EbonTomePrices) sont encore lues.
+- **Build Echo Builder** (project-ebonhold.com/tools/echo-builder) : la même case accepte son lien
+  (« Copy link »), son texte (« Copy build », qui finit par le lien) ou le build seul
+  (`200044-200479-…`). Le lien contient les ids des Echos (`?b=id[.piles]-…[!verrouillés]&c=classe`).
+  - Un Echo dont l'id exact est débloqué par un tome devient ce tome, en **1 exemplaire** (le tome
+    débloque l'Echo, quel que soit le nombre de piles).
+  - L'aperçu sépare : **tomes apprenables** (ajoutés), **déjà appris** (non ajoutés), **Echos de
+    base** sans tome (ignorés), avec leurs noms. Après l'import, les listes complètes s'affichent
+    dans le chat.
+  - Sur les 546 Echos d'Echo Builder, 157 seulement ont un tome (tous connus de l'addon) : les
+    autres s'obtiennent sans tome. Le tome d'un Echo rare ne couvre pas ses versions commune et peu
+    commune, qui ont leur propre id et sont de base.
 - **Envoi direct :** « Envoyer à : » (+ bouton Cible) ou `/eth send Nom`, par message d'addon
   chuchoté.
   - Le joueur doit avoir l'addon : il reçoit « X vous envoie une wishlist » → Voir / Ignorer, et

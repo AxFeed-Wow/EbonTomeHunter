@@ -1,5 +1,14 @@
 # Historique des versions
 
+## 2.2.0 — 2026-09-24
+
+- **Import d'un build Echo Builder** (project-ebonhold.com/tools/echo-builder) dans la wishlist :
+  dans `/eth share`, coller son lien (« Copy link »), son texte (« Copy build ») ou le build seul.
+  - Les Echos qui ont un tome deviennent ce tome (1 exemplaire).
+  - L'aperçu sépare les tomes apprenables (ajoutés), déjà appris (non ajoutés) et les Echos de base,
+    sans tome (ignorés), avec leurs noms ; les listes complètes s'affichent dans le chat.
+- Une chaîne de wishlist fabriquée à la main (code de contrôle faux) reste refusée.
+
 ## 2.1.0 — 2026-09-24
 
 - **Réseau : les lieux circulent même quand les joueurs ne sont pas connectés en même temps.**

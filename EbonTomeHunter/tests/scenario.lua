@@ -319,6 +319,60 @@ ns.Share.importBox:SetText("ETH1:x:12,oops:000000")
 Check(not ns.Share.mergeButton:IsEnabled(), "merge disabled for an invalid string")
 EbonTomeHunterShareFrame:Hide()
 
+-- --- Echo Builder builds in the same import box (real examples of project-ebonhold.com) -------
+local EB_BUILD = "200044-200479-200491-200500-200521-200539-200540-200663-200688-200722-200954-201340-201378"
+local EB_LINK = "https://project-ebonhold.com/tools/echo-builder?b=" .. EB_BUILD .. "&c=paladin"   -- "Copy link"
+local EB_TEXT = table.concat({                                                                        -- "Copy build"
+    "Echo build \226\128\148 13/85 picks \226\128\148 Paladin", "Cyclone of Cold Bones x1", "Dark Nucleus x1",
+    "Forged in Combat x1", "Keen Aim x1", "Mystic Potency x1", "Nature\226\128\153s Surge x1", "Open Wounds x1",
+    "Precision Strike x1", "Reactive Retaliation x1", "Rolling Momentum x1", "Spiteful Shard x1",
+    "Steady Channeling x1", "Tunnel Vision x1", EB_LINK,
+}, "\n")
+local surge, cyclone, nucleus = ns.Catalog.FindBySpell(200954), ns.Catalog.FindBySpell(201340), ns.Catalog.FindBySpell(201378)
+Check(surge and cyclone and nucleus and not ns.Catalog.FindBySpell(200044),
+    "3 echoes of the build have a tome (Nature's Surge, Cyclone of Cold Bones, Dark Nucleus), the others none")
+local realKnown = ns.Known.IsKnown
+ns.Known.IsKnown = function(id) return nucleus ~= nil and id == nucleus.itemId end   -- Dark Nucleus learned
+for label, pasted in pairs({ link = EB_LINK, ["Copy build"] = EB_TEXT, ["bare build"] = EB_BUILD }) do
+    local b = ns.Share.Decode(pasted)
+    Check(b and b.echoBuild and b.echoes == 13 and #b.items == 2 and #b.learned == 1 and #b.basic == 10,
+        "Echo Builder " .. label .. ": 13 echoes = 2 tomes to add, 1 already learned, 10 basic")
+end
+local eb = ns.Share.Decode(EB_LINK)
+local ebNames = {}
+for _, item in ipairs(eb.items) do ebNames[item.row.name] = item.qty end
+Check(eb.class == "Paladin" and ebNames[surge.name] == 1 and ebNames[cyclone.name] == 1 and eb.learned[1] == nucleus,
+    "the tomes of the build, 1 copy each; the learned one set apart")
+local stacked = ns.Share.Decode("https://project-ebonhold.com/tools/echo-builder?b=200954.3-201340-200044.2%21201340&c=death-knight")
+Check(stacked and #stacked.items == 2 and #stacked.basic == 1 and stacked.class == "Death Knight",
+    "picks (.3), locked echoes (!, %21 when encoded) and the class name are read")
+local onlyBasic = ns.Share.Decode("https://project-ebonhold.com/tools/echo-builder?b=200044-200479&c=mage")
+Check(onlyBasic and #onlyBasic.items == 0 and #onlyBasic.basic == 2, "a build of basic echoes only: nothing to add")
+Check(select(2, ns.Share.Decode("ETH1:Yangr:20,35,48,52,63,227,228,234,231,240:7768f7")) == "ShareCorrupt",
+    "a hand-made string with a wrong checksum is still refused")
+
+for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
+Slash("/eth share")
+ns.Share.importBox:SetText("https://project-ebonhold.com/tools/echo-builder?b=200044-200479&c=mage")
+Check(not ns.Share.mergeButton:IsEnabled() and (ns.Share.previewText:GetText() or ""):find(ns.L.ShareEchoNoTome, 1, true),
+    "only basic echoes: the preview says so, nothing to import")
+ns.Share.importBox:SetText(EB_TEXT)
+local ebPreview = ns.Share.previewText:GetText() or ""
+Check(ns.Share.mergeButton:IsEnabled() and ebPreview:find(format(ns.L.ShareEchoTomes, 2), 1, true)
+    and ebPreview:find(format(ns.L.ShareEchoLearned, 1), 1, true) and ebPreview:find(format(ns.L.ShareEchoBasic, 10), 1, true),
+    "preview of the pasted build: learnable tomes, learned, basic echoes")
+ns.Share.mergeButton:GetScript("OnClick")(ns.Share.mergeButton)
+Check(ns.Wishlist.Has(surge.itemId) and ns.Wishlist.Has(cyclone.itemId) and not ns.Wishlist.Has(nucleus.itemId)
+    and ns.Wishlist.Count() == 2, "merged: the 2 learnable tomes are in the wishlist, not the learned one")
+Check(ChatContains(format(ns.L.ShareEchoBasicChat, 10, ""):sub(1, 20)), "the ignored basic echoes are listed in the chat")
+local mine = ns.Share.ExportWishlist()
+ns.Share.importBox:SetText(mine)
+Check(ns.Share.mergeButton:IsEnabled() and (ns.Share.previewText:GetText() or ""):find("2", 1, true) ~= nil,
+    "an addon string still imports in the same box")
+EbonTomeHunterShareFrame:Hide()
+ns.Known.IsKnown = realKnown
+for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
+
 -- --- World map: a marker where the tome drops ------------------------------------------------
 -- Farm places as EbonholdHub gives them: percentages of ITS map images (real coordinates).
 EbonholdHub = { EchoMapData = { Locations = {

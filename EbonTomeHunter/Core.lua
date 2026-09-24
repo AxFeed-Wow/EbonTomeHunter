@@ -1,7 +1,7 @@
 local addonName, ns = ...
 local L = ns.L
 
-ns.version = "2.1.0"
+ns.version = "2.2.0"
 -- Public namespace: lets macros, other addons and the offline tests reach the API.
 EbonTomeHunter = ns
 

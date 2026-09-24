@@ -8,6 +8,12 @@ local C = W.C
 --              (#<item id> for an id outside the 300000 range)
 --   checksum = 6 hex digits over everything before it: a truncated or edited copy
 --              is refused instead of importing a wrong list.
+-- The import box also takes an Echo Builder build (project-ebonhold.com/tools/echo-builder):
+-- its link, its "Copy build" text (which ends with the link), or the bare build. Link:
+-- "?b=<echo>[.<picks>]-<echo>...[!<locked>-...]&c=<class>", echo spell ids. An echo whose
+-- exact id a tome unlocks becomes that tome (1 copy: a tome unlocks its echo whatever the
+-- picks); the others are basic echoes, offered without any tome (the tome of a rare echo
+-- does not cover its common and uncommon versions: those have ids of their own).
 ns.Share = {}
 local S = ns.Share
 
@@ -15,6 +21,8 @@ local VERSION = "ETH1"
 local LEGACY = { ETP1 = true }   -- strings of EbonTomePrices 1.x (the addon's former name): same format
 local BASE_ID = 300000
 local MAX_QTY = 99
+local ECHO_MIN, ECHO_MAX = 200000, 299999
+local PREVIEW_NAMES = 5
 
 local function Checksum(text)
     local h = 0
@@ -68,10 +76,60 @@ function S.ExportWishlist()
     return S.Encode(items, UnitName("player")), #items, copies
 end
 
--- Finds and checks a wishlist string (it may be surrounded by other text).
--- Returns { author, items = { { itemId, qty, row } }, copies, unknown }, or nil + error key.
+local function EchoName(id)
+    local name = type(GetSpellInfo) == "function" and GetSpellInfo(id) or nil
+    return name or ("#" .. id)
+end
+
+-- "death-knight" -> "Death Knight"
+local function ClassName(slug)
+    if not slug or slug == "" then return nil end
+    return (slug:gsub("%-", " "):gsub("(%a)(%w*)", function(a, b) return strupper(a) .. b end))
+end
+
+-- An Echo Builder build found in the text, or nil. Returns { echoBuild = true, class,
+-- echoes, items (tomes to add), learned (tome rows already known), basic (echo names) }.
+function S.DecodeEchoBuild(text)
+    text = tostring(text or "")
+    local build = text:match("echo%-builder%S-[?&]b=([%w%.%-!%%]+)")
+    if not build then build = strtrim(text):match("^(2%d%d%d%d%d[%d%.%-!]*)$") end
+    if not build then return nil end
+    build = build:gsub("%%21", "!"):gsub("%%2[Dd]", "-"):gsub("%%2[Ee]", ".")
+    local result = {
+        echoBuild = true, author = "", class = ClassName(text:match("echo%-builder%S-[?&]c=([%w%-]+)")),
+        echoes = 0, items = {}, learned = {}, basic = {}, copies = 0, unknown = 0,
+    }
+    local seenEcho, seenTome = {}, {}
+    for token in (build:match("^([^!]*)") or ""):gmatch("[^%-]+") do
+        local id = tonumber(token:match("^(%d+)"))
+        if id and id >= ECHO_MIN and id <= ECHO_MAX and not seenEcho[id] then
+            seenEcho[id] = true
+            result.echoes = result.echoes + 1
+            local row = ns.Catalog.FindBySpell(id)
+            if not row then
+                result.basic[#result.basic + 1] = EchoName(id)
+            elseif not seenTome[row.itemId] then
+                seenTome[row.itemId] = true
+                if ns.Known and ns.Known.IsKnown(row.itemId) then
+                    result.learned[#result.learned + 1] = row
+                else
+                    result.items[#result.items + 1] = { itemId = row.itemId, qty = 1, row = row }
+                    result.copies = result.copies + 1
+                end
+            end
+        end
+    end
+    if result.echoes == 0 then return nil end
+    return result
+end
+
+-- Finds and checks a wishlist string (it may be surrounded by other text), or an Echo
+-- Builder build. Returns { author, items = { { itemId, qty, row } }, copies, unknown },
+-- or nil + error key.
 function S.Decode(text)
     text = tostring(text or "")
+    local build = S.DecodeEchoBuild(text)
+    if build then return build end
     local version, author, entries, sum = text:match("(ET[HP]%d+):([^:\r\n]*):([^:\r\n]*):(%x%x%x%x%x%x)")
     if not version then
         if text:find("ET[HP]%d+:") then return nil, "ShareCorrupt" end
@@ -112,6 +170,16 @@ function S.Import(result, mode)
     if not result or #result.items == 0 then return 0, 0 end
     local added, raised = ns.Wishlist.ApplyImport(result.items, mode)
     ns.Print(L.ShareImported, added, raised)
+    if result.echoBuild then
+        if #result.learned > 0 then
+            local names = {}
+            for i, row in ipairs(result.learned) do names[i] = row.name or "?" end
+            ns.Print(L.ShareEchoLearnedChat, #names, table.concat(names, ", "))
+        end
+        if #result.basic > 0 then
+            ns.Print(L.ShareEchoBasicChat, #result.basic, table.concat(result.basic, ", "))
+        end
+    end
     return added, raised
 end
 
@@ -130,6 +198,27 @@ local function RefreshExport()
     summaryText:SetText(count > 0 and format(L.ShareSummary, count, copies) or L.ShareEmpty)
 end
 
+local function Names(list, name)
+    local out = {}
+    for i = 1, math.min(PREVIEW_NAMES, #list) do out[i] = name(list[i]) end
+    if #list > PREVIEW_NAMES then out[#out + 1] = "..." end
+    return table.concat(out, ", ")
+end
+
+-- Echo Builder build: which echoes are tomes to add, already learned, or basic.
+local function EchoBuildPreview(result)
+    local lines = { format(L.ShareEchoBuild, result.class or "?", result.echoes) }
+    local function Line(color, text, list, name)
+        if #list > 0 then lines[#lines + 1] = color .. text .. "|r |cffaaaaaa" .. Names(list, name) .. "|r" end
+    end
+    local function RowName(item) return (item.row or item).name or "?" end
+    Line("|cff40ff40", format(L.ShareEchoTomes, #result.items), result.items, RowName)
+    Line("|cffffd100", format(L.ShareEchoLearned, #result.learned), result.learned, RowName)
+    Line("|cff999999", format(L.ShareEchoBasic, #result.basic), result.basic, function(n) return n end)
+    if #result.items == 0 then lines[#lines + 1] = "|cffff8000" .. L.ShareEchoNoTome .. "|r" end
+    return table.concat(lines, "\n")
+end
+
 local function RefreshPreview()
     if not dialog then return end
     local text = importArea.box:GetText() or ""
@@ -143,6 +232,9 @@ local function RefreshPreview()
         if not result then
             previewText:SetText(L[err])
             color = C.bad
+        elseif result.echoBuild then
+            parsed = #result.items > 0 and result or nil
+            previewText:SetText(EchoBuildPreview(result))
         elseif #result.items == 0 then
             previewText:SetText(L.ShareNothing)
             color = C.bad
