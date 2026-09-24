@@ -21,6 +21,10 @@
 - `/eth net check` montre aussi la dernière info et les trouvailles de chacun.
 - **`/eth net compare <nom>`** : les lieux qu'un joueur a et pas toi, et l'inverse.
 - **Nouvelle version** : l'addon prévient quand un autre utilisateur a une version plus récente.
+- **Historique des drops** (bouton Historique, `/eth history`) : quand, quel tome, qui, où, quel
+  monstre ; filtre « mes trouvailles », clic = Sources.
+- Statistiques de kills par créature, envoyées seulement à la demande de l'addon de dev.
+- Nouveau fichier `History.lua` : **relancer complètement le jeu** après la mise à jour.
 - **Synchro automatique toutes les 15 min**, et un bouton réseau dans la fenêtre : « À jour » ou
   non (bulle d'aide : dernière synchro, version de l'addon), clic = synchro complète.
 

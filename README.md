@@ -69,6 +69,7 @@ Coming from *EbonTomePrices* (the former name): delete its folder, otherwise bot
 | `/eth share` | share / import a wishlist (also an Echo Builder link or build) |
 | `/eth send <name>` | send your wishlist to a player |
 | `/eth net` | network status (`check`: who is in sync with you, `sync`: ask everything again, `compare <name>`: what differs with that player) |
+| `/eth history` | drop history (who found which tome, where, on which mob) |
 | `/eth tuto` | show the tutorial again |
 | `/eth options` | options (also in Interface > AddOns) |
 | `/eth help` | every command |
@@ -92,7 +93,8 @@ Coming from *EbonTomePrices* (the former name): delete its folder, otherwise bot
 
 The network sends the other users online the place where you got a tome, with **your character
 name** ("found by"). You can turn it off in the options (*Network and alerts*). The addon sends
-nothing else, except your wishlist when you send it to someone yourself.
+nothing else, except your wishlist when you send it to someone yourself, and, only when the maintainer
+asks for statistics, how many of each creature you killed.
 
 ## Contributing
 
@@ -189,6 +191,7 @@ Ancienne version (*EbonTomePrices*) : supprimer son dossier, sinon les deux se c
 | `/eth share` | partager / importer une wishlist (aussi un lien ou un build Echo Builder) |
 | `/eth send <nom>` | envoyer sa wishlist à un joueur |
 | `/eth net` | état du réseau (`check` : qui est synchronisé avec toi, `sync` : tout redemander, `compare <nom>` : les écarts avec ce joueur) |
+| `/eth history` | historique des drops (qui a trouvé quel tome, où, sur quel monstre) |
 | `/eth tuto` | revoir le tutoriel |
 | `/eth options` | options (aussi dans Interface > AddOns) |
 | `/eth help` | toutes les commandes |
@@ -212,7 +215,8 @@ Ancienne version (*EbonTomePrices*) : supprimer son dossier, sinon les deux se c
 
 Le réseau envoie aux autres utilisateurs connectés le lieu où tu as obtenu un tome, avec **ton nom de
 personnage** (« trouvé par »). Tu peux le couper dans les options (*Réseau et alertes*). L'addon
-n'envoie rien d'autre, sauf ta wishlist quand tu l'envoies toi-même à quelqu'un.
+n'envoie rien d'autre, sauf ta wishlist quand tu l'envoies toi-même à quelqu'un, et, seulement quand
+le mainteneur demande des statistiques, combien de chaque créature tu as tuées.
 
 ## Contribuer
 

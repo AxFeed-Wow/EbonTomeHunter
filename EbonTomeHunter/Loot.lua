@@ -107,6 +107,39 @@ local function IsCreature(guid)
     return high == "F130" or high == "F150"
 end
 
+-- Kills per creature (NPC id): the ones the player or the group fought, then died. One
+-- table write per kill; 600 creatures at most (the least killed are dropped). Shared only
+-- when a user asks for statistics (Net.lua, /ethdev stats).
+local KILL_STATS_MAX = 600
+local killStatsAdded = 0
+
+local function KillStats()
+    if type(ns.DB.killStats) ~= "table" then ns.DB.killStats = {} end
+    return ns.DB.killStats
+end
+
+local function PruneKillStats(stats)
+    local list = {}
+    for npcId, s in pairs(stats) do list[#list + 1] = { npcId = npcId, n = tonumber(s.n) or 0 } end
+    if #list <= KILL_STATS_MAX then return end
+    table.sort(list, function(a, b) return a.n > b.n end)
+    for i = KILL_STATS_MAX * 5 / 6 + 1, #list do stats[list[i].npcId] = nil end
+end
+
+function Loot.CountKill(npcId, name)
+    npcId = tonumber(npcId)
+    if not npcId then return end
+    local stats = KillStats()
+    local s = stats[npcId]
+    if not s then
+        s = { n = 0 }
+        stats[npcId] = s
+        killStatsAdded = killStatsAdded + 1
+        if killStatsAdded % 50 == 0 then PruneKillStats(stats) end
+    end
+    s.n, s.name, s.last = s.n + 1, name or s.name, time()
+end
+
 local function ForgetOldFights(now)
     for guid, at in pairs(engaged) do
         if now - at > 600 then
@@ -123,6 +156,7 @@ ns.RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", function(_, subEvent, _, _, srcF
         engagedCount = engagedCount - 1
         local now = GetTime()
         kills[#kills + 1] = { at = now, name = dstName, npcId = ns.Wowhead.NpcIdFromGUID(dstGUID) }
+        Loot.CountKill(kills[#kills].npcId, dstName)
         while kills[1] and now - kills[1].at > KILL_WINDOW do tremove(kills, 1) end
     elseif srcFlags and band(srcFlags, OURS) ~= 0 and not (dstFlags and band(dstFlags, FRIENDLY) ~= 0)
         and IsCreature(dstGUID) then

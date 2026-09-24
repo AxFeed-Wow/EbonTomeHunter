@@ -696,14 +696,18 @@ ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, 0
 before = #sentChat
 Check(ns.Net.RequestSync(), "sync requested")
 Advance(1)
--- the last sync request sent (other messages, like the version announcement, may follow it)
-local function LastQ()
-    for i = #sentChat, 1, -1 do
-        local q, s = sentChat[i].msg:match("^ETHN1~Q~(%x+)%^(%d+)$")
-        if q then return q, s end
+-- the last sync request sent after message n° `from` (other messages, like the version
+-- announcement, may follow it); waits for it: messages waiting in the queue go first
+local function LastQ(from)
+    for _ = 1, 40 do
+        for i = #sentChat, (from or 0) + 1, -1 do
+            local q, s = sentChat[i].msg:match("^ETHN1~Q~(%x+)%^(%d+)$")
+            if q then return q, s end
+        end
+        Advance(1)
     end
 end
-local qid, since = LastQ()
+local qid, since = LastQ(before)
 Check(qid and #qid == 5 and tonumber(since) == 0, "never synced: asks for everything (2.1.0 request)")
 local function Rec(i, at)
     return ns.Net.Encode({ itemId = tomeIds[i], mapFile = "Barrens", x = 0.3, y = 0.3,
@@ -711,8 +715,9 @@ local function Rec(i, at)
 end
 ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(40, base + 100), "Vet")
 ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(41, base + 101), "Vet")
+local afterAnswers = #sentChat
 Advance(6)
-local qid2, since2 = LastQ()
+local qid2, since2 = LastQ(afterAnswers)
 Check(qid2 and tonumber(since2) == base + 101 and ns.DB.syncFrom == base + 101,
     "more to come: asks again from the last record received, kept for the next login")
 ChannelMessage("ETHN1~S~" .. qid2 .. "~0~" .. Rec(42, base + 102), "Vet")
@@ -767,7 +772,7 @@ ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, now - 3600
 before = #sentChat
 Check(ns.Net.RequestSync(), "sync requested (last complete sync an hour ago)")
 Advance(1)
-local q3, s3 = LastQ()
+local q3, s3 = LastQ(before)
 Check(q3 and tonumber(s3) == now - 3600 - 600, "asks what was learned since the last complete sync, minus a margin")
 local fromDee = ns.Net.Encode({ itemId = tomeIds[3], mapFile = "Mulgore", x = 0.5, y = 0.5, mob = "Plainstrider",
     zone = "Mulgore", at = now - 30, by = "Dee" })
@@ -1067,6 +1072,41 @@ ns.DB.sightings = keptForEvidence
 ns.DB.corpses, ns.DB.evidence, ns.DB.reports = {}, {}, {}
 ns.Fire("SIGHTINGS_CHANGED")
 Advance(2)
+
+-- --- Kill statistics (counted by Loot.lua, shared on request for /ethdev stats) ---------------
+do
+    ns.DB.killStats = {}
+    local function Kill(guid, name)
+        CLEU("SWING_DAMAGE", "0x0000000000000042", "Tester", 0x511, guid, name, 0xa48, 250)
+        CLEU("UNIT_DIED", nil, nil, 0, guid, name, 0xa48)
+    end
+    Kill("0xF1300071C0000101", "Frost Wyrm")
+    Kill("0xF1300071C0000102", "Frost Wyrm")
+    CLEU("UNIT_DIED", nil, nil, 0, "0xF1300071C0000103", "Frost Wyrm", 0xa48)   -- not fought by us
+    local wyrm = ns.Wowhead.NpcIdFromGUID("0xF1300071C0000101")
+    local counted = ns.DB.killStats[wyrm]
+    Check(counted and counted.n == 2 and counted.name == "Frost Wyrm",
+        "kills per creature: the ones fought by the player or the group, counted")
+    before = #sentChat
+    ChannelMessage("ETHN1~H~t^a1b2c", "Yan")
+    Advance(6)
+    local shared = false
+    for i = before + 1, #sentChat do
+        if sentChat[i].msg:find("^ETHN1~H~u%^a1b2c%^1%^1%^2%^" .. wyrm .. ":2$") then shared = true end
+    end
+    Check(shared, "a statistics request is answered with our kills")
+    local got
+    ns.On("NET_STATS", function(results) got = results end)
+    Check(ns.Net.RequestStats(), "statistics asked to the users online")
+    Advance(1)
+    local sq
+    for i = before + 1, #sentChat do sq = sq or sentChat[i].msg:match("^ETHN1~H~t%^(%x+)$") end
+    ChannelMessage("ETHN1~H~u^" .. sq .. "^1^1^500^29120:300;1234:200", "Zoe")
+    Advance(15)
+    Check(got and got.Zoe and got.Zoe.total == 500 and got.Zoe.kills[29120] == 300 and got.Zoe.kills[1234] == 200,
+        "the answers are collected and handed over (NET_STATS)")
+    Advance(61)   -- these kills must not count as the recent kills of the Scavenger tests
+end
 
 -- --- Drop history window (/eth history) ------------------------------------------------------
 do

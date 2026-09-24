@@ -8,6 +8,8 @@
 --   /ethdev dump        snapshot: echoes of ProjectEbonhold, echo and tome tooltips, learned
 --                       echoes, checkpoints, services of ProjectEbonhold and their functions
 --   /ethdev log on|off  journal: corpses opened, tomes looted, server messages (codes)
+--   /ethdev stats       asks the users online (EbonTomeHunter 2.2.0+) for their kills per
+--                       creature; the answers land in EbonTomeHunterDevDB.stats after 15 s
 --   /ethdev clear       empties everything
 --   /ethdev             status
 
@@ -121,6 +123,8 @@ local function Dump()
     end
 
     snap.discovered = Copy(Call("PerkService", "GetDiscoveredEchoes"), 1)
+    -- our own kills per creature, counted by EbonTomeHunter
+    snap.killStats = type(EbonTomeHunterDB) == "table" and Copy(EbonTomeHunterDB.killStats, 2) or nil
     snap.checkpoints = Copy(Call("CheckpointService", "GetCheckpoints"), 3)
     db.dump = snap
     local echoes, tomes = 0, 0
@@ -155,6 +159,18 @@ frame:SetScript("OnEvent", function(self, event, a1, a2, a3, a4)
         if type(EbonTomeHunterDevDB) ~= "table" then EbonTomeHunterDevDB = {} end
         db = EbonTomeHunterDevDB
         db.log = type(db.log) == "table" and db.log or {}
+        db.stats = type(db.stats) == "table" and db.stats or {}
+        -- answers to /ethdev stats, collected by EbonTomeHunter's network
+        if type(EbonTomeHunter) == "table" and type(EbonTomeHunter.On) == "function" then
+            EbonTomeHunter.On("NET_STATS", function(results)
+                local n = 0
+                for name, result in pairs(results) do
+                    db.stats[name] = { at = time(), total = result.total, kills = result.kills }
+                    n = n + 1
+                end
+                Print(format("stats: %d user(s) answered. Type /reload to write the file.", n))
+            end)
+        end
     elseif event == "LOOT_OPENED" then
         local unit = (UnitExists("mouseover") and UnitIsDead("mouseover") and "mouseover")
             or (UnitExists("target") and UnitIsDead("target") and "target") or nil
@@ -184,12 +200,20 @@ SlashCmdList["EBONTOMEHUNTERDEV"] = function(input)
     elseif command == "log" then
         db.logging = strlower(argument) ~= "off"
         Print("journal " .. (db.logging and "on" or "off") .. " (" .. #db.log .. " entries)")
+    elseif command == "stats" then
+        local net = type(EbonTomeHunter) == "table" and EbonTomeHunter.Net
+        if not (net and net.RequestStats) then return Print("EbonTomeHunter 2.2.0 or later needed") end
+        if net.RequestStats() then
+            Print("stats asked to the users online; answers in 15 s")
+        else
+            Print("not sent: network off, hidden channel not joined, or asked less than 30 s ago")
+        end
     elseif command == "clear" then
         wipe(db)
         db.log = {}
         Print("cleared")
     else
-        Print(format("journal %s, %d entries; dump %s. Commands: dump, log on|off, clear.",
+        Print(format("journal %s, %d entries; dump %s. Commands: dump, log on|off, stats, clear.",
             db.logging and "on" or "off", #db.log, db.dump and db.dump.date or "none"))
     end
 end

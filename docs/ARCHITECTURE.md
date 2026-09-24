@@ -257,6 +257,11 @@ Un tome peut arriver de deux façons.
   `H k^qid^partie^parties^trouvailles^dernier^clé,clé,…`, 20 clés par message, au plus toutes les
   30 s. Clé courte d'un lieu : `<id du tome − 300000>.<hachage hexa de carte:mob>` (mod 65521).
   Rapport quand toutes les parties sont là, ou au bout de 12 s.
+- **Statistiques** (type `H`, 2.2.0) : `t^qid` demande ; chaque client répond (au plus toutes les
+  30 s, après 1 à 5 s) `u^qid^partie^parties^total^npcId:n;…`, 60 créatures au plus, 20 par message.
+  `Net.RequestStats()` rassemble les réponses 15 s et émet `NET_STATS` { [nom] = { total, kills } }
+  (écouté par l'addon de dev). Compteurs : `Loot.CountKill` à chaque `UNIT_DIED` d'une créature
+  combattue par le joueur ou le groupe, `DB.killStats[npcId] = { n, name, last }`, 600 au plus.
 - **Version** (type `I`, 2.2.0) : `I~<version>` envoyé 6 s après l'entrée dans le canal. Une version
   plus récente que la nôtre (au plus une majeure d'avance) → `NewVersion`, une fois par version. Une
   version plus ancienne → on répond avec la nôtre après 1 à 5 s, sauf si quelqu'un d'autre a déjà

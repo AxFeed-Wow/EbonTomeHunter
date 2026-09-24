@@ -26,6 +26,8 @@ local L = ns.L
 --                           a^qid^version^places^tomes^fingerprint^newest^ownFinds  answers;
 --                           d^qid^name  asks one user for its places (/eth net compare), who
 --                           answers k^qid^part^parts^ownFinds^newest^key,key,...
+--                           t^qid  asks the users online for their kill statistics, who
+--                           answer u^qid^part^parts^totalKills^npcId:count;... (top 60)
 --   I  version (2.2.0):     the addon version, sent at login; users with a newer version
 --                           answer with theirs, and an older addon tells its player to update.
 ns.Net = {}
@@ -57,6 +59,9 @@ local CHECK_WAIT = 6         -- seconds to collect the answers of /eth net check
 local CHECK_GAP = 30
 local COMPARE_WAIT = 12      -- seconds to collect the parts of /eth net compare
 local COMPARE_KEYS = 20      -- keys per message
+local STATS_TOP = 60          -- creatures per answer to a statistics request
+local STATS_PER_MSG = 20
+local STATS_WAIT = 15
 local AUTO_SYNC = 900        -- every user syncs again every 15 min (+ up to 1 min, not all at once)
 local UP_TO_DATE = 1200      -- "up to date": a complete sync less than 20 min ago
 local OLD_PLACE = 90 * 86400  -- a place nobody found again for 90 days comes after the others
@@ -80,6 +85,8 @@ local lastCompare, lastCompareAnswer = -math.huge, -math.huge
 local newerSeen              -- highest version heard from another user, when newer than ours
 local versionReplyPending    -- a version answer we are about to send (cancelled if someone does)
 local lastAloneAt = 0        -- time() of our last sync that nobody answered
+local statsRequest           -- our statistics request: { qid, results = { [name] = { total, kills } } }
+local lastStatsRequest, lastStatsAnswer = -math.huge, -math.huge
 local autoStarted = false
 
 local function Opt() return ns.Opt() end
@@ -662,7 +669,9 @@ end
 -- Every user syncs again every 15 min while online (the login sync starts the cycle).
 local function AutoSync()
     ns.Timer.After(AUTO_SYNC + math.random() * 60, function()
-        if Opt().netEnabled and FindChannel() and not mySync then Net.RequestSync(true) end
+        -- never in the middle of a sync (between two batches mySync is briefly nil)
+        local busy = mySync or (lastSession and not lastSession.done)
+        if Opt().netEnabled and FindChannel() and not busy then Net.RequestSync(true) end
         AutoSync()
     end)
 end
@@ -961,6 +970,62 @@ local function OnVersion(author, version)
     end
 end
 
+------------------------------------------------------------------------
+-- Kill statistics (asked by the developer helper, /ethdev stats)
+------------------------------------------------------------------------
+-- Asks the users online for their kills per creature; after 15 s, NET_STATS is fired with
+-- { [name] = { total, kills = { [npcId] = count } } }.
+function Net.RequestStats()
+    if not (Opt().netEnabled and FindChannel()) then return false end
+    if GetTime() - lastStatsRequest < CHECK_GAP then return false end
+    lastStatsRequest = GetTime()
+    local current = { qid = format("%05x", math.random(0, 0xFFFFF)), results = {} }
+    if not Queue("H", "t^" .. current.qid) then return false end
+    statsRequest = current
+    ns.Timer.After(STATS_WAIT, function()
+        if statsRequest ~= current then return end
+        statsRequest = nil
+        ns.Fire("NET_STATS", current.results)
+    end)
+    return true
+end
+
+local function AnswerStats(qid)
+    if GetTime() - lastStatsAnswer < CHECK_GAP then return end
+    lastStatsAnswer = GetTime()
+    local list, total = {}, 0
+    for npcId, s in pairs(type(ns.DB.killStats) == "table" and ns.DB.killStats or {}) do
+        local n = tonumber(s.n) or 0
+        total = total + n
+        list[#list + 1] = { npcId = npcId, n = n }
+    end
+    table.sort(list, function(a, b) return a.n > b.n end)
+    local count = math.min(#list, STATS_TOP)
+    local parts = math.max(1, math.ceil(count / STATS_PER_MSG))
+    ns.Timer.After(1 + math.random() * 4, function()
+        for part = 1, parts do
+            local chunk = {}
+            for i = (part - 1) * STATS_PER_MSG + 1, math.min(count, part * STATS_PER_MSG) do
+                chunk[#chunk + 1] = list[i].npcId .. ":" .. list[i].n
+            end
+            Queue("H", table.concat({ "u", qid, part, parts, total, table.concat(chunk, ";") }, "^"))
+        end
+    end)
+end
+
+local function OnStatsPart(author, qid, rest)
+    local current = statsRequest
+    if not (current and current.qid == qid) then return end
+    local total, body = rest:match("^%^%d+%^%d+%^(%d+)%^(.*)$")
+    if not total then return end
+    local result = current.results[author]
+    if not result then
+        result = { total = tonumber(total), kills = {} }
+        current.results[author] = result
+    end
+    for npcId, n in body:gmatch("(%d+):(%d+)") do result.kills[tonumber(npcId)] = tonumber(n) end
+end
+
 local function OnCheck(author, payload)
     local kind, qid, rest = payload:match("^(%a)%^(%x+)(.*)$")
     if kind == "r" then
@@ -981,6 +1046,10 @@ local function OnCheck(author, payload)
             checking.order[#checking.order + 1] = author
             Net.SeeVersion(version)
         end
+    elseif kind == "t" then
+        AnswerStats(qid)
+    elseif kind == "u" then
+        OnStatsPart(author, qid, rest)
     elseif kind == "d" then
         Net.AnswerCompare(author, qid, rest)
     elseif kind == "k" then

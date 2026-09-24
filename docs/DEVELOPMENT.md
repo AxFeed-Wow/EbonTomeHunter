@@ -29,6 +29,10 @@ dossier de l'addon, donc ni dans le zip ni dans l'archive installée par Ebonhol
 - Installation : `python tools/install_dev.py --wow <dossier du jeu>`, puis **redémarrage complet**.
 - `/ethdev dump` : photo en lecture seule (Echos de ProjectEbonhold + infobulles des Echos et des
   tomes, Echos appris, checkpoints, services de ProjectEbonhold et leurs fonctions).
+- `/ethdev stats` : demande aux utilisateurs connectés (EbonTomeHunter 2.2.0 et plus) leurs kills par
+  créature ; au bout de 15 s les réponses sont rangées dans `EbonTomeHunterDevDB.stats[joueur] =
+  { at, total, kills = { [npcId] = n } }` (au plus une demande toutes les 30 s). Le dump contient
+  aussi nos propres compteurs (`dump.killStats`, avec les noms).
 - `/ethdev log on|off` : journal (cadavres ouverts avec id du monstre et position, tomes obtenus,
   codes des messages serveur `AAM0x9`). `/ethdev clear` vide tout.
 - Le jeu n'écrit le fichier qu'au `/reload` ou à la déconnexion. À lire ensuite :

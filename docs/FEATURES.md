@@ -256,6 +256,24 @@ Distances : en « mètres » du jeu (= yards du client anglais).
     only be in 10 channels at a time. » : ni envoi ni réception pendant la session, et `/eth net`
     le dit. Pour libérer une place : `/chatlist`, `/leave <numéro>`, puis `/reload`.
 
+## 11 ter. L'historique des drops
+
+Bouton **Historique** de la fenêtre principale, ou `/eth history`.
+- Tous les lieux de drop partagés sur le réseau, **du plus récent au plus ancien** (300 au plus) :
+  **quand**, **quel tome** (couleur de qualité), **qui** l'a trouvé (+N : joueurs qui l'ont
+  confirmé), **où** (zone - sous-zone), **quel monstre**.
+- Case **« Mes trouvailles seulement »**.
+- Un clic sur une ligne ouvre la fenêtre Sources du tome.
+
+## 11 quater. Statistiques de kills
+
+- L'addon compte, par créature (id de PNJ), les monstres que toi ou ton groupe avez combattus puis
+  tués : une écriture dans une table par kill, 600 créatures au plus (les moins tuées sont
+  oubliées). Aucun impact visible sur le jeu.
+- Ces compteurs ne sont envoyés **que sur demande** de l'addon de développement (`/ethdev stats`,
+  pour le mainteneur) : les 60 créatures les plus tuées et le total. Rien n'est envoyé
+  automatiquement. Couper le réseau coupe aussi ces réponses.
+
 ## 11 bis. Les sources qui ne lâchent plus leur tome
 
 Un monstre listé pour un tome (EbonholdHub ou réseau) peut ne plus le lâcher après un patch.

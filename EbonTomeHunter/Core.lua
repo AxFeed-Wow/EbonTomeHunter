@@ -22,6 +22,7 @@ local DB_DEFAULTS = {
     lastSync = 0,
     syncedAt = 0,   -- start (our clock) of the last sync that went to the end (Net.lua)
     netOutbox = {}, -- own finds made while no other user was online, sent when one shows up
+    killStats = {}, -- [npcId] = { n, name, last }: creatures killed by the player or the group (Loot.lua)
     tutorialDone = 0,   -- version of the guided tour already seen (Tutorial.lua)
     options = {
         minimap = { hide = false, angle = 200 },
