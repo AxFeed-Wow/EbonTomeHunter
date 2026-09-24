@@ -8,6 +8,10 @@
   - L'aperçu sépare les tomes apprenables (ajoutés), déjà appris (non ajoutés) et les Echos de base,
     sans tome (ignorés), avec leurs noms ; les listes complètes s'affichent dans le chat.
 - Une chaîne de wishlist fabriquée à la main (code de contrôle faux) reste refusée.
+- **Tomes de raid** : les 20 tomes qu'EbonholdHub ne place nulle part sont rattachés aux boss de la
+  Citadelle de la Couronne de glace et du Sanctum rubis (source supposée : chaque Echo reprend une
+  capacité du boss), avec lien Wowhead et téléportation vers l'entrée du raid.
+- Un tome sans aucun lieu affiche « inconnu » dans la liste au lieu de rien.
 
 ## 2.1.0 — 2026-09-24
 

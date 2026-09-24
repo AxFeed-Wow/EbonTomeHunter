@@ -281,7 +281,9 @@ local function UpdateRow(row, data)
     row.icon:SetKnown(ns.Known.State(data.itemId))
     row.name:SetText(tome.name or ns.Catalog.Title(tome))
     row.name:SetTextColor(r, g, b)
-    local place = tome.location and tome.location.placeName or ""
+    -- a tome no source lists at all still says so (it used to show nothing)
+    local place = tome.location and (tome.location.placeName or L.LocationUnknown)
+        or ("|cff888888" .. L.LocationUnknown .. "|r")
     local extra = tome.locations and (#tome.locations - 1) or 0
     if extra > 0 then place = place .. " |cff888888(+" .. extra .. ")|r" end
     row.place:SetText(place)

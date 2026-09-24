@@ -302,11 +302,62 @@ local function LocationsByEchoName()
     return out
 end
 
+-- Tomes of raid bosses, for which EbonholdHub lists no place. Our own finding: their item
+-- ids follow the encounters of Icecrown Citadel then of the Ruby Sanctum, and every echo
+-- copies an ability of its boss (Mana Barrier of Lady Deathwhisper, Warborn Reflection of
+-- Baltharus, Harvest Soul of the Lich King...). A supposed source, at the raid entrance,
+-- until a drop place of the network shows the real one.
+local ICC = { mapFile = "IcecrownGlacier", x = 0.537, y = 0.872, place = L.RaidICC }
+local RS = { mapFile = "Dragonblight", x = 0.599, y = 0.545, place = L.RaidRS }
+local RAID_BOSSES = {
+    [301340] = { ICC, { "Lord Marrowgar", 36612 } },
+    [301344] = { ICC, { "Lady Deathwhisper", 36855 } },
+    [301348] = { ICC, { "Muradin Bronzebeard", 36948 }, { "High Overlord Saurfang", 36939 } },   -- Gunship Battle
+    [301354] = { ICC, { "Deathbringer Saurfang", 37813 } },
+    [301356] = { ICC, { "Festergut", 36626 } },
+    [301360] = { ICC, { "Rotface", 36627 } },
+    [301366] = { ICC, { "Professor Putricide", 36678 } },
+    [301370] = { ICC, { "Prince Valanar", 37970 } },
+    [301378] = { ICC, { "Prince Keleseth", 37972 } },
+    [301382] = { ICC, { "Prince Taldaram", 37973 } },
+    [301388] = { ICC, { "Blood-Queen Lana'thel", 37955 } },
+    [301394] = { ICC, { "Valithria Dreamwalker", 36789 } },
+    [301398] = { ICC, { "Sindragosa", 36853 } },
+    [301402] = { ICC, { "The Lich King", 36597 } },
+    [301406] = { ICC, { "The Lich King", 36597 } },
+    [301410] = { ICC, { "The Lich King", 36597 } },
+    [301416] = { RS, { "Baltharus the Warborn", 39751 } },
+    [301420] = { RS, { "General Zarithrian", 39746 } },
+    [301424] = { RS, { "Saviana Ragefire", 39747 } },
+    [301428] = { RS, { "Halion", 39863 } },
+}
+Cat.RAID_BOSSES = RAID_BOSSES
+
+function Cat.RaidLocations(itemId)
+    local entry = RAID_BOSSES[tonumber(itemId)]
+    if not entry then return {} end
+    local raid, out = entry[1], {}
+    for i = 2, #entry do
+        local name, npcId = entry[i][1], entry[i][2]
+        out[#out + 1] = {
+            source = "raid", mapFile = raid.mapFile, x = raid.x, y = raid.y, placeName = raid.place,
+            mobs = { name }, npcIds = { [name] = npcId }, notes = L.RaidGuess, order = 70000 + i,
+        }
+    end
+    return out
+end
+
 -- Drop places found by the players (Net.lua) join the static ones. Places with a
 -- map point come first: a tome listed as "Unknown location" gets the real place.
 function Cat.AttachSightings(row)
     local list = {}
     for _, loc in ipairs(row.staticLocations or {}) do list[#list + 1] = loc end
+    if #list == 0 then
+        for _, loc in ipairs(Cat.RaidLocations(row.itemId)) do
+            loc.onMap = ns.WorldMap.WorldPosition(loc) ~= nil
+            list[#list + 1] = loc
+        end
+    end
     local found = ns.Net and ns.Net.Locations(row.itemId)
     if found then
         for _, loc in ipairs(found) do

@@ -895,6 +895,45 @@ ns.DB.corpses, ns.DB.evidence, ns.DB.reports = {}, {}, {}
 ns.Fire("SIGHTINGS_CHANGED")
 Advance(2)
 
+-- --- Raid tomes: Icecrown Citadel and Ruby Sanctum bosses (no EbonholdHub place) ------------
+local defile = ns.Catalog.Get(301402)
+local raidLoc = defile and defile.location
+Check(raidLoc and raidLoc.source == "raid" and raidLoc.placeName == ns.L.RaidICC and raidLoc.mobs[1] == "The Lich King"
+    and raidLoc.notes == ns.L.RaidGuess, "Defile: supposed source, the Lich King in Icecrown Citadel")
+Check(ns.WorldMap.WorldPosition(raidLoc) ~= nil and ns.WorldMap.BestZone(raidLoc) == "IcecrownGlacier",
+    "placed at the raid entrance on the Icecrown map")
+local lichUrl, lichId = WH.LinkFor("The Lich King", raidLoc)
+Check(lichId == 36597 and lichUrl and lichUrl:find("npc=36597", 1, true), "exact Wowhead link of the boss")
+local gunship = ns.Travel.Sources(301348)
+Check(#gunship == 2, "Gunship Barrage: the two gunship leaders")
+local halion = ns.Catalog.Get(301428)
+Check(halion and halion.location and halion.location.placeName == ns.L.RaidRS and halion.location.mobs[1] == "Halion",
+    "Twilight Combustion: Halion in the Ruby Sanctum")
+local raidCount = 0
+for id in pairs(ns.Catalog.RAID_BOSSES) do
+    if ns.Catalog.Get(id) then raidCount = raidCount + 1 end
+end
+Check(raidCount == 20, "the 20 raid tomes are all in the catalogue, got " .. raidCount)
+Check(ns.Catalog.Get(300569).location.source ~= "raid", "a tome with EbonholdHub places keeps them")
+
+-- a tome that no source lists at all says "unknown" in the list (it showed nothing)
+local noPlace
+for _, row in ipairs(ns.Catalog.rows) do
+    if not row.location and row.itemId then noPlace = row break end
+end
+if not EbonTomeHunterFrame:IsShown() then UI.Toggle() end
+if noPlace then
+    UI.searchBox:SetText(noPlace.name)
+    local shown
+    for i = 1, UI.VISIBLE_ROWS do
+        local r = _G["EbonTomeHunterListRow" .. i]
+        if r and r:IsShown() and r.item and r.item.itemId == noPlace.itemId then shown = r.place:GetText() end
+    end
+    Check(shown and shown:find(ns.L.LocationUnknown, 1, true), "no place at all: 'unknown' shown for " .. noPlace.name)
+    UI.searchBox:SetText("")
+end
+EbonTomeHunterFrame:Hide()
+
 -- group loot of a wishlist tome
 ns.Wishlist.SetQty(300570, 1)
 Fire("CHAT_MSG_LOOT", format(LOOT_ITEM, "Groupie", Link(300570, "Tome of Echo: DragonKin Bane")))
