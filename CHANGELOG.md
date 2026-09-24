@@ -1,5 +1,20 @@
 # Historique des versions
 
+## 2.1.0 — 2026-09-24
+
+- **Réseau : les lieux circulent même quand les joueurs ne sont pas connectés en même temps.**
+  - Une trouvaille faite sans personne en ligne est gardée et renvoyée dès qu'un autre utilisateur
+    se manifeste.
+  - La synchro demande ce que les autres ont appris depuis ta dernière synchro : une vieille
+    trouvaille arrivée tard circule aussi.
+  - Chaque utilisateur connecté complète la réponse avec ce qu'elle ne contenait pas, et celui qui
+    demande envoie à son tour ce qu'il sait et que personne n'a cité.
+  - Une synchro restée sans réponse repart quand quelqu'un arrive.
+  - Une ligne dans le chat dit combien de nouveaux lieux la synchro a apportés.
+- `/eth net` dit si le canal caché est vraiment rejoint (il affichait « connecté » même quand le
+  jeu le refusait à cause de la limite des 10 canaux).
+- Compatible avec la 2.0.0 : les deux versions se comprennent.
+
 ## 2.0.0 — 2026-09-23
 
 - **Nouveau nom : EbonTomeHunter** (anciennement EbonTomePrices).

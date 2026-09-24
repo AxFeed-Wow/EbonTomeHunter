@@ -178,21 +178,37 @@ Distances : en « mètres » du jeu (= yards du client anglais).
   - au plus 12 lieux par tome.
 - **Résultat :** un tome « Unknown location » finit par avoir un vrai lieu, sur la carte, dans
   Localiser et pour la téléportation.
+- **Trouvaille faite seul** (aucun autre utilisateur entendu depuis 30 min) : elle part quand même
+  tout de suite, et attend aussi dans une boîte d'envoi (50 au plus, 30 jours). Dès qu'un autre
+  utilisateur se manifeste (sa demande de connexion suffit), elle lui est renvoyée. Couper le réseau
+  vide la boîte.
 - **Synchronisation à la connexion** (15 s après, au plus toutes les 10 min) :
-  - tu demandes ce que tu as manqué ;
-  - l'utilisateur qui en sait le plus répond, les autres se taisent ;
+  - tu demandes ce que les autres ont **appris** depuis ta dernière synchro complète (moins 10 min
+    de marge ; la première fois : tout). Une vieille trouvaille arrivée tard circule donc aussi ;
+  - l'utilisateur qui en sait le plus répond en premier, puis chacun des autres envoie seulement ce
+    que les réponses déjà entendues ne contenaient pas ;
   - la réponse arrive par lots de 30 lieux, jusqu'à 5 lots par session, et reprend à la connexion
-    suivante.
-- `/eth net` affiche l'état. Le réseau se coupe dans les options (sous-panneau « Réseau et
-  alertes »).
+    suivante ;
+  - à la fin, tu envoies à ton tour ce que tu avais appris depuis ta dernière synchro et que
+    personne n'a cité ;
+  - une ligne dans le chat dit combien de nouveaux lieux la synchro t'a apportés ;
+  - si personne n'a répondu, la demande repart quand un autre utilisateur se manifeste (au plus
+    une fois par minute).
+- **Compatibilité :** les versions 2.0.0 et 2.1.0 se comprennent. Une version 2.0.0 reçoit les
+  réponses comme avant (par date de trouvaille, une seule réponse).
+- `/eth net` affiche l'état réel : connecté, ou canal caché non rejoint. Le réseau se coupe dans
+  les options (sous-panneau « Réseau et alertes »).
 - **Limites :**
-  - le réseau ne relie que les joueurs connectés en même temps, en principe de la même faction ;
+  - les lieux ne circulent qu'entre utilisateurs connectés en même temps (en principe de la même
+    faction) : une trouvaille voyage de proche en proche, au fil des connexions ;
+  - un lieu appris par un joueur avant ta dernière synchro complète, alors que ceux avec qui tu t'es
+    synchronisé ne l'avaient pas, peut rester chez lui jusqu'à ce qu'un nouvel utilisateur demande
+    tout (les réponses sont publiques : tout le monde en profite) ;
   - les lieux reçus ne sont pas vérifiables (chacun affiche qui l'a trouvé et combien l'ont confirmé) ;
   - WoW limite chaque personnage à **10 canaux de discussion**. S'ils sont tous pris (canaux de zone,
     canaux « world », canaux cachés d'autres addons…), le jeu refuse le canal caché avec « You can
-    only be in 10 channels at a time. » : ni envoi ni réception pendant la session. L'addon ne le
-    détecte pas (`/eth net` affiche quand même « connecté »). Pour libérer une place : `/chatlist`,
-    `/leave <numéro>`, puis `/reload`.
+    only be in 10 channels at a time. » : ni envoi ni réception pendant la session, et `/eth net`
+    le dit. Pour libérer une place : `/chatlist`, `/leave <numéro>`, puis `/reload`.
 
 ## 12. D'où vient un tome (loot à la main ou Greedy Scavenger)
 

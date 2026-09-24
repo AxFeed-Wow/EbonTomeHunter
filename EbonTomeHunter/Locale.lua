@@ -257,6 +257,9 @@ local L = {
     NetStatus = "Network: %s - %d user(s) seen recently - %d drop place(s) shared for %d tome(s).",
     NetOn = "connected",
     NetOff = "off",
+    NetJoining = "joining the hidden channel",
+    NetNoChannel = "not connected (hidden channel not joined: 10 chat channels at most, see /chatlist)",
+    NetSynced = "Network: %d new drop place(s) received.",
 
     -- sending a wishlist
     SendTo = "Send to:",
@@ -550,6 +553,9 @@ local fr = {
     NetStatus = "Réseau : %s - %d utilisateur(s) vu(s) récemment - %d lieu(x) de drop partagé(s) pour %d tome(s).",
     NetOn = "connecté",
     NetOff = "désactivé",
+    NetJoining = "connexion au canal caché",
+    NetNoChannel = "non connecté (canal caché non rejoint : 10 canaux de discussion au plus, voir /chatlist)",
+    NetSynced = "Réseau : %d nouveau(x) lieu(x) de drop reçu(s).",
 
     SendTo = "Envoyer à :",
     SendButton = "Envoyer",

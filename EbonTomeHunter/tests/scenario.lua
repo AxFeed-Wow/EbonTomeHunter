@@ -520,6 +520,7 @@ Check(sentDrop and sentDrop.chatType == "CHANNEL" and sentDrop.channel == 5
     and sentDrop.msg:find("^ETHN1~D~300569%^CrystalsongForest%^490%^540%^28434%^Sinewy Wolf%^") ~= nil,
     "drop sent on the hidden channel: " .. tostring(sentDrop and sentDrop.msg))
 Check(WH.NpcId("Sinewy Wolf") == 28434, "the looted mob's id is learned too")
+Check(#ns.DB.netOutbox == 1, "no other user online: the find also waits in the outbox")
 unitState.target = nil
 
 -- a tome listed as "Unknown location": another user drops it -> real place for everybody
@@ -531,9 +532,15 @@ end
 local found = ns.Net.Encode({ itemId = hazardRow.itemId, mapFile = "Tanaris", x = 0.512, y = 0.498, npcId = 5420,
     mob = "Wastewander Bandit", zone = "Tanaris:Wavestrider Beach", at = time(), by = "Bob" })
 ns.Wishlist.SetQty(hazardRow.itemId, 1)
+before = #sentChat
 ChannelMessage("ETHN1~D~" .. found, "Bob")
 Check(ChatContains("Bob") and ChatContains("Wastewander Bandit"), "wishlist tome found by another user: told in chat")
 Advance(2)
+local resent = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~S~0~0~300569%^CrystalsongForest%^") then resent = true end
+end
+Check(resent and #ns.DB.netOutbox == 0, "a user shows up: the find made alone is sent again, outbox emptied")
 Check(hazardRow.location and hazardRow.location.mapFile == "Tanaris" and hazardRow.location.source == "net",
     "the catalogue now places Arcane Hazard where Bob looted it")
 local hzFile, _, hzx, hzy = ns.WorldMap.BestZone(hazardRow.location)
@@ -541,7 +548,7 @@ Check(hzFile == "Tanaris" and math.abs(hzx - 0.512) < 0.001, "its zone and coord
 ns.WorldMap.Locate(hazardRow.itemId)
 Check(WorldMapFrame:IsShown() and shownMap == "Tanaris", "Locate now opens Tanaris")
 WorldMapFrame:Hide()
-ChannelMessage("ETHN1~D~" .. found:gsub("%^Bob$", "^Carl"), "Carl")
+ChannelMessage("ETHN1~D~" .. found:gsub("%^Bob%^", "^Carl^"), "Carl")
 Advance(2)
 Check(#ns.DB.sightings[hazardRow.itemId] == 1 and hazardRow.location.notes:find("2", 1, true) ~= nil,
     "same spot from a second player: confirmed, not duplicated")
@@ -614,12 +621,12 @@ Check(#times == 30 and inOrder and flags["1"] and not flags["0"],
     "backlog: the 30 oldest after the asked time, in order, flagged 'more' (" .. #times .. " sent)")
 
 -- our own request: asks again from the last record received while there are more
-ns.DB.syncFrom, ns.DB.lastSync = nil, 0
+ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, 0
 before = #sentChat
 Check(ns.Net.RequestSync(), "sync requested")
 Advance(1)
 local qid, since = tostring(sentChat[#sentChat].msg):match("^ETHN1~Q~(%x+)%^(%d+)$")
-Check(qid and tonumber(since) == base + 35 - 600, "asks from the newest record we have, minus a margin")
+Check(qid and #qid == 5 and tonumber(since) == 0, "never synced: asks for everything (2.1.0 request)")
 local function Rec(i, at)
     return ns.Net.Encode({ itemId = tomeIds[i], mapFile = "Barrens", x = 0.3, y = 0.3,
         mob = "Quilboar", zone = "The Barrens", at = at, by = "Vet" })
@@ -632,8 +639,95 @@ Check(qid2 and tonumber(since2) == base + 101 and ns.DB.syncFrom == base + 101,
     "more to come: asks again from the last record received, kept for the next login")
 ChannelMessage("ETHN1~S~" .. qid2 .. "~0~" .. Rec(42, base + 102), "Vet")
 Advance(6)
-Check(ns.DB.syncFrom == nil and #ns.DB.sightings[tomeIds[42]] == 1,
+Check(ns.DB.syncFrom == nil and #ns.DB.sightings[tomeIds[42]] == 1 and ns.DB.syncedAt > 0,
     "answer complete: up to date")
+Check(ChatContains(format(ns.L.NetSynced, 3)), "the sync tells how many places it brought")
+ns.DB.sightings = keptSightings
+ns.Fire("SIGHTINGS_CHANGED")
+
+-- 2.1.0: sync by time learned, answers completed by every user, what the asker adds
+keptSightings = ns.DB.sightings
+ns.DB.sightings = {}
+local now = time()
+local oldFind = { itemId = tomeIds[1], mapFile = "Durotar", x = 0.2, y = 0.2, mob = "Boar", zone = "Durotar",
+    at = now - 5 * 86400, by = "Old", rx = now - 60 }
+ns.Net.Add(oldFind)
+local function SentFor(qidPattern, from)
+    local out = {}
+    for i = from + 1, #sentChat do
+        local body = sentChat[i].msg:match("^ETHN1~S~" .. qidPattern .. "~[01]~(.*)$")
+        if body then
+            for encoded in body:gmatch("[^;]+") do out[#out + 1] = (ns.Net.Decode(encoded)) end
+        end
+    end
+    return out
+end
+before = #sentChat
+ChannelMessage("ETHN1~Q~a0000^" .. (now - 3600), "Ann")
+ChannelMessage("ETHN1~Q~a001^" .. (now - 3600), "Ann")
+Advance(8)
+Check(#SentFor("a0000", before) == 1, "2.1.0 request: a find of 5 days ago learned a minute ago is sent")
+Check(#SentFor("a001", before) == 0, "2.0.0 request: by time found, as before")
+
+local second = { itemId = tomeIds[2], mapFile = "Durotar", x = 0.4, y = 0.4, mob = "Scorpid", zone = "Durotar",
+    at = now - 100, by = "Mia", rx = now - 50 }
+ns.Net.Add(second)
+before = #sentChat
+ChannelMessage("ETHN1~Q~b0000^0", "Ben")
+ChannelMessage("ETHN1~S~b0000~0~" .. ns.Net.Encode(oldFind), "Cid")
+Advance(8)
+local complement = SentFor("b0000", before)
+Check(#complement == 1 and complement[1].itemId == tomeIds[2],
+    "another user answered first: only what the answer lacked is sent")
+before = #sentChat
+ChannelMessage("ETHN1~Q~c0000^0", "Ben")
+ChannelMessage("ETHN1~S~c0000~0~" .. ns.Net.Encode(oldFind) .. ";" .. ns.Net.Encode(second), "Cid")
+Advance(8)
+Check(#SentFor("c0000", before) == 0, "the answer already said everything: silent")
+
+ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, now - 3600
+before = #sentChat
+Check(ns.Net.RequestSync(), "sync requested (last complete sync an hour ago)")
+Advance(1)
+local q3, s3 = tostring(sentChat[#sentChat].msg):match("^ETHN1~Q~(%x+)%^(%d+)$")
+Check(q3 and tonumber(s3) == now - 3600 - 600, "asks what was learned since the last complete sync, minus a margin")
+local fromDee = ns.Net.Encode({ itemId = tomeIds[3], mapFile = "Mulgore", x = 0.5, y = 0.5, mob = "Plainstrider",
+    zone = "Mulgore", at = now - 30, by = "Dee" })
+ChannelMessage("ETHN1~S~" .. q3 .. "~0~" .. ns.Net.Encode(oldFind) .. ";" .. fromDee, "Dee")
+Advance(8)
+local added = SentFor("0", before)
+Check(#added == 1 and added[1].itemId == tomeIds[2], "then the asker sends what it knew and nobody said")
+Check(ns.DB.syncedAt >= now and ns.DB.syncFrom == nil, "sync complete: noted for the next one")
+
+-- our sync went unanswered: asked again as soon as a user shows up
+ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, 0
+Check(ns.Net.RequestSync(), "sync requested with nobody answering")
+Advance(75)
+before = #sentChat
+ChannelMessage("ETHN1~D~" .. fromDee, "Gus")
+Advance(7)
+local reasked = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^") then reasked = true end
+end
+Check(reasked, "a user showed up after an unanswered sync: asked again")
+
+-- places sent without a request: stored, no wishlist alert (they are not new finds)
+ns.Wishlist.SetQty(tomeIds[4], 1)
+ChannelMessage("ETHN1~S~0~0~" .. ns.Net.Encode({ itemId = tomeIds[4], mapFile = "Tanaris", x = 0.6, y = 0.6,
+    mob = "Hyena", zone = "Tanaris", at = now - 7200, by = "Fay" }), "Fay")
+Advance(2)
+Check(ns.DB.sightings[tomeIds[4]] and #ns.DB.sightings[tomeIds[4]] == 1 and not ChatContains("Fay"),
+    "pushed place stored without an alert")
+ns.Wishlist.Remove(tomeIds[4])
+
+-- the status tells whether the hidden channel is really joined
+local realChannelName = GetChannelName
+GetChannelName = function() return 0, nil end
+Check(ns.Net.StatusText():find(ns.L.NetNoChannel, 1, true) ~= nil and not ns.Net.IsJoined(),
+    "channel refused by the game: the status says so")
+GetChannelName = realChannelName
+Check(ns.Net.StatusText():find(ns.L.NetOn, 1, true) ~= nil and ns.Net.IsJoined(), "in the channel: connected")
 ns.DB.sightings = keptSightings
 ns.Fire("SIGHTINGS_CHANGED")
 
@@ -644,7 +738,9 @@ Check(ChatContains("Groupie"), "a group member looted a wishlist tome: told in c
 
 -- network off: nothing leaves any more
 shownMap = "CrystalsongForest"   -- the zone map of the zone texts (Locate had left Tanaris)
+ns.DB.netOutbox[1] = { wire = "pending", at = time() }
 ns.SetOption("netEnabled", false)
+Check(#ns.DB.netOutbox == 0, "network turned off: the finds waiting to be sent are dropped")
 before = #sentChat
 unitState.target = { name = "Sinewy Wolf", guid = "0xF130006F12000042", dead = true }
 GetPlayerMapPosition = function(unit) return 0.20, 0.30 end

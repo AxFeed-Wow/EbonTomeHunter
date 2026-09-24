@@ -81,7 +81,8 @@ Coming from *EbonTomePrices* (the former name): delete its folder, otherwise bot
   cannot join it: during that session you neither receive nor share drop places. Everything else
   works. To free a slot: `/chatlist` lists your channels, `/leave <number>` leaves one you do not
   use, then `/reload`.
-* The network only links the players who are online at the same time.
+* Drop places travel between users who are online at the same time. A find made while nobody else
+  is online is kept and sent as soon as another user shows up.
 * The drop places received from other players cannot be verified: each one shows who found it and
   how many players confirmed it.
 
@@ -199,7 +200,8 @@ Ancienne version (*EbonTomePrices*) : supprimer son dossier, sinon les deux se c
   EbonTomeHunter ne peut pas le rejoindre : pendant cette session, tu ne reçois ni ne partages de
   lieux de drop. Tout le reste fonctionne. Pour libérer une place : `/chatlist` liste tes canaux,
   `/leave <numéro>` quitte celui que tu n'utilises pas, puis `/reload`.
-* Le réseau ne relie que les joueurs connectés en même temps.
+* Les lieux de drop circulent entre utilisateurs connectés en même temps. Une trouvaille faite
+  quand personne d'autre n'est en ligne est gardée et envoyée dès qu'un autre utilisateur arrive.
 * Les lieux de drop reçus des autres joueurs ne sont pas vérifiables : chacun affiche qui l'a trouvé
   et combien de joueurs l'ont confirmé.
 

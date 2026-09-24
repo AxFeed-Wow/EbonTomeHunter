@@ -1,7 +1,7 @@
 local addonName, ns = ...
 local L = ns.L
 
-ns.version = "2.0.0"
+ns.version = "2.1.0"
 -- Public namespace: lets macros, other addons and the offline tests reach the API.
 EbonTomeHunter = ns
 
@@ -20,6 +20,8 @@ local DB_DEFAULTS = {
     sightings = {}, -- [itemId] = drop places found by the players (Net.lua)
     npcIds = {},    -- [mob name] = NPC id, for the Wowhead links (Wowhead.lua)
     lastSync = 0,
+    syncedAt = 0,   -- start (our clock) of the last sync that went to the end (Net.lua)
+    netOutbox = {}, -- own finds made while no other user was online, sent when one shows up
     tutorialDone = 0,   -- version of the guided tour already seen (Tutorial.lua)
     options = {
         minimap = { hide = false, angle = 200 },

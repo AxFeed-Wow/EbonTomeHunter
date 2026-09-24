@@ -207,18 +207,39 @@ Un tome peut arriver de deux façons.
   avant chaque envoi.
 - **Format** : `ETHN1~<type>~<charge>`, 240 octets max, jamais de `|`, coupures sans casser un
   caractère UTF-8, un envoi toutes les 0,3 s.
-  - `D` : un drop, `itemId^mapFile^x^y^npcId^mob^zone^heure^trouveur` (x et y de 0 à 1000).
+  - `D` : un drop, `itemId^mapFile^x^y^npcId^mob^zone^heure^trouveur^appris` (x et y de 0 à 1000).
   - `Q` : demande de synchronisation, `qid^depuis`.
-  - `S` : réponse, `qid~suite~enreg;enreg;…`.
+  - `S` : réponse, `qid~suite~enreg;enreg;…`. qid `0` : lieux envoyés sans demande.
+  - `appris` (10e champ, depuis 2.1.0, ignoré par 2.0.0) : quand l'expéditeur a enregistré le lieu,
+    sur son horloge. Chaque lieu stocké a son `rx` (notre heure d'enregistrement, remise à jour quand
+    le lieu gagne un trouveur ou son mob) ; sans `rx` (données 2.0.0), on prend `at`.
 - **Réception** : validation (tome connu, positions de 0 à 1000, date plausible, date future ramenée
   à maintenant).
 - **Même endroit** : même carte, moins de 4 % d'écart, même mob. Le lieu gagne alors un trouveur
   (10 max). Un lieu sans mob fusionne avec le même endroit et récupère le mob s'il arrive ensuite.
-- **Synchronisation** : 15 s après la connexion, au plus toutes les 10 min.
-  - On demande ce qui est plus récent que `syncFrom`, sinon que le lieu le plus récent moins 10 min.
-  - Les réponses vont du plus ancien au plus récent, par 30, avec un drapeau « suite ». On redemande
-    à partir du dernier reçu (5 lots par session), et `syncFrom` sert de point de reprise.
-  - Celui qui a le plus à envoyer répond en premier ; les autres voient la réponse et se taisent.
+- **Boîte d'envoi** (`netOutbox`) : une trouvaille à nous, faite sans autre utilisateur entendu
+  depuis 30 min, y est gardée (encodée ; 50 max, 30 jours). Au premier message d'un utilisateur
+  absent depuis 30 min, elle part en `S` qid `0`. Couper le réseau la vide.
+- **Synchronisation** : 15 s après la connexion, au plus toutes les 10 min. La longueur du qid
+  distingue deux sortes de demande :
+  - **4 chiffres hexa (2.0.0)** : lieux *trouvés* après `depuis` (`at`), du plus ancien au plus
+    récent ; celui qui a le plus à envoyer répond en premier, les autres voient la réponse et se
+    taisent. Inchangé pour ne pas perturber la reprise des clients 2.0.0.
+  - **5 chiffres hexa (2.1.0)** : lieux *appris* après `depuis` (`rx`). Chaque répondant note les
+    lieux entendus dans les réponses à ce qid et, à son tour, n'envoie que ce qui manque.
+  - Notre `depuis` : `syncFrom` (reprise) ; sinon `syncedAt` − 10 min (début de notre dernière
+    synchro complète) ; sinon 0 si on n'a jamais demandé ; sinon (données 2.0.0) le lieu le plus
+    récent − 10 min.
+  - Réponses par 30 (sans couper une même seconde), drapeau « suite ». On reprend au plus bas point
+    atteint par les répondants qui avaient une suite (5 lots par session), `syncFrom` sert de reprise.
+  - Fin de session (4 s sans nouvelle partie, ou 12 s sans aucune réponse une fois la demande
+    partie) : ligne `NetSynced` si des lieux sont arrivés ; puis, si quelqu'un a répondu ou est en
+    ligne, envoi en qid `0` de nos lieux appris depuis `depuis`, avant la session, que personne n'a
+    cités (60 max, les plus récents ; un lieu n'est renvoyé que s'il a changé).
+  - Synchro inachevée (`syncedAt` < `lastSync`) : nouvelle demande quand un utilisateur absent
+    depuis 30 min se manifeste (5 s après, au plus une par minute, 10 par session de jeu).
+- **État** : `Net.IsJoined()` et `/eth net` regardent si le canal est vraiment rejoint (le jeu le
+  refuse au-delà de 10 canaux).
 
 ### Comm.lua (envoi direct)
 `SendAddonMessage("ETH", msg, "WHISPER", nom)` :
