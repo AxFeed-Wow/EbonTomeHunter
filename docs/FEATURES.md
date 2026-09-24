@@ -224,6 +224,13 @@ Distances : en « mètres » du jeu (= yards du client anglais).
   lieu le plus récent), le nombre de **ses propres trouvailles**, et s'il est **synchronisé** avec
   toi ou **différent**. Les utilisateurs entendus récemment qui ne répondent pas sont listés (version
   plus ancienne). Au plus une vérification toutes les 30 s.
+- **Synchro automatique :** en plus de celle de la connexion, chaque utilisateur se resynchronise
+  **toutes les 15 min** (plus 0 à 1 min, pour que tout le monde ne demande pas en même temps).
+- **Bouton réseau** (fenêtre principale, à gauche de Scan) : **À jour** (vert, synchro complète il
+  y a moins de 20 min), **Pas à jour** (orange), **Seul en ligne** (gris : personne n'a répondu à la
+  dernière synchro), **Hors réseau** (canal caché refusé), **Réseau coupé**. Sa bulle d'aide dit quand
+  date la dernière synchro et si une version plus récente de l'addon a été vue ; le clic lance la
+  synchro complète. La bulle d'aide du bouton de la minimap reprend ces lignes.
 - **`/eth net sync`** : synchro complète pour toi seul : tu redemandes tout depuis le début, sans
   l'attente de 10 min et avec jusqu'à 20 lots de 30 lieux.
 - **`/eth net compare <nom>`** : ce joueur (connecté, 2.2.0 et plus) t'envoie la liste compacte de

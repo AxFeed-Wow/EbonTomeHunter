@@ -57,6 +57,8 @@ local CHECK_WAIT = 6         -- seconds to collect the answers of /eth net check
 local CHECK_GAP = 30
 local COMPARE_WAIT = 12      -- seconds to collect the parts of /eth net compare
 local COMPARE_KEYS = 20      -- keys per message
+local AUTO_SYNC = 900        -- every user syncs again every 15 min (+ up to 1 min, not all at once)
+local UP_TO_DATE = 1200      -- "up to date": a complete sync less than 20 min ago
 local OLD_PLACE = 90 * 86400  -- a place nobody found again for 90 days comes after the others
 
 local channelIndex
@@ -77,6 +79,8 @@ local comparing              -- our /eth net compare: { qid, target, parts, coun
 local lastCompare, lastCompareAnswer = -math.huge, -math.huge
 local newerSeen              -- highest version heard from another user, when newer than ours
 local versionReplyPending    -- a version answer we are about to send (cancelled if someone does)
+local lastAloneAt = 0        -- time() of our last sync that nobody answered
+local autoStarted = false
 
 local function Opt() return ns.Opt() end
 
@@ -550,6 +554,8 @@ end
 local function EndSession(session)
     if session.done then return end
     session.done = true
+    if not session.answered then lastAloneAt = time() end
+    ns.Fire("NET_SYNC_STATE")
     if session.fresh > 0 then ns.Print(L.NetSynced, session.fresh) end
     if not (session.answered or Net.PeerCount() > 0) then return end   -- nobody online
     local list = {}
@@ -637,6 +643,34 @@ function Net.RequestSync(force, full)
         maxBatches = full and SYNC_BATCHES_FULL or SYNC_BATCHES }
     if not SendSyncRequest(since, 1, session) then return false end
     lastSession = session
+    return true
+end
+
+-- Where our data stands: "off" (network off), "nochannel" (hidden channel refused), "synced"
+-- (a sync went to the end less than 20 min ago), "alone" (our last sync found nobody to
+-- answer) or "stale". Second value: time() of the last complete sync (0: never).
+function Net.SyncState()
+    local synced = tonumber(ns.DB.syncedAt) or 0
+    if not Opt().netEnabled then return "off", synced end
+    if not FindChannel() then return "nochannel", synced end
+    local now = time()
+    if synced > 0 and now - synced < UP_TO_DATE then return "synced", synced end
+    if now - lastAloneAt < UP_TO_DATE then return "alone", synced end
+    return "stale", synced
+end
+
+-- Every user syncs again every 15 min while online (the login sync starts the cycle).
+local function AutoSync()
+    ns.Timer.After(AUTO_SYNC + math.random() * 60, function()
+        if Opt().netEnabled and FindChannel() and not mySync then Net.RequestSync(true) end
+        AutoSync()
+    end)
+end
+
+function Net.StartAutoSync()
+    if autoStarted then return false end
+    autoStarted = true
+    AutoSync()
     return true
 end
 
@@ -1044,6 +1078,7 @@ ns.On("LOGIN", function()
         Net.Join()
         ns.Timer.After(5, Net.RequestSync)
         ns.Timer.After(6, function() Queue("I", ns.version) end)
+        Net.StartAutoSync()
     end)
 end)
 

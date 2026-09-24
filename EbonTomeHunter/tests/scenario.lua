@@ -911,6 +911,50 @@ for i = before + 1, #sentChat do
 end
 Check(not toldWes, "another user already told it: we stay silent")
 end
+
+-- "Up to date" button of the main window, and the automatic sync every 15 min
+do
+    if not EbonTomeHunterFrame:IsShown() then UI.Toggle() end
+    local button = UI.syncButton
+    ns.DB.syncedAt = time()
+    UI.RefreshSync()
+    local _, tip = UI.SyncTip()
+    Check(button:GetText() == ns.L.SyncUpToDate and tip:find(format(ns.L.SyncTipData, ns.L.JustNow), 1, true),
+        "a sync went to the end just now: 'Up to date'")
+    local newer = ns.Net.NewerVersion()
+    Check(newer and tip:find(format(ns.L.SyncTipNewer, newer, ns.version), 1, true),
+        "the tooltip also says a newer addon version exists")
+    ns.DB.syncedAt = time() - 7200
+    UI.RefreshSync()
+    local label = button:GetText()
+    Check(label == ns.L.SyncOutdated or label == ns.L.SyncAlone,
+        "last complete sync 2 h ago: no longer 'Up to date' (or 'Alone online' after unanswered syncs)")
+    before = #sentChat
+    button:GetScript("OnClick")(button)
+    Advance(1)
+    local full = false
+    for i = before + 1, #sentChat do
+        if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^0$") then full = true end
+    end
+    Check(full, "the button asks the users online for everything")
+    Advance(14)
+    UI.RefreshSync()
+    Check(button:GetText() == ns.L.SyncAlone, "nobody answered: 'Alone online'")
+    local realName = GetChannelName
+    GetChannelName = function() return 0, nil end
+    UI.RefreshSync()
+    Check(button:GetText() == ns.L.SyncNoChannel, "hidden channel refused: 'No network'")
+    GetChannelName = realName
+    EbonTomeHunterFrame:Hide()
+    Check(not ns.Net.StartAutoSync(), "the automatic sync runs from the login on (started once)")
+    before = #sentChat
+    Advance(961)
+    local auto = false
+    for i = before + 1, #sentChat do
+        if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^") then auto = true end
+    end
+    Check(auto, "15 min later: a sync by itself")
+end
 ns.DB.sightings = keptSightings
 ns.Fire("SIGHTINGS_CHANGED")
 

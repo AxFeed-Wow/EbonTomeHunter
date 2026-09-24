@@ -17,6 +17,7 @@ UI.filter = ""
 local frame, list, header, searchBox, countText
 local tabAll, tabWish, scanButton, listedChip, locatedChip, unknownChip
 local totalText, statusText, progress, emptyText
+local syncButton
 
 ------------------------------------------------------------------------
 -- Data
@@ -433,6 +434,7 @@ function UI.Init()
         UI.Refresh()
         ns.Tutorial.MaybeStart()   -- the very first time: guided tour
     end)
+    frame:HookScript("OnShow", function() UI.RefreshSync() end)
     frame:SetScript("OnHide", function()
         if ns.Tutorial.running then ns.Tutorial.Stop(true) end
     end)
@@ -457,6 +459,13 @@ function UI.Init()
     scanButton = W.Button(frame, L.Scan, 110, 24, function() ns.Scan.Start() end)
     scanButton:SetPoint("RIGHT", optionsButton, "LEFT", -4, 0)
     scanButton:SetTip(L.ScanAll, L.ScanAllTip)
+    -- network: "Up to date" or not; a click asks the users online for everything again
+    syncButton = W.Button(frame, L.SyncUpToDate, 100, 24, function()
+        ns.Net.ForceSync()
+        UI.RefreshSync()
+    end)
+    syncButton:SetPoint("RIGHT", scanButton, "LEFT", -4, 0)
+    UI.syncButton = syncButton
 
     -- search + filters
     searchBox = W.SearchBox(frame, 280, L.SearchPlaceholder, function(text)
@@ -532,6 +541,44 @@ function UI.Init()
     ApplyLayout()
     return frame
 end
+
+-- The network button: its label says whether the data and the addon are up to date, its
+-- tooltip gives the details (last complete sync, newer version seen on the network).
+local SYNC_LABELS = {
+    synced = { L.SyncUpToDate, 0.35, 1, 0.35 }, stale = { L.SyncOutdated, 1, 0.6, 0.2 },
+    alone = { L.SyncAlone, 0.7, 0.7, 0.7 }, nochannel = { L.SyncNoChannel, 1, 0.35, 0.35 },
+    off = { L.SyncOff, 0.6, 0.6, 0.6 },
+}
+
+function UI.SyncTip()
+    local state, synced = ns.Net.SyncState()
+    local lines = {}
+    if state == "synced" then
+        lines[1] = format(L.SyncTipData, ns.Ago(synced) or "?")
+    elseif state == "alone" then
+        lines[1] = L.SyncTipAlone
+    elseif state == "stale" then
+        lines[1] = synced > 0 and format(L.SyncTipStale, ns.Ago(synced) or "?") or L.SyncTipNever
+    else
+        lines[1] = ns.Net.StatusText()
+    end
+    local newer = ns.Net.NewerVersion()
+    lines[2] = newer and format(L.SyncTipNewer, newer, ns.version) or format(L.SyncTipAddon, ns.version)
+    if state ~= "off" and state ~= "nochannel" then lines[3] = L.SyncTipClick end
+    return state, table.concat(lines, "\n")
+end
+
+function UI.RefreshSync()
+    if not syncButton then return end
+    local state, tip = UI.SyncTip()
+    local label = SYNC_LABELS[state] or SYNC_LABELS.stale
+    syncButton:SetText(label[1])
+    local text = syncButton:GetFontString()
+    if text then text:SetTextColor(label[2], label[3], label[4]) end
+    syncButton:SetTip(L.SyncTitle, tip)
+end
+
+ns.On("NET_SYNC_STATE", function() UI.RefreshSync() end)
 
 -- Guided tour: every tome in the list, no search (the chips stay as they are).
 function UI.ResetForTour()

@@ -38,6 +38,8 @@ local function ShowTooltip(self)
     end
     local last = ns.Prices.LastScan()
     GameTooltip:AddLine(last > 0 and format(L.LastScanAgo, ns.Ago(last) or "") or L.NeverScanned, 0.6, 0.6, 0.6)
+    local _, syncTip = ns.UI.SyncTip()
+    GameTooltip:AddLine(syncTip, 0.55, 0.8, 1, true)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine(L.MinimapLeft, 0.8, 0.8, 0.8)
     GameTooltip:AddLine(L.MinimapRight, 0.8, 0.8, 0.8)

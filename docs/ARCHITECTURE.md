@@ -248,6 +248,11 @@ Un tome peut arriver de deux façons.
   indépendante des coordonnées exactes. Rapport au bout de 6 s ; les pairs entendus depuis 30 min sans
   réponse sont listés. Les versions antérieures ignorent `H`.
 - **Synchro complète** (`/eth net sync`) : `RequestSync(true, true)`, depuis 0, 20 lots au plus.
+- **Synchro automatique** : `Net.StartAutoSync()` (au premier LOGIN) relance `RequestSync(true)`
+  toutes les 900 s + 0 à 60 s, si le réseau est actif, le canal rejoint et aucune synchro en cours.
+- **État** (`Net.SyncState()`) : `off`, `nochannel`, `synced` (`syncedAt` il y a moins de 20 min),
+  `alone` (notre dernière synchro sans réponse, il y a moins de 20 min), sinon `stale`. `EndSession`
+  émet `NET_SYNC_STATE` ; `UI.RefreshSync` met à jour le bouton.
 - **Comparaison** (`/eth net compare <nom>`) : `H d^qid^nom` ; le joueur nommé (seul) répond
   `H k^qid^partie^parties^trouvailles^dernier^clé,clé,…`, 20 clés par message, au plus toutes les
   30 s. Clé courte d'un lieu : `<id du tome − 300000>.<hachage hexa de carte:mob>` (mod 65521).

@@ -21,6 +21,8 @@
 - `/eth net check` montre aussi la dernière info et les trouvailles de chacun.
 - **`/eth net compare <nom>`** : les lieux qu'un joueur a et pas toi, et l'inverse.
 - **Nouvelle version** : l'addon prévient quand un autre utilisateur a une version plus récente.
+- **Synchro automatique toutes les 15 min**, et un bouton réseau dans la fenêtre : « À jour » ou
+  non (bulle d'aide : dernière synchro, version de l'addon), clic = synchro complète.
 
 ## 2.1.0 — 2026-09-24
 
