@@ -210,6 +210,25 @@ Distances : en « mètres » du jeu (= yards du client anglais).
     only be in 10 channels at a time. » : ni envoi ni réception pendant la session, et `/eth net`
     le dit. Pour libérer une place : `/chatlist`, `/leave <numéro>`, puis `/reload`.
 
+## 11 bis. Les sources qui ne lâchent plus leur tome
+
+Un monstre listé pour un tome (EbonholdHub ou réseau) peut ne plus le lâcher après un patch.
+- **Preuve automatique :** quand tu ouvres le butin d'un cadavre d'un monstre listé et que le tome
+  n'y est pas, l'addon compte un « cadavre sans le tome » pour ce tome et ce monstre (un cadavre
+  rouvert ne compte qu'une fois). Seuls les cadavres que **tu** loots comptent : on est sûr qu'il n'y
+  avait pas le tome. Le Greedy Scavenger n'est pas compté. Ces compteurs sont partagés sur le réseau.
+- **Signalement :** le bouton **« Plus bon ? »** de la fenêtre Sources signale la source (recliquer :
+  « Annuler »).
+- **Source jugée périmée** quand, depuis le dernier drop connu (le tien, celui d'un autre, un lieu du
+  réseau) : **500 cadavres sans le tome** au total (un autre joueur compte pour 250 au plus : il en
+  faut au moins deux, ou toi seul), ou **3 joueurs** l'ont signalée, ou **toi** tu l'as signalée
+  (pour toi seulement).
+- **Rien n'est supprimé :** la source est grisée dans la fenêtre Sources, avec la raison (« ne le
+  lâche probablement plus (0 drop sur 520 cadavres lootés) »), et passe en dernier pour la
+  téléportation et Localiser. Si le tome y retombe, elle redevient normale.
+- **Âge des lieux du réseau :** la fenêtre Sources affiche « trouvé il y a … ». Les plus récents
+  passent devant, et un lieu non retrouvé depuis 90 jours passe après les autres.
+
 ## 12. D'où vient un tome (loot à la main ou Greedy Scavenger)
 
 - **Loot à la main :** le monstre est le cadavre ouvert (celui sous la souris, sinon la cible

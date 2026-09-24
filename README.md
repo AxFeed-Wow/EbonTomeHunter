@@ -26,6 +26,8 @@ Find, buy and farm the **Echo tomes** of Project Ebonhold: Auction House prices 
 * **Teleport** to the unlocked checkpoint (flight master, meeting stone) nearest to the mobs that
   drop the tome.
 * **Sources window**: every mob that drops the tome, with its Wowhead (WotLK) link and a teleport.
+  A source that no longer drops the tome (500 looted corpses without it, or reported by 3 players)
+  is greyed and comes last.
 * **Network between players**: when a user loots a tome, the place is shared with the others, so a
   tome listed as "Unknown location" ends up with a real place.
 * **Alerts** when you, your group or another player find a tome of your wishlist. It also works
@@ -144,7 +146,8 @@ Trouver, acheter et farmer les **tomes d'Echo** de Project Ebonhold : prix et ac
 * **Téléportation** au checkpoint débloqué (maître de vol, pierre de rencontre) le plus proche des
   monstres qui lâchent le tome.
 * **Fenêtre Sources** : chaque monstre qui lâche le tome, avec son lien Wowhead (version WotLK) et une
-  téléportation.
+  téléportation. Une source qui ne lâche plus le tome (500 cadavres lootés sans lui, ou signalée par
+  3 joueurs) est grisée et passe en dernier.
 * **Réseau entre joueurs** : quand un utilisateur loote un tome, le lieu est partagé avec les autres.
   Un tome « Unknown location » finit ainsi par avoir un vrai lieu.
 * **Alertes** quand toi, ton groupe ou un autre joueur trouvez un tome de ta wishlist. Ça marche

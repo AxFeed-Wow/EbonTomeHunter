@@ -314,8 +314,13 @@ function Cat.AttachSightings(row)
             list[#list + 1] = loc
         end
     end
+    for _, loc in ipairs(list) do
+        loc.stale = ns.Evidence and ns.Evidence.LocationStale(row.itemId, loc) or false
+    end
+    -- on the map first, then the places that still drop the tome
     table.sort(list, function(a, b)
         if (a.onMap and true or false) ~= (b.onMap and true or false) then return a.onMap and true or false end
+        if a.stale ~= b.stale then return not a.stale end
         return (a.order or 99999) < (b.order or 99999)
     end)
     row.locations = #list > 0 and list or nil

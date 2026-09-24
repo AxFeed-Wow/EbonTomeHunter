@@ -27,6 +27,7 @@ Sources.lua
 Net.lua
 Comm.lua
 Loot.lua
+Evidence.lua
 UI.lua
 AuctionHouse.lua
 Minimap.lua

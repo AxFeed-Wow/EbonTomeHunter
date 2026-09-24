@@ -105,7 +105,9 @@ end
 
 -- Every source of a tome: one per mob of each drop place (a place without mob: one),
 -- with its nearest checkpoint. Order: reachable by teleport (nearest first), then
--- with a position but nothing unlocked on that continent, then without position.
+-- with a position but nothing unlocked on that continent, then without position; and
+-- in that order the good sources, then the network places not found for 90 days, then
+-- the stale ones (Evidence.lua: probably no longer dropping the tome).
 function T.Sources(itemId)
     local row = ns.Catalog.Get(itemId)
     local checkpoints = T.Checkpoints()
@@ -120,15 +122,21 @@ function T.Sources(itemId)
         end
         if #names == 0 then names[1] = false end
         for _, name in ipairs(names) do
-            out[#out + 1] = {
+            local source = {
                 itemId = itemId, loc = loc, index = index, mob = name or nil, near = near,
-                place = tostring(loc.placeName or L.LocationUnknown), order = #out,
+                place = tostring(loc.placeName or L.LocationUnknown), order = #out, old = loc.old,
             }
+            if name then
+                local npcId = type(loc.npcIds) == "table" and loc.npcIds[name] or nil
+                source.stale, source.kills, source.voters, source.reported = ns.Evidence.Verdict(itemId, name, npcId)
+            end
+            out[#out + 1] = source
         end
     end
     local function Rank(s)
-        if s.near and s.near.checkpoint then return 1 end
-        return s.near and 2 or 3
+        local rank = (s.near and s.near.checkpoint) and 1 or (s.near and 2 or 3)
+        if s.stale then return rank + 6 end
+        return s.old and rank + 3 or rank
     end
     table.sort(out, function(a, b)
         local ra, rb = Rank(a), Rank(b)

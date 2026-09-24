@@ -46,6 +46,7 @@ local PUSH_MAX = 60          -- places the asker adds at the end of its sync
 local REASK_DELAY = 5
 local REASK_GAP = 60
 local REASK_MAX = 10         -- per session of play
+local OLD_PLACE = 90 * 86400  -- a place nobody found again for 90 days comes after the others
 
 local channelIndex
 local joined = false         -- joining was asked (the game may still have refused it)
@@ -166,6 +167,11 @@ local function Queue(msgType, payload)
     queue[#queue + 1] = wire
     sender:Show()
     return true
+end
+
+-- For the other modules (Evidence.lua): one message of their own type.
+function Net.Send(msgType, payload)
+    return Queue(msgType, payload)
 end
 
 local function Queued(wire)
@@ -302,11 +308,15 @@ local function Changed()
     end)
 end
 
--- Drop places of a tome, as catalogue locations (zone map coordinates).
+-- Drop places of a tome, as catalogue locations (zone map coordinates), the most
+-- recently found first.
 function Net.Locations(itemId)
-    local list = Store()[tonumber(itemId)]
-    if not list or #list == 0 then return nil end
-    local out = {}
+    local stored = Store()[tonumber(itemId)]
+    if not stored or #stored == 0 then return nil end
+    local list = {}
+    for i, r in ipairs(stored) do list[i] = r end
+    table.sort(list, function(a, b) return (tonumber(a.at) or 0) > (tonumber(b.at) or 0) end)
+    local out, now = {}, time()
     for index, r in ipairs(list) do
         local zone, sub = tostring(r.zone or ""):match("^([^:]*):?(.*)$")
         local place = (sub and sub ~= "") and (zone .. " - " .. sub) or (zone ~= "" and zone or L.LocationUnknown)
@@ -315,10 +325,15 @@ function Net.Locations(itemId)
             source = "net", mapFile = r.mapFile, x = r.x, y = r.y, placeName = place,
             mobs = r.mob and { r.mob } or nil, npcIds = (r.mob and r.npcId) and { [r.mob] = r.npcId } or nil,
             notes = format(L.NetNotes, r.by or "?", ns.Ago(r.at) or "?", finders),
-            order = 50000 + index,
+            order = 50000 + index, at = r.at, old = now - (tonumber(r.at) or 0) > OLD_PLACE,
         }
     end
     return out
+end
+
+-- The drop places stored for a tome (nil when none).
+function Net.Places(itemId)
+    return Store()[tonumber(itemId)]
 end
 
 function Net.Count()
@@ -617,6 +632,7 @@ local function OnPeerArrived()
         wipe(box)
         SendEncoded(PUSH, "0", wires)
     end
+    ns.Fire("NET_PEER_ARRIVED")
     if mySync or (lastSession and not lastSession.done) then return end   -- a sync is going on
     if (tonumber(ns.DB.syncedAt) or 0) >= (tonumber(ns.DB.lastSync) or 0) then return end
     if reasks >= REASK_MAX or GetTime() - lastReask < REASK_GAP then return end
@@ -664,6 +680,8 @@ ns.RegisterEvent("CHAT_MSG_CHANNEL", function(text, author, _, channelString, _,
             end
         end
         if mySync and mySync.qid == qid then OnOwnAnswer(author, more == "1", newest, fresh) end
+    elseif author ~= me then
+        ns.Fire("NET_MESSAGE", msgType, payload, author)   -- Evidence.lua: K, V
     end
 end)
 

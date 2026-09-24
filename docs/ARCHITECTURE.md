@@ -30,12 +30,13 @@ plus tard (clics, évènements) peuvent viser n'importe quel module.
 | 16 | `Sources.lua` | fenêtre Sources (monstres, TP, Wowhead) `ns.Sources` | | CATALOG_CHANGED |
 | 17 | `Net.lua` | réseau caché entre utilisateurs `ns.Net` | CHAT_MSG_CHANNEL | LOGIN, SETTINGS_CHANGED → SIGHTINGS_CHANGED |
 | 18 | `Comm.lua` | envoi direct de wishlist (chuchotement d'addon) `ns.Comm` | CHAT_MSG_ADDON (préfixe ETH) | |
-| 19 | `Loot.lua` | tomes obtenus : alertes + lieu de drop `ns.Loot` | LOOT_OPENED, LOOT_CLOSED, CHAT_MSG_LOOT, COMBAT_LOG_EVENT_UNFILTERED, BAG_UPDATE, PLAYER_ENTERING_WORLD | BAGS_CHANGED, READY |
-| 20 | `UI.lua` | fenêtre principale `ns.UI` | | CATALOG_CHANGED, WISHLIST_CHANGED, PRICES_CHANGED, KNOWN_CHANGED, SCAN_STATE, SETTINGS_CHANGED, READY |
-| 21 | `AuctionHouse.lua` | onglets Tomes / Wishlist de l'HV `ns.AH` | AUCTION_HOUSE_SHOW, AUCTION_HOUSE_CLOSED | AUCTION_UI_LOADED, DATABASE_READY, SEARCH_RESULTS, … |
-| 22 | `Minimap.lua` | bouton de minimap | | LOGIN, SETTINGS_CHANGED |
-| 23 | `Options.lua` | panneaux Interface > AddOns (principal + « Réseau et alertes ») | | → SETTINGS_CHANGED |
-| 24 | `Tutorial.lua` | tour guidé `ns.Tutorial` | | READY |
+| 19 | `Loot.lua` | tomes obtenus : alertes + lieu de drop `ns.Loot` | LOOT_OPENED, LOOT_CLOSED, CHAT_MSG_LOOT, COMBAT_LOG_EVENT_UNFILTERED, BAG_UPDATE, PLAYER_ENTERING_WORLD | BAGS_CHANGED, READY → CORPSE_OPENED, CORPSE_CLOSED, TOME_DROPPED |
+| 20 | `Evidence.lua` | sources qui ne lâchent plus leur tome `ns.Evidence` | | CORPSE_*, TOME_DROPPED, NET_MESSAGE, NET_PEER_ARRIVED, CATALOG_CHANGED → SIGHTINGS_CHANGED |
+| 21 | `UI.lua` | fenêtre principale `ns.UI` | | CATALOG_CHANGED, WISHLIST_CHANGED, PRICES_CHANGED, KNOWN_CHANGED, SCAN_STATE, SETTINGS_CHANGED, READY |
+| 22 | `AuctionHouse.lua` | onglets Tomes / Wishlist de l'HV `ns.AH` | AUCTION_HOUSE_SHOW, AUCTION_HOUSE_CLOSED | AUCTION_UI_LOADED, DATABASE_READY, SEARCH_RESULTS, … |
+| 23 | `Minimap.lua` | bouton de minimap | | LOGIN, SETTINGS_CHANGED |
+| 24 | `Options.lua` | panneaux Interface > AddOns (principal + « Réseau et alertes ») | | → SETTINGS_CHANGED |
+| 25 | `Tutorial.lua` | tour guidé `ns.Tutorial` | | READY |
 
 ## Socle (Core.lua)
 
@@ -240,6 +241,28 @@ Un tome peut arriver de deux façons.
     depuis 30 min se manifeste (5 s après, au plus une par minute, 10 par session de jeu).
 - **État** : `Net.IsJoined()` et `/eth net` regardent si le canal est vraiment rejoint (le jeu le
   refuse au-delà de 10 canaux).
+
+### Evidence.lua (sources périmées)
+- **Source** = un monstre listé pour un tome (EbonholdHub, ou lieu du réseau). Clé du monstre :
+  `#npcId` (même clé dans toutes les langues du client), sinon le nom en minuscules ; une source
+  est cherchée sous ses deux clés.
+- **Nos cadavres** (`corpses[itemId@mob] = { n, since, drop }`) : à l'ouverture du butin d'un
+  cadavre (`CORPSE_OPENED`, GUID compté une seule fois) d'un monstre listé pour des tomes, chaque
+  tome non looté sur ce cadavre compte +1 à la fermeture (+5 s de grâce). Un tome looté remet son
+  compteur à 0 (`TOME_DROPPED`, même pour un monstre non listé). Le Greedy Scavenger n'est pas
+  compté (on ne sait pas quels cadavres il ramasse).
+- **Partage** (types inconnus de 2.0.0, ignorés) : `K` `itemId^mob^n^depuis^dernierDrop;…` tous les
+  25 cadavres, et `V` `itemId^mob^heure;…` (heure 0 = retrait) au clic. Tous nos compteurs (≥ 10) et
+  signalements repartent quand un utilisateur se manifeste (`NET_PEER_ARRIVED`, au plus toutes les
+  10 min). Reçus : `evidence` / `reports[clé][joueur]`, 50 joueurs max par source.
+- **Verdict** : dernier drop connu = max(nos drops, ceux des autres, lieux du réseau de ce tome avec
+  ce monstre). Ne comptent que les compteurs commencés après ce drop et les signalements postérieurs.
+  Périmée si cadavres ≥ 500 (un autre joueur pèse 250 au plus : il en faut deux, ou soi-même seul),
+  ou ≥ 3 signalements, ou notre propre signalement (pour nous seulement).
+- **Effets** : `Travel.Sources` classe bonnes sources, puis lieux réseau vieux de plus de 90 jours,
+  puis sources périmées (la TP vise la meilleure) ; `Catalog.AttachSightings` préfère un lieu dont
+  tous les monstres ne sont pas périmés ; la fenêtre Sources grise la ligne avec la raison, et son
+  bouton « Plus bon ? » signale / retire.
 
 ### Comm.lua (envoi direct)
 `SendAddonMessage("ETH", msg, "WHISPER", nom)` :

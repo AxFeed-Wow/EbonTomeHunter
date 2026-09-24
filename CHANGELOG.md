@@ -11,6 +11,17 @@
     demande envoie à son tour ce qu'il sait et que personne n'a cité.
   - Une synchro restée sans réponse repart quand quelqu'un arrive.
   - Une ligne dans le chat dit combien de nouveaux lieux la synchro a apportés.
+- **Sources périmées** (un monstre qui ne lâche plus un tome depuis un patch) :
+  - chaque cadavre que tu loots sans le tome est compté pour ce monstre, et les compteurs sont
+    partagés ;
+  - bouton « Plus bon ? » dans la fenêtre Sources pour signaler une source ;
+  - à 500 cadavres sans le tome (au moins deux joueurs, ou toi seul) ou 3 signalements, la source
+    est grisée avec la raison et passe en dernier pour la téléportation. Rien n'est supprimé, et un
+    nouveau drop la rétablit.
+- Lieux du réseau : les plus récents d'abord, l'âge affiché (« trouvé il y a … »), ceux non retrouvés
+  depuis 90 jours après les autres.
+- Nouveau fichier : **relancer complètement le jeu** après la mise à jour (un `/reload` ne suffit
+  pas).
 - `/eth net` dit si le canal caché est vraiment rejoint (il affichait « connecté » même quand le
   jeu le refusait à cause de la limite des 10 canaux).
 - Compatible avec la 2.0.0 : les deux versions se comprennent.

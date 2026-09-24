@@ -6,6 +6,8 @@ local C = W.C
 -- "Sources" window of a tome: every mob and place that drops it, nearest first by
 -- teleport, each with its nearest unlocked checkpoint (TP) and the Wowhead page of
 -- the mob (WotLK section; never an item page: Ebonhold's tomes are not on Wowhead).
+-- A source that probably no longer drops it (Evidence.lua) is greyed, with the reason,
+-- and comes last; "Gone?" reports it (again: withdraws the report).
 ns.Sources = {}
 local S = ns.Sources
 
@@ -36,13 +38,18 @@ local function Muted(text)
     return "  |cff888888" .. text .. "|r"
 end
 
+local function SourceLabel(source)
+    local row = ns.Catalog.Get(source.itemId)
+    return (row and row.name or "?") .. " - " .. ns.Travel.SourceName(source)
+end
+
 local function CreateRow(row)
     row.title = W.Cell(row, "GameFontNormal", 330, 14)
     row.title:SetPoint("TOPLEFT", 6, -5)
     row.place = W.Cell(row, "GameFontHighlightSmall", 180, 12, "RIGHT")
     row.place:SetPoint("TOPRIGHT", -6, -6)
     row.place:SetTextColor(C.place[1], C.place[2], C.place[3])
-    row.travel = W.Cell(row, "GameFontHighlightSmall", 380, 12)
+    row.travel = W.Cell(row, "GameFontHighlightSmall", 320, 12)
     row.travel:SetPoint("BOTTOMLEFT", 6, 7)
     row.wowhead = W.Button(row, L.WowheadButton, 74, 18, function(self)
         local source = self:GetParent().item
@@ -54,6 +61,14 @@ local function CreateRow(row)
         if source then ns.Travel.GoTo(source) end
     end)
     row.tp:SetPoint("BOTTOMRIGHT", -84, 5)
+    row.report = W.Button(row, L.SourceReport, 64, 18, function(self)
+        local source = self:GetParent().item
+        if not (source and source.mob) then return end
+        local on = not ns.Evidence.IsReported(source.itemId, source.mob, source.npcId)
+        ns.Evidence.Report(source.itemId, source.mob, source.npcId, on)
+        ns.Print(on and L.SourceReported or L.SourceUnreported, SourceLabel(source))
+    end)
+    row.report:SetPoint("BOTTOMRIGHT", -134, 5)
 end
 
 local function UpdateRow(row, source)
@@ -66,6 +81,13 @@ local function UpdateRow(row, source)
         else
             title = title .. Muted("(" .. L.WowheadSearch .. ")")
         end
+    end
+    if source.loc and source.loc.source == "net" and source.loc.at then
+        title = title .. Muted(format(L.SourceFound, ns.Ago(source.loc.at) or "?"))
+    end
+    local reason = source.stale and ns.Evidence.Reason(source.kills or 0, source.voters or 0, source.reported)
+    if reason then
+        title = "|cff888888" .. (source.mob or L.SourceNoMob) .. "|r" .. Muted(format(L.SourceStale, reason))
     end
     row.title:SetText(title)
     row.place:SetText(source.place)
@@ -85,6 +107,12 @@ local function UpdateRow(row, source)
     end
     W.SetEnabled(row.tp, near ~= nil and near.checkpoint ~= nil)
     if source.url then row.wowhead:Show() else row.wowhead:Hide() end
+    if source.mob then
+        row.report:Show()
+        row.report:SetText(ns.Evidence.IsReported(source.itemId, source.mob, source.npcId) and L.SourceUnreport or L.SourceReport)
+    else
+        row.report:Hide()
+    end
 end
 
 local function Build()

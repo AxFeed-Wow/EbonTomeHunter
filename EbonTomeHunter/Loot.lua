@@ -76,10 +76,14 @@ ns.RegisterEvent("LOOT_OPENED", function()
     lootSource.npcId = ns.Wowhead.NpcIdFromGUID(UnitGUID(unit))
     if lootSource.name and lootSource.npcId then ns.Wowhead.Remember(lootSource.name, lootSource.npcId) end
     lootSource.place = Loot.CapturePlace()
+    ns.Fire("CORPSE_OPENED", UnitGUID(unit), lootSource.name, lootSource.npcId)   -- Evidence.lua
 end)
 
 ns.RegisterEvent("LOOT_CLOSED", function()
-    if lootSource and not lootSource.closedAt then lootSource.closedAt = GetTime() end
+    if lootSource and not lootSource.closedAt then
+        lootSource.closedAt = GetTime()
+        if lootSource.name then ns.Fire("CORPSE_CLOSED") end
+    end
 end)
 
 -- The loot window the tome came from: open, or closed a few seconds ago.
@@ -179,6 +183,7 @@ function Loot.Obtained(itemId)
     if window then
         -- its corpse; nothing for a chest, a bag opened from the inventory or fishing
         if window.name and window.place then Report(itemId, window.place, window.name, window.npcId) end
+        if window.name then ns.Fire("TOME_DROPPED", itemId, window.name, window.npcId) end
         return
     end
     -- no loot window: the Greedy Scavenger (or a roll won later): the corpses of the last minute

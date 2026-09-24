@@ -731,6 +731,116 @@ Check(ns.Net.StatusText():find(ns.L.NetOn, 1, true) ~= nil and ns.Net.IsJoined()
 ns.DB.sightings = keptSightings
 ns.Fire("SIGHTINGS_CHANGED")
 
+-- --- Stale sources (Evidence.lua) --------------------------------------------------------
+local EV = ns.Evidence
+local keptForEvidence = ns.DB.sightings
+ns.DB.sightings = {}
+ns.Fire("SIGHTINGS_CHANGED")
+Advance(2)
+ns.DB.corpses, ns.DB.evidence, ns.DB.reports = {}, {}, {}
+local wolfKey = "300569@#28434"
+local function LootCorpse(guidTail, withTome)
+    unitState.target = { name = "Sinewy Wolf", guid = "0xF130006F1200" .. guidTail, dead = true }
+    Fire("LOOT_OPENED")
+    if withTome then Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300569, "Tome of Echo: Beast Bane"))) end
+    Fire("LOOT_CLOSED")
+    unitState.target = nil
+    Advance(6)
+end
+LootCorpse("1001")
+LootCorpse("1001")
+Check(ns.DB.corpses[wolfKey] and ns.DB.corpses[wolfKey].n == 1,
+    "a looted corpse of a listed source without the tome counts, once")
+ns.DB.corpses[wolfKey].n = 24
+before = #sentChat
+LootCorpse("1002")
+local announced = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~K~300569%^#28434%^25%^") then announced = true end
+end
+Check(announced, "the counter is shared every 25 corpses")
+Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "25 corpses: still a good source")
+ns.DB.corpses[wolfKey].n = 500
+local staleNow, kills = EV.Verdict(300569, "Sinewy Wolf", 28434)
+Check(staleNow and kills == 500, "500 looted corpses without the tome: probably no longer drops it")
+local staleSeen, orderOk = false, true
+for _, source in ipairs(ns.Travel.Sources(300569)) do
+    if source.stale then staleSeen = true elseif staleSeen then orderOk = false end
+end
+Check(staleSeen and orderOk, "stale sources come last (teleport, Sources window)")
+LootCorpse("1003", true)
+Check(ns.DB.corpses[wolfKey].n == 0 and not EV.Verdict(300569, "Sinewy Wolf", 28434),
+    "the tome drops from it again: counter back to 0, good source")
+
+-- other users' counters: one weighs half the threshold at most; a later drop clears them
+ns.DB.corpses = {}
+local nowEv = time()
+ChannelMessage("ETHN1~K~300569^#28434^900^" .. nowEv .. "^0", "Hal")
+local _, halKills = EV.Verdict(300569, "Sinewy Wolf", 28434)
+Check(halKills == EV.STALE_KILLS / 2 and not EV.Verdict(300569, "Sinewy Wolf", 28434),
+    "a single other user cannot mark a source alone")
+ChannelMessage("ETHN1~K~300569^#28434^260^" .. nowEv .. "^0", "Ivy")
+Check(EV.Verdict(300569, "Sinewy Wolf", 28434), "two users with enough corpses: stale")
+ChannelMessage("ETHN1~K~300569^#28434^3^" .. (nowEv + 30) .. "^" .. (nowEv + 30), "Kim")
+Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "a drop reported after their counts: good source again")
+
+-- reports: 3 users, or the player alone for themselves; withdrawn from the Sources window
+ns.DB.evidence, ns.DB.reports = {}, {}
+local later = nowEv + 60
+ChannelMessage("ETHN1~V~300569^#4698^" .. later, "Lea")
+ChannelMessage("ETHN1~V~300569^#4698^" .. later, "Max")
+Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "2 reports: not enough")
+ChannelMessage("ETHN1~V~300569^#4698^" .. later, "Ned")
+local byVotes, _, voters = EV.Verdict(300569, "Scarlet Paladins", 4698)
+Check(byVotes and voters == 3, "3 users reported it: stale")
+ChannelMessage("ETHN1~V~300569^#4698^0", "Ned")
+Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "a report withdrawn")
+before = #sentChat
+Check(EV.Report(300569, "Scarlet Paladins", 4698, true), "the player reports a source")
+local mineStale, _, _, mine = EV.Verdict(300569, "Scarlet Paladins", 4698)
+Advance(2)
+local shared = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~V~300569%^#4698%^%d+$") then shared = true end
+end
+Check(mineStale and mine and shared, "own report: stale for the player, shared with the others")
+Check(WH.Show(300569) > 0, "Sources window opened")
+local reportRow
+for i = 1, 6 do
+    local r = _G["EbonTomeHunterSourcesListRow" .. i]
+    if r and r:IsShown() and r.title:GetText() and r.title:GetText():find(format(ns.L.SourceStale, format(ns.L.StaleVotes, 3)), 1, true) then
+        reportRow = r
+    end
+end
+Check(reportRow ~= nil, "the Sources window greys the source, with the reason (Lea, Max and the player: 3 reports)")
+if reportRow then reportRow.report:GetScript("OnClick")(reportRow.report) end
+Advance(2)
+Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "clicked again: report withdrawn")
+EbonTomeHunterSourcesFrame:Hide()
+
+-- our counters and reports go to a user who shows up (at most every 10 min)
+ns.DB.corpses[wolfKey] = { n = 30, since = time(), drop = 0 }
+Advance(601)
+before = #sentChat
+ChannelMessage("ETHN1~Q~d0000^" .. time(), "Zed")
+Advance(3)
+local bundled = false
+for i = before + 1, #sentChat do
+    if sentChat[i].msg:find("^ETHN1~K~.*300569%^#28434%^30%^") then bundled = true end
+end
+Check(bundled, "a user shows up: our counters are sent")
+
+-- network places: the most recent first, those not found for 90 days flagged
+ns.Net.Add({ itemId = 300569, mapFile = "Tanaris", x = 0.1, y = 0.1, mob = "Old Mob", zone = "Tanaris",
+    at = time() - 100 * 86400, by = "Pat" })
+local netLocs = ns.Net.Locations(300569)
+Check(netLocs and #netLocs >= 2 and not netLocs[1].old and netLocs[#netLocs].old and netLocs[1].at >= netLocs[#netLocs].at,
+    "network places: most recent first, the old ones flagged")
+ns.DB.sightings = keptForEvidence
+ns.DB.corpses, ns.DB.evidence, ns.DB.reports = {}, {}, {}
+ns.Fire("SIGHTINGS_CHANGED")
+Advance(2)
+
 -- group loot of a wishlist tome
 ns.Wishlist.SetQty(300570, 1)
 Fire("CHAT_MSG_LOOT", format(LOOT_ITEM, "Groupie", Link(300570, "Tome of Echo: DragonKin Bane")))
