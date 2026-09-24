@@ -7,6 +7,7 @@
   - Les Echos qui ont un tome deviennent ce tome (1 exemplaire).
   - L'aperçu sépare les tomes apprenables (ajoutés), déjà appris (non ajoutés) et les Echos de base,
     sans tome (ignorés), avec leurs noms ; les listes complètes s'affichent dans le chat.
+  - Une case « Ajouter aussi les tomes déjà appris » permet de les mettre quand même en wishlist.
 - Une chaîne de wishlist fabriquée à la main (code de contrôle faux) reste refusée.
 - **Tomes de raid** : les 20 tomes qu'EbonholdHub ne place nulle part sont rattachés aux boss de la
   Citadelle de la Couronne de glace et du Sanctum rubis (source supposée : chaque Echo reprend une

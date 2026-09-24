@@ -369,6 +369,23 @@ local mine = ns.Share.ExportWishlist()
 ns.Share.importBox:SetText(mine)
 Check(ns.Share.mergeButton:IsEnabled() and (ns.Share.previewText:GetText() or ""):find("2", 1, true) ~= nil,
     "an addon string still imports in the same box")
+Check(not ns.Share.learnedCheck:IsShown(), "no 'add the learned tomes' box for an addon string")
+
+-- tomes already learned: added only when the player ticks the box
+ns.Share.importBox:SetText(EB_LINK)
+Check(ns.Share.learnedCheck:IsShown() and not ns.Share.learnedCheck:GetChecked(),
+    "a build with a learned tome: the box is offered, unticked")
+ns.Share.learnedCheck:SetChecked(true)
+ns.Share.learnedCheck:GetScript("OnClick")(ns.Share.learnedCheck)
+Check((ns.Share.previewText:GetText() or ""):find(format(ns.L.ShareEchoLearnedAdded, 1), 1, true) ~= nil,
+    "ticked: the preview says the learned tome is added anyway")
+ns.Share.mergeButton:GetScript("OnClick")(ns.Share.mergeButton)
+Check(ns.Wishlist.Has(nucleus.itemId) and ns.Wishlist.Count() == 3, "merged: the learned tome is in the wishlist too")
+Check(not ns.Share.learnedCheck:IsShown(), "after the import the box is gone")
+ns.Share.importBox:SetText(EB_LINK)
+Check(ns.Share.learnedCheck:IsShown() and not ns.Share.learnedCheck:GetChecked(), "and unticked again for the next build")
+ns.Share.importBox:SetText("https://project-ebonhold.com/tools/echo-builder?b=200044-200479&c=mage")
+Check(not ns.Share.learnedCheck:IsShown(), "no learned tome in the build: no box")
 EbonTomeHunterShareFrame:Hide()
 ns.Known.IsKnown = realKnown
 for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end

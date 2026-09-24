@@ -123,6 +123,21 @@ function S.DecodeEchoBuild(text)
     return result
 end
 
+-- The same build with its already learned tomes added anyway (the player's choice: a
+-- tome learned on this character can still be wanted for another one).
+function S.WithLearned(result)
+    if not (result and result.echoBuild and #result.learned > 0) then return result end
+    local copy = {}
+    for k, v in pairs(result) do copy[k] = v end
+    copy.items, copy.learned, copy.learnedAdded = {}, {}, result.learned
+    for i, item in ipairs(result.items) do copy.items[i] = item end
+    for _, row in ipairs(result.learned) do
+        copy.items[#copy.items + 1] = { itemId = row.itemId, qty = 1, row = row }
+    end
+    copy.copies = #copy.items
+    return copy
+end
+
 -- Finds and checks a wishlist string (it may be surrounded by other text), or an Echo
 -- Builder build. Returns { author, items = { { itemId, qty, row } }, copies, unknown },
 -- or nil + error key.
@@ -186,9 +201,10 @@ end
 ------------------------------------------------------------------------
 -- Dialog: export (top) and import (bottom)
 ------------------------------------------------------------------------
-local dialog, exportArea, importArea, summaryText, previewText, mergeButton, replaceButton
+local dialog, exportArea, importArea, summaryText, previewText, mergeButton, replaceButton, learnedCheck
 local exportText = ""
 local parsed
+local withLearned = false   -- "also add the tomes already learned" (Echo Builder builds)
 
 local function RefreshExport()
     if not dialog then return end
@@ -214,6 +230,7 @@ local function EchoBuildPreview(result)
     local function RowName(item) return (item.row or item).name or "?" end
     Line("|cff40ff40", format(L.ShareEchoTomes, #result.items), result.items, RowName)
     Line("|cffffd100", format(L.ShareEchoLearned, #result.learned), result.learned, RowName)
+    Line("|cffffd100", format(L.ShareEchoLearnedAdded, #(result.learnedAdded or {})), result.learnedAdded or {}, RowName)
     Line("|cff999999", format(L.ShareEchoBasic, #result.basic), result.basic, function(n) return n end)
     if #result.items == 0 then lines[#lines + 1] = "|cffff8000" .. L.ShareEchoNoTome .. "|r" end
     return table.concat(lines, "\n")
@@ -223,6 +240,7 @@ local function RefreshPreview()
     if not dialog then return end
     local text = importArea.box:GetText() or ""
     parsed = nil
+    learnedCheck:Hide()
     local color = C.text
     if strtrim(text) == "" then
         previewText:SetText(L.SharePasteHint)
@@ -233,6 +251,12 @@ local function RefreshPreview()
             previewText:SetText(L[err])
             color = C.bad
         elseif result.echoBuild then
+            if #result.learned > 0 then
+                learnedCheck.label:SetText(format(L.ShareEchoAddLearned, #result.learned))
+                learnedCheck:SetChecked(withLearned)
+                learnedCheck:Show()
+                if withLearned then result = S.WithLearned(result) end
+            end
             parsed = #result.items > 0 and result or nil
             previewText:SetText(EchoBuildPreview(result))
         elseif #result.items == 0 then
@@ -260,6 +284,7 @@ end
 
 local function AfterImport()
     if not dialog then return end
+    withLearned = false
     importArea.box:SetText("")
     RefreshExport()
 end
@@ -348,6 +373,16 @@ local function Build()
     end)
     mergeButton:SetPoint("RIGHT", replaceButton, "LEFT", -6, 0)
     mergeButton:SetTip(L.ShareMerge, L.ShareMergeTip)
+
+    -- Echo Builder build with tomes this character already learned: add them anyway?
+    learnedCheck = W.CheckBox(dialog, "", function() return withLearned end, function(value)
+        withLearned = value
+        RefreshPreview()
+    end, L.ShareEchoAddLearnedTip)
+    learnedCheck:SetPoint("BOTTOMLEFT", 12, 12)
+    learnedCheck.label = _G[learnedCheck:GetName() .. "Text"]
+    learnedCheck:Hide()
+    S.learnedCheck = learnedCheck
 
     dialog:SetScript("OnShow", function()
         RefreshExport()

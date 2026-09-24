@@ -172,6 +172,9 @@ Distances : en « mètres » du jeu (= yards du client anglais).
   - L'aperçu sépare : **tomes apprenables** (ajoutés), **déjà appris** (non ajoutés), **Echos de
     base** sans tome (ignorés), avec leurs noms. Après l'import, les listes complètes s'affichent
     dans le chat.
+  - Si le build contient des tomes déjà appris par ce personnage, une case **« Ajouter aussi les N
+    tome(s) déjà appris »** apparaît (décochée) : cochée, ils sont ajoutés quand même (pour un autre
+    personnage, ou pour les revendre). Elle se décoche après chaque import.
   - Sur les 546 Echos d'Echo Builder, 157 seulement ont un tome (tous connus de l'addon) : les
     autres s'obtiennent sans tome. Le tome d'un Echo rare ne couvre pas ses versions commune et peu
     commune, qui ont leur propre id et sont de base.
