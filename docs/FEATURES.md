@@ -230,7 +230,8 @@ Distances : en « mètres » du jeu (= yards du client anglais).
   y a moins de 20 min), **Pas à jour** (orange), **Seul en ligne** (gris : personne n'a répondu à la
   dernière synchro), **Hors réseau** (canal caché refusé), **Réseau coupé**. Sa bulle d'aide dit quand
   date la dernière synchro et si une version plus récente de l'addon a été vue ; le clic lance la
-  synchro complète. La bulle d'aide du bouton de la minimap reprend ces lignes.
+  synchro complète. Il se met à jour à la fin de chaque synchro (automatique ou non), quand le
+  réseau est activé ou coupé, toutes les 30 s tant que la fenêtre est ouverte, et au survol. La bulle d'aide du bouton de la minimap reprend ces lignes.
 - **`/eth net sync`** : synchro complète pour toi seul : tu redemandes tout depuis le début, sans
   l'attente de 10 min et avec jusqu'à 20 lots de 30 lieux.
 - **`/eth net compare <nom>`** : ce joueur (connecté, 2.2.0 et plus) t'envoie la liste compacte de
@@ -300,8 +301,11 @@ Un monstre listé pour un tome (EbonholdHub ou réseau) peut ne plus le lâcher 
 - **Greedy Scavenger** (familier d'Ebonhold qui ramasse tout seul) : il ne laisse **aucun message**.
   - L'addon voit le tome **apparaître dans les sacs**.
   - Il prend le monstre que toi ou ton groupe avez combattu puis tué dans la dernière minute, si
-    c'est un seul type de monstre. Sinon il envoie le lieu seul, qu'un autre joueur pourra
-    compléter. La position est la tienne.
+    c'est un seul type de monstre.
+  - Plusieurs types de monstres : il garde **celui qui est une source connue du tome** (lieux
+    d'EbonholdHub, du réseau, boss de raid, indice du serveur « Can be found on … »), s'il n'y en a
+    qu'un parmi eux.
+  - Sinon il envoie le lieu seul, qu'un autre joueur pourra compléter. La position est la tienne.
   - Aucun monstre tué dans la dernière minute : pas de lieu.
 - **Pas comptés comme du loot :**
   - ce qui arrive par une banque (dont la banque étendue et le stockage du Vide), le courrier, un

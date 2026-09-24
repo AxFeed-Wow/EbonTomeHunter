@@ -205,6 +205,45 @@ local function RecentMob(now)
     return mob, any, npcId
 end
 
+-- Names and NPC ids of the known sources of a tome: its drop places (EbonholdHub, network,
+-- raid bosses) and the server's hint ("Can be found on Lord Marrowgar").
+local function KnownSources(itemId)
+    local keys = {}
+    local row = ns.Catalog.Get(itemId)
+    for _, loc in ipairs(ns.WorldMap.Locations(row)) do
+        for _, text in ipairs(type(loc.mobs) == "table" and loc.mobs or {}) do
+            for _, name in ipairs(ns.Wowhead.SplitMobs(text)) do
+                keys[strlower(name)] = true
+                local npcId = (type(loc.npcIds) == "table" and loc.npcIds[name]) or ns.Wowhead.NpcId(name)
+                if npcId then keys["#" .. npcId] = true end
+            end
+        end
+    end
+    local hint = row and ns.Catalog.DropHint(row)
+    local who = hint and hint:match("^Can be found on (.+)$")
+    if who then keys[strlower((who:gsub("^[Tt]he ", "")))] = true end
+    return keys
+end
+
+-- Several kinds of mobs died in the last minute: the only one of them that is a known
+-- source of this tome, if there is exactly one.
+local function RecentSourceMob(itemId, now)
+    local keys = KnownSources(itemId)
+    local found
+    for i = #kills, 1, -1 do
+        local kill = kills[i]
+        if now - kill.at > KILL_WINDOW then break end
+        local name = kill.name and strlower(kill.name)
+        local known = (name and (keys[name] or keys[(name:gsub("^the ", ""))])) or (kill.npcId and keys["#" .. kill.npcId])
+        if known then
+            if found and found.name ~= kill.name then return nil end   -- two different known sources
+            found = kill
+        end
+    end
+    if found then return found.name, found.npcId end
+    return nil
+end
+
 -- A tome just came in (loot window or Scavenger): wishlist alert, then its drop place.
 function Loot.Obtained(itemId)
     local row = ns.Catalog.Get(itemId)
@@ -222,6 +261,7 @@ function Loot.Obtained(itemId)
     end
     -- no loot window: the Greedy Scavenger (or a roll won later): the corpses of the last minute
     local mob, any, npcId = RecentMob(now)
+    if any and not mob then mob, npcId = RecentSourceMob(itemId, now) end
     if any then Report(itemId, Loot.CapturePlace(), mob, npcId) end
 end
 

@@ -950,6 +950,21 @@ do
     UI.RefreshSync()
     Check(button:GetText() == ns.L.SyncNoChannel, "hidden channel refused: 'No network'")
     GetChannelName = realName
+
+    -- a sync that goes to the end (automatic or not) turns the button to "Up to date" by itself
+    ns.DB.syncedAt = 0
+    UI.RefreshSync()
+    before = #sentChat
+    Check(ns.Net.RequestSync(true), "a sync starts")
+    local sq = LastQ(before)
+    ChannelMessage("ETHN1~S~" .. sq .. "~0~" .. ns.Net.Encode({ itemId = tomeIds[5], mapFile = "Durotar", x = 0.7, y = 0.7,
+        mob = "Raptor", zone = "Durotar", at = time(), by = "Bea" }), "Bea")
+    Advance(5)
+    Check(button:GetText() == ns.L.SyncUpToDate, "the sync ended: the button says 'Up to date' without being asked")
+    -- and it follows time alone (checked every 30 s while the window is shown)
+    ns.DB.syncedAt = time() - 7200
+    Advance(31)
+    Check(button:GetText() ~= ns.L.SyncUpToDate, "2 h later: no longer 'Up to date', by itself")
     EbonTomeHunterFrame:Hide()
     Check(not ns.Net.StartAutoSync(), "the automatic sync runs from the login on (started once)")
     before = #sentChat
@@ -1318,6 +1333,27 @@ ChannelMessage("ETHN1~D~" .. ns.Net.Encode({ itemId = 300025, mapFile = "Crystal
     npcId = tonumber("0071C0", 16), mob = "Frostbite Bear", zone = "Crystalsong Forest", at = time(), by = "Zed" }), "Zed")
 Check(#ns.DB.sightings[300025] == 1 and ns.DB.sightings[300025][1].mob == "Frostbite Bear",
     "a player who knows the mob confirms that spot: merged, the mob is now known")
+
+-- several kinds of mobs killed, but only one is a known source of the tome: that one
+Advance(61)
+Kill("0xF130006F120000AB", "Sinewy Wolf")        -- a known source of Beast Bane
+Kill("0xF1300071C00000AC", "Frostbite Bear")
+GetPlayerMapPosition = function(unit) return 0.80, 0.80 end
+bagSlots[12] = { link = Link(300569, "Tome of Echo: Beast Bane"), count = 1 }
+BagsChanged()
+local sourced
+for _, r in ipairs(ns.DB.sightings[300569] or {}) do
+    if r.x and math.abs(r.x - 0.80) < 0.001 then sourced = r end
+end
+Check(sourced and sourced.mob == "Sinewy Wolf" and sourced.npcId == 28434,
+    "Scavenger after mixed kills: the only known source of the tome among them is its mob")
+bagSlots[12] = nil
+BagsChanged()
+for i, r in ipairs(ns.DB.sightings[300569] or {}) do   -- leave the teleport tests as they were
+    if r == sourced then table.remove(ns.DB.sightings[300569], i) break end
+end
+ns.Fire("SIGHTINGS_CHANGED")
+Advance(2)
 
 Advance(61)
 bagSlots[5] = { link = Link(300436, "Tome of Echo: Shielded Steps"), count = 1 }

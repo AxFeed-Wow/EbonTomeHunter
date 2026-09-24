@@ -24,6 +24,8 @@
 - **Historique des drops** (bouton Historique, `/eth history`) : quand, quel tome, qui, où, quel
   monstre ; filtre « mes trouvailles », clic = Sources.
 - Statistiques de kills par créature, envoyées seulement à la demande de l'addon de dev.
+- Greedy Scavenger : après des kills de plusieurs monstres différents, le monstre retenu est celui
+  qui est une source connue du tome (moins de lieux sans monstre).
 - Nouveau fichier `History.lua` : **relancer complètement le jeu** après la mise à jour.
 - **Synchro automatique toutes les 15 min**, et un bouton réseau dans la fenêtre : « À jour » ou
   non (bulle d'aide : dernière synchro, version de l'addon), clic = synchro complète.

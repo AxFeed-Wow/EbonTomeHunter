@@ -470,6 +470,21 @@ function UI.Init()
     end)
     syncButton:SetPoint("RIGHT", scanButton, "LEFT", -4, 0)
     UI.syncButton = syncButton
+    -- the tooltip is computed when hovered ("5 min ago" stays true)
+    local showTip = syncButton:GetScript("OnEnter")
+    syncButton:SetScript("OnEnter", function(self)
+        UI.RefreshSync()
+        if showTip then showTip(self) end
+    end)
+    -- "Up to date" turns into "Not up to date" with time alone: checked every 30 s while shown
+    local elapsed = 0
+    syncButton:SetScript("OnUpdate", function(self, delta)
+        elapsed = elapsed + (delta or 0)
+        if elapsed >= 30 then
+            elapsed = 0
+            UI.RefreshSync()
+        end
+    end)
 
     -- search + filters
     searchBox = W.SearchBox(frame, 280, L.SearchPlaceholder, function(text)
@@ -583,6 +598,9 @@ function UI.RefreshSync()
 end
 
 ns.On("NET_SYNC_STATE", function() UI.RefreshSync() end)
+ns.On("SETTINGS_CHANGED", function(key)
+    if key == "netEnabled" then UI.RefreshSync() end
+end)
 
 -- Guided tour: every tome in the list, no search (the chips stay as they are).
 function UI.ResetForTour()
