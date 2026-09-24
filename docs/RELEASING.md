@@ -36,7 +36,9 @@ Versionnage sémantique `MAJEUR.MINEUR.CORRECTIF` :
 La version s'écrit à **deux endroits** : `EbonTomeHunter/Core.lua` (`ns.version = "x.y.z"`) et
 `EbonTomeHunter/EbonTomeHunter.toc` (`## Version: x.y.z`). `tools/package.py` refuse s'ils diffèrent.
 Chaque version a son entrée en haut de `CHANGELOG.md` : `## x.y.z — AAAA-MM-JJ`, puis les changements
-en français. Cette entrée devient les notes de la release.
+en français. **Notes de la release** : l'utilisateur les veut en anglais ET en français, rédigées
+pour les joueurs (pas une liste de commits). Les écrire dans `.github/release-notes/x.y.z.md`
+(modèle : `2.1.0.md`) ; sans ce fichier, le workflow reprend l'entrée du CHANGELOG.
 
 ## Livrer une version
 
