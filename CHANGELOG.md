@@ -1,9 +1,9 @@
 # Historique des versions
 
-## Prochaine version (non publiée)
+## 3.1.0 — 2026-09-29
 
-À publier en **3.1.0** : renommer ce titre en `## 3.1.0 — AAAA-MM-JJ`, monter la version (Core.lua
-et .toc) et écrire `.github/release-notes/3.1.0.md`.
+Les sources où le tome tombe vraiment passent en premier. Compatible avec la 3.0.0 (même réseau),
+aucun nouveau fichier : un `/reload` suffit après la mise à jour.
 
 - **Les sources les plus farmées d'abord.** Les sources vues lâcher le tome le plus souvent passent
   en tête : lieu principal de la liste, fenêtre Sources, Localiser et téléportation.
@@ -17,6 +17,8 @@ et .toc) et écrire `.github/release-notes/3.1.0.md`.
   « Black Temple »).
 - La téléportation vise la première de ces sources qu'un checkpoint dessert, jamais une source
   périmée tant que la première est bonne.
+- Outils : `validate_addon.py` teste aussi un addon qui dépend d'un autre (`## Dependencies`) quand
+  cet autre est donné par `--with`.
 
 ## 3.0.0 — 2026-09-28
 

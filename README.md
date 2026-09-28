@@ -24,8 +24,9 @@ Find, buy and farm the **Echo tomes** of Project Ebonhold: Auction House prices 
 * **World map**: *Locate* opens the map on the drop place; the tomes of your wishlist are marked on
   it.
 * **Teleport** to the unlocked checkpoint (flight master, meeting stone) nearest to the mobs that
-  drop the tome.
-* **Sources window**: every mob that drops the tome, with its Wowhead (WotLK) link and a teleport.
+  drop the tome most often; for a raid or a dungeon, to the meeting stone of its entrance.
+* **Sources window**: every mob that drops the tome, the ones seen dropping it most often first,
+  with the number of drops seen, its Wowhead (WotLK) link and a teleport.
   A source that no longer drops the tome (more looted corpses without it than bad luck explains,
   given its drop rate, or reported by 3 players) is greyed and comes last.
 * **Network between players** (with the EbonAPI addon): when a user loots a tome, the place is
@@ -162,11 +163,12 @@ Trouver, acheter et farmer les **tomes d'Echo** de Project Ebonhold : prix et ac
 * **Carte du monde** : « Localiser » ouvre la carte sur le lieu de drop ; les tomes de la wishlist y
   sont marqués.
 * **Téléportation** au checkpoint débloqué (maître de vol, pierre de rencontre) le plus proche des
-  monstres qui lâchent le tome.
-* **Fenêtre Sources** : chaque monstre qui lâche le tome, avec son lien Wowhead (version WotLK) et une
-  téléportation. Une source qui ne lâche plus le tome (plus de cadavres lootés sans lui que la
-  malchance ne l'explique, vu son taux de drop, ou signalée par 3 joueurs) est grisée et passe en
-  dernier.
+  monstres qui lâchent le plus souvent le tome ; pour un raid ou un donjon, à la pierre de rencontre
+  de son entrée.
+* **Fenêtre Sources** : chaque monstre qui lâche le tome, ceux vus le lâcher le plus souvent en
+  premier, avec le nombre de drops vus, son lien Wowhead (version WotLK) et une téléportation. Une
+  source qui ne lâche plus le tome (plus de cadavres lootés sans lui que la malchance ne l'explique,
+  vu son taux de drop, ou signalée par 3 joueurs) est grisée et passe en dernier.
 * **Réseau entre joueurs** (avec l'addon EbonAPI) : quand un utilisateur loote un tome, le lieu est
   partagé avec les autres, même avec ceux qui ne sont jamais connectés en même temps. Un tome
   « Unknown location » finit ainsi par avoir un vrai lieu.
