@@ -91,6 +91,10 @@ local function UpdateRow(row, source)
     elseif loc.source == "atlas" then
         title = title .. Muted(format(L.SourceAtlas, loc.count or 1))
     end
+    -- how often it was seen dropping the tome (the order of the window follows it)
+    if (source.drops or 0) > 0 and loc.source ~= "atlas" then
+        title = title .. Muted(format(L.SourceDrops, source.drops))
+    end
     local reason = source.stale and ns.Evidence.Reason(source.kills or 0, source.voters or 0, source.reported,
         source.oneIn, source.needed)
     if reason then

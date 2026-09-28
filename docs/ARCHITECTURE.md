@@ -125,7 +125,9 @@ identité son nom normalisé (chaîne) ; `ns.Key` accepte les deux.
   graphies), `byEchoKey`.
 - `AttachSightings(row)` : `locations` = lieux statiques (sinon boss de raid) + lieux du réseau
   (`Net.Locations`) + sources de l'atlas d'EbonBuilds que les autres ne citent pas
-  (`Atlas.Locations`), ceux qui ont un point sur la carte d'abord ; `location` = le premier.
+  (`Atlas.Locations`). Triés : pas périmés d'abord, pas vieux de 90 jours, **les plus vus** (`drops`
+  = max de `seen`, joueurs du réseau ou nombre de l'atlas, et de `Evidence.Drops` de ses monstres),
+  puis sur la carte, puis `order` ; `location` = le premier.
 - `LearnTome(name, itemId)` : tome vu à l'HV ou dans les sacs, gardé dans `DB.tomes` ;
   `AddLearnedRow` crée une ligne pour un tome inconnu.
 - `MigrateKeys()` convertit les clés des anciennes versions (id d'Echo, nom) en item id.
@@ -199,11 +201,17 @@ ProjectEbonhold), quand les sacs changent et à `READY`.
   - `Nearest(loc)` : checkpoint débloqué le plus proche sur le même continent (à vol d'oiseau), plus
     un checkpoint encore plus proche mais verrouillé ; `approx` quand la position est le centre de
     la zone (`FormatDistance(m, approx)` ajoute « ~ »).
-  - `Sources(itemId)` : une entrée par monstre de chaque lieu, triée (rang 1 : checkpoint ; 1,5 :
-    checkpoint depuis le centre de la zone ; 2 : pas de checkpoint sur ce continent ; 3 : sans
-    position ; +3 lieu réseau vieux de 90 jours ; +6 source périmée).
-  - `GoBest` vise la source au checkpoint le plus proche. Il refuse si le joueur est déjà plus près
-    d'une source que tout checkpoint.
+  - `Entrance(loc)` : pour un lieu sans position (carte d'une instance, zone d'un raid de l'atlas),
+    la pierre de rencontre (`kind` `MEETINGSTONE*`) dont le nom normalisé (minuscules, lettres et
+    chiffres) égale le fichier de carte (`BlackTemple`, le même dans toutes les langues) ou le nom
+    du lieu ; `Nearest` part alors de sa position (`near.entrance`).
+  - `Sources(itemId)` : une entrée par monstre de chaque lieu, triée : pénalité (périmée 2, lieu
+    réseau vieux de 90 jours 1), puis **drops vus** (max de `loc.seen` et de
+    `Evidence.Drops(tome, monstre)`), puis accès (1 : checkpoint ; 1,5 : depuis le centre de la
+    zone ; 2 : pas de checkpoint sur ce continent ; 3 : sans position), distance, ordre.
+  - `Best` : la première source de cet ordre qu'un checkpoint dessert, sans passer d'une bonne
+    source à une périmée. `GoBest` la vise ; il refuse si le joueur est déjà plus près d'une source
+    que tout checkpoint.
   - `GoTo` exécute `UseCheckpoint(id)` : jamais en combat, démontage au sol, une demande toutes les
     3 s. La confirmation est une option (`confirmTeleport`).
 
@@ -325,6 +333,8 @@ candidats), et émet `TOME_OBTAINED` pour l'addon de dev.
   - Périmée si cadavres ≥ seuil (un autre joueur pèse la moitié du seuil au plus : il en faut deux,
     ou soi-même seul), ou ≥ 3 signalements, ou notre propre signalement (pour nous seulement).
   - `E.Verdict` renvoie aussi `oneIn` (1 ÷ taux, affiché « d'habitude 1 sur N ») et le seuil.
+- **Drops vus** (`E.Drops`) : somme des `drops` de notre compteur et de ceux des autres joueurs pour
+  ce tome et ce monstre ; sert à l'ordre des sources (catalogue, `Travel.Sources`).
 - **Effets** : `Travel.Sources` classe bonnes sources, puis lieux réseau vieux de plus de 90 jours,
   puis sources périmées (la TP vise la meilleure) ; `Catalog.AttachSightings` préfère un lieu dont
   tous les monstres ne sont pas périmés ; la fenêtre Sources grise la ligne avec la raison, et son

@@ -1,5 +1,23 @@
 # Historique des versions
 
+## Prochaine version (non publiée)
+
+À publier en **3.1.0** : renommer ce titre en `## 3.1.0 — AAAA-MM-JJ`, monter la version (Core.lua
+et .toc) et écrire `.github/release-notes/3.1.0.md`.
+
+- **Les sources les plus farmées d'abord.** Les sources vues lâcher le tome le plus souvent passent
+  en tête : lieu principal de la liste, fenêtre Sources, Localiser et téléportation.
+  - Comptés : les joueurs du réseau qui l'ont trouvé là, les drops de l'atlas d'EbonBuilds, et les
+    drops des compteurs de cadavres (les tiens et ceux des autres joueurs).
+  - Un lieu listé que personne n'a vu lâcher le tome (peut-être obsolète, comme Lord Kazzak pour
+    Demonic Awakening) passe après ; un lieu du réseau non retrouvé depuis 90 jours aussi.
+  - La fenêtre Sources affiche « N drop(s) vu(s) ».
+- **Raids et donjons** : un lieu trouvé dans une instance (pas de point sur les cartes du monde) se
+  rejoint maintenant par téléportation, vers la pierre de rencontre de son entrée (par exemple
+  « Black Temple »).
+- La téléportation vise la première de ces sources qu'un checkpoint dessert, jamais une source
+  périmée tant que la première est bonne.
+
 ## 3.0.0 — 2026-09-28
 
 Le réseau change complètement : il passe par EbonAPI et n'est plus compatible avec les 2.x.

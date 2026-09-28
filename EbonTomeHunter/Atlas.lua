@@ -92,7 +92,7 @@ function A.Locations(itemId, known)
             out[#out + 1] = {
                 source = "atlas", mapFile = file, x = x, y = y,
                 placeName = s.zone ~= "" and s.zone or L.LocationUnknown,
-                mobs = s.mob and { s.mob } or nil, count = s.count,
+                mobs = s.mob and { s.mob } or nil, count = s.count, seen = s.count,
                 notes = format(L.SourceAtlas, s.count), order = 60000 + #out,
             }
             if key and known then known[key] = true end

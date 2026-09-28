@@ -362,8 +362,9 @@ function Cat.RaidLocations(itemId)
 end
 
 -- Drop places found by the players (Net.lua) and EbonBuilds' atlas (Atlas.lua) join the
--- static ones. Places with a map point come first: a tome listed as "Unknown location"
--- gets the real place.
+-- static ones. The places seen dropping the tome the most come first (a listed place that
+-- nobody saw drop it, perhaps obsolete, comes after), then those with a map point: a tome
+-- listed as "Unknown location" gets the real place.
 function Cat.AttachSightings(row)
     local list = {}
     for _, loc in ipairs(row.staticLocations or {}) do list[#list + 1] = loc end
@@ -395,11 +396,26 @@ function Cat.AttachSightings(row)
     end
     for _, loc in ipairs(list) do
         loc.stale = ns.Evidence and ns.Evidence.LocationStale(row.itemId, loc) or false
+        -- drops seen there: by players of the network or of EbonBuilds (seen), or counted by
+        -- Evidence.lua for its mobs (ours and the other players')
+        local drops = tonumber(loc.seen) or 0
+        if ns.Evidence and type(loc.mobs) == "table" then
+            local counted = 0
+            for _, text in ipairs(loc.mobs) do
+                for _, name in ipairs(ns.Wowhead.SplitMobs(text)) do
+                    counted = counted + ns.Evidence.Drops(row.itemId, name, type(loc.npcIds) == "table" and loc.npcIds[name] or nil)
+                end
+            end
+            drops = math.max(drops, counted)
+        end
+        loc.drops = drops
     end
-    -- on the map first, then the places that still drop the tome
+    -- the places that still drop the tome, the most farmed first, then those on the map
     table.sort(list, function(a, b)
-        if (a.onMap and true or false) ~= (b.onMap and true or false) then return a.onMap and true or false end
         if a.stale ~= b.stale then return not a.stale end
+        if (a.old and true or false) ~= (b.old and true or false) then return not a.old end
+        if a.drops ~= b.drops then return a.drops > b.drops end
+        if (a.onMap and true or false) ~= (b.onMap and true or false) then return a.onMap and true or false end
         return (a.order or 99999) < (b.order or 99999)
     end)
     row.locations = #list > 0 and list or nil

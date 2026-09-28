@@ -4,7 +4,8 @@ local L = ns.L
 -- Teleport near a tome's drop place: ProjectEbonhold's checkpoints (flight masters
 -- and meeting stones the character has unlocked), the nearest one to the mob's spot
 -- on the same continent, straight-line distance in yards. A tome dropped by several
--- mobs (or at several places): the source with the nearest checkpoint wins.
+-- mobs (or at several places): the source seen dropping it the most wins, then the one
+-- with the nearest checkpoint (T.Sources).
 -- PE checkpoint: { id, name, kind, mapId = GetCurrentMapAreaID() (WorldMapArea id + 1),
 -- serverMapId, x, y (0..1 on that zone map), factionAllowed, unlocked }. "unlocked"
 -- stays false until the server has sent the list (code 800, asked at login).
@@ -82,13 +83,40 @@ function T.FormatDistance(yards, approx)
     return (approx and "~" or "") .. format(L.TravelYards, floor((yards or 0) + 0.5))
 end
 
+local function Normalized(text)
+    return (strlower(tostring(text or "")):gsub("[^%w]", ""))
+end
+
+-- The meeting stone at the entrance of the instance where a place is: a place inside a
+-- raid or a dungeon has no point on the world maps (its map file is the instance's), but
+-- ProjectEbonhold has a meeting stone of that name at its entrance ("Black Temple").
+-- Matched by the map file (the same in every client language) or by the place name.
+function T.Entrance(loc, checkpoints)
+    if type(loc) ~= "table" then return nil end
+    local wanted = {}
+    if loc.mapFile then wanted[Normalized(loc.mapFile)] = true end
+    local place = tostring(loc.placeName or "")
+    place = place:match("^(.-) %- ") or place   -- "Black Temple - Temple Summit"
+    if place ~= "" then wanted[Normalized(place)] = true end
+    wanted[""] = nil
+    for _, c in ipairs(checkpoints or T.Checkpoints()) do
+        if tostring(c.kind or ""):find("MEETINGSTONE", 1, true) and wanted[Normalized(c.name)] then return c end
+    end
+    return nil
+end
+
 -- Nearest checkpoints of a drop place: the nearest unlocked one, and a nearer one
 -- that is still locked (worth unlocking). nil when the place has no position; approx
--- when only its zone is known.
+-- when only its zone is known; entrance (the meeting stone) for a place in an instance.
 function T.Nearest(loc, checkpoints)
     local map, worldX, worldY, approx = ns.WorldMap.TravelPosition(loc)
+    local entrance
+    if not map then
+        entrance = T.Entrance(loc, checkpoints)
+        if entrance then map, worldX, worldY = entrance.map, entrance.worldX, entrance.worldY end
+    end
     if not map then return nil end
-    local near = { map = map, worldX = worldX, worldY = worldY, approx = approx }
+    local near = { map = map, worldX = worldX, worldY = worldY, approx = approx, entrance = entrance }
     for _, c in ipairs(checkpoints or T.Checkpoints()) do
         if c.map == map then
             local d = Distance(c.worldX, c.worldY, worldX, worldY)
@@ -106,10 +134,12 @@ function T.Nearest(loc, checkpoints)
 end
 
 -- Every source of a tome: one per mob of each drop place (a place without mob: one),
--- with its nearest checkpoint. Order: reachable by teleport (nearest first), then
--- with a position but nothing unlocked on that continent, then without position; and
--- in that order the good sources, then the network places not found for 90 days, then
--- the stale ones (Evidence.lua: probably no longer dropping the tome).
+-- with its nearest checkpoint. Order: the good sources, then the network places not found
+-- for 90 days, then the stale ones (Evidence.lua: probably no longer dropping the tome);
+-- in each, the sources seen dropping it the most first (players of the network, EbonBuilds'
+-- atlas, the corpses counted by Evidence.lua: a listed source nobody saw drop it comes
+-- after); then reachable by teleport (nearest first), with a position but nothing unlocked
+-- on that continent, without position.
 function T.Sources(itemId)
     local row = ns.Catalog.Get(itemId)
     local checkpoints = T.Checkpoints()
@@ -128,22 +158,29 @@ function T.Sources(itemId)
                 itemId = itemId, loc = loc, index = index, mob = name or nil, near = near,
                 place = tostring(loc.placeName or L.LocationUnknown), order = #out, old = loc.old,
             }
+            source.drops = tonumber(loc.seen) or 0
             if name then
                 local npcId = type(loc.npcIds) == "table" and loc.npcIds[name] or nil
                 source.stale, source.kills, source.voters, source.reported, source.oneIn, source.needed =
                     ns.Evidence.Verdict(itemId, name, npcId)
+                source.drops = math.max(source.drops, ns.Evidence.Drops(itemId, name, npcId))
             end
             out[#out + 1] = source
         end
     end
-    local function Rank(s)
+    local function Penalty(s)
+        return s.stale and 2 or (s.old and 1 or 0)
+    end
+    local function Reach(s)
         local rank = (s.near and s.near.checkpoint) and 1 or (s.near and 2 or 3)
         if rank == 1 and s.near.approx then rank = 1.5 end   -- only its zone is known: after the precise ones
-        if s.stale then return rank + 6 end
-        return s.old and rank + 3 or rank
+        return rank
     end
     table.sort(out, function(a, b)
-        local ra, rb = Rank(a), Rank(b)
+        local pa, pb = Penalty(a), Penalty(b)
+        if pa ~= pb then return pa < pb end
+        if a.drops ~= b.drops then return a.drops > b.drops end
+        local ra, rb = Reach(a), Reach(b)
         if ra ~= rb then return ra < rb end
         if (ra == 1 or ra == 1.5) and a.near.distance ~= b.near.distance then return a.near.distance < b.near.distance end
         return a.order < b.order
@@ -151,11 +188,16 @@ function T.Sources(itemId)
     return out
 end
 
--- The source reached fastest by teleport (nil when none), and all the sources.
+-- The first source of that order that a teleport reaches (nil when none), and all the
+-- sources: the most farmed one when a checkpoint serves it. Never a stale source while the
+-- first one is good.
 function T.Best(itemId)
     local sources = T.Sources(itemId)
-    local best = sources[1]
-    if best and best.near and best.near.checkpoint then return best, sources end
+    local first = sources[1]
+    for _, source in ipairs(sources) do
+        if (source.stale and true or false) ~= (first.stale and true or false) then break end
+        if source.near and source.near.checkpoint then return source, sources end
+    end
     return nil, sources
 end
 

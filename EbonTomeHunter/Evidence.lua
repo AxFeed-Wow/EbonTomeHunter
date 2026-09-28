@@ -172,6 +172,22 @@ function E.Verdict(itemId, name, npcId)
     return stale, kills, voters, mine, floor(1 / rate + 0.5), needed
 end
 
+-- How many times the tome was seen dropping from this mob: our counter and those of the
+-- other players (each counts its own drops). Travel.lua and the catalogue put the most
+-- farmed sources first.
+function E.Drops(itemId, name, npcId)
+    itemId = tonumber(itemId)
+    if not itemId or not name then return 0 end
+    local corpses, evidence = Data()
+    local drops = 0
+    for _, key in ipairs(Keys(name, npcId)) do
+        local k = Key(itemId, key)
+        drops = drops + (tonumber(corpses[k] and corpses[k].drops) or 0)
+        for _, c in pairs(evidence[k] or {}) do drops = drops + (tonumber(c.drops) or 0) end
+    end
+    return drops
+end
+
 -- The reason shown next to a stale source.
 function E.Reason(kills, voters, mine, oneIn, needed)
     if kills >= (needed or E.STALE_KILLS) then return format(L.StaleKills, kills, oneIn or 200) end

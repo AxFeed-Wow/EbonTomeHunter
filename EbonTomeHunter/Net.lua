@@ -302,6 +302,7 @@ function Net.Locations(itemId)
             mobs = r.mob and { r.mob } or nil, npcIds = (r.mob and r.npcId) and { [r.mob] = r.npcId } or nil,
             candidates = candidates, inferred = r.inferred,
             notes = format(L.NetNotes, r.by or "?", ns.Ago(r.at) or "?", math.max(1, CountFinders(r))),
+            seen = math.max(1, CountFinders(r)),   -- drops seen there: one per player who found it
             order = 50000 + index, at = r.at, old = now - (tonumber(r.at) or 0) > OLD_PLACE,
         }
     end

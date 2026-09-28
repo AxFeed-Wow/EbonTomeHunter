@@ -17,6 +17,9 @@ Distances : en « mètres » du jeu (= yards du client anglais).
   leur qualité et leur description vus en jeu.
 - **Tome inconnu :** un tome vu à l'HV ou dans les sacs mais absent des données (nouveau patch) est
   ajouté automatiquement.
+- **Ordre des lieux d'un tome :** ceux vus lâcher le tome le plus souvent d'abord (lieu principal de
+  la liste, bulle d'aide, Localiser, téléportation) ; un lieu listé que personne n'a vu le lâcher
+  passe après, un lieu du réseau non retrouvé depuis 90 jours aussi, une source périmée en dernier.
 - **Lieux de drop :** ils sont lus en jeu dans **EbonholdHub** (ou EbonCompletionist) et convertis en
   coordonnées de la vraie carte. S'y ajoutent les lieux trouvés par les joueurs (§11) et les sources
   de l'atlas d'EbonBuilds. Sans EbonholdHub ni EbonCompletionist, seuls ces deux-là existent.
@@ -126,13 +129,17 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 ## 7. La fenêtre Sources (bouton patte)
 
 - **Une ligne par monstre de chaque lieu**, dans cet ordre :
-  1. les sources joignables par téléportation, la plus proche d'un checkpoint en premier ;
-  2. celles dont seule la zone est connue (atlas d'EbonBuilds), mesurées depuis le centre de la zone ;
-  3. celles sans checkpoint débloqué sur ce continent ;
-  4. celles sans position.
+  1. **les sources vues lâcher le tome le plus souvent** : joueurs du réseau qui l'ont trouvé là,
+     drops de l'atlas d'EbonBuilds, drops comptés par les compteurs de cadavres (les tiens et ceux
+     des autres). Une source listée que personne n'a vu le lâcher (peut-être obsolète) passe après ;
+  2. à égalité : les sources joignables par téléportation, la plus proche d'un checkpoint en
+     premier ; celles dont seule la zone est connue (atlas d'EbonBuilds), mesurées depuis le centre
+     de la zone ; celles sans checkpoint débloqué sur ce continent ; celles sans position ;
+  3. puis les lieux du réseau non retrouvés depuis 90 jours, et en dernier les sources périmées.
 - **Chaque ligne indique :**
   - le monstre (#id s'il est connu, « recherche » sinon, « créature d'Ebonhold » si elle n'existe pas
     sur Wowhead) et le lieu ;
+  - « N drop(s) vu(s) » quand des drops y ont été vus ;
   - le checkpoint et sa distance (vert), ou le checkpoint à débloquer (orange) ; « ~ » devant la
     distance quand elle part du centre de la zone ;
   - ta distance si tu es sur le même continent ;
@@ -158,7 +165,12 @@ Distances : en « mètres » du jeu (= yards du client anglais).
     d'oiseau ;
   - une source dont seule la zone est connue (atlas d'EbonBuilds) : depuis le centre de la zone
     (distance avec « ~ »), et seulement si aucune source précise n'a de checkpoint ;
-  - avec plusieurs sources, la source retenue est celle qui a le checkpoint le plus proche.
+  - un lieu dans un **raid ou un donjon** (carte de l'instance, sans point sur les cartes du monde) :
+    depuis la pierre de rencontre de son entrée (checkpoint de ProjectEbonhold du même nom, par
+    exemple « Black Temple ») ;
+  - avec plusieurs sources, la source retenue est la première de la fenêtre Sources (la plus vue
+    lâcher le tome) qu'un checkpoint dessert ; jamais une source périmée tant que la première est
+    bonne.
 - **Où la lancer :**
   - le bouton portail d'une ligne ;
   - `/eth tp <tome>` (nom complet ou morceau unique, utilisable en macro) ;

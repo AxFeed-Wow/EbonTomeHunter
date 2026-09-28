@@ -1400,16 +1400,20 @@ if ProjectEbonhold then
     Check(count[310] == 1 and count[39] == 1 and count[83] == 1, "checkpoints placed on their continent (Ghostlands too)")
 
     -- one place: the nearest unlocked checkpoint, and a nearer one still locked
-    local hearthglen = ns.Catalog.Get(300569).locations[1]
+    local hearthglen
+    for _, loc in ipairs(ns.Catalog.Get(300569).locations) do
+        if loc.placeName == "Hearthglen" then hearthglen = loc end
+    end
     local near = T.Nearest(hearthglen)
     Check(near and near.checkpoint and near.checkpoint.id == 66, "Hearthglen: Chillwind Camp, nearest unlocked checkpoint")
     Check(near and near.locked and near.locked.id == 383 and near.lockedDistance < near.distance,
         "a nearer checkpoint not unlocked yet is reported (Thondoril River)")
 
-    -- several sources (Hearthglen, Crystalsong...): the one with the nearest checkpoint wins
+    -- several sources (Hearthglen, Crystalsong...): the one seen dropping it (our loot in
+    -- Crystalsong Forest) comes first, via its nearest checkpoint
     local best, sources = T.Best(300569)
-    Check(#sources >= 3 and best and best.near.checkpoint.id == 310,
-        "Beast Bane: Dalaran, nearest checkpoint among all its sources, got " .. tostring(best and best.near.checkpoint.id))
+    Check(#sources >= 3 and best and best.near.checkpoint.id == 310 and (best.drops or 0) >= 1,
+        "Beast Bane: the source seen dropping it, via Dalaran, got " .. tostring(best and best.near.checkpoint.id))
     Check(sources[#sources].near == nil, "sources without a position come last")
 
     -- a drop found in Ghostlands (zone drawn on the Eastern Kingdoms map, on map 530)
@@ -1518,6 +1522,50 @@ if ProjectEbonhold then
     Check(not T.GoBest(300569) and listRequests == 1 and ChatContains(ns.L.TravelNoData),
         "nothing unlocked (list not received?): asked again")
     for _, c in ipairs(CHECKPOINTS) do c.unlocked = true end
+
+    -- the most farmed source first: a place inside Black Temple found by 2 players (the map of
+    -- the instance: no world map point) beats the listed places nobody saw drop the tome;
+    -- the teleport aims at the raid's meeting stone
+    do
+        CHECKPOINTS[#CHECKPOINTS + 1] = { id = 10028, name = "Black Temple", mapId = 474, serverMapId = 530,
+            x = 0.6445, y = 0.4670, factionAllowed = true, unlocked = true, kind = "MEETINGSTONE_RAID" }
+        local places = ns.DB.sightings[300569]
+        local count = #places
+        for _, by in ipairs({ "Zyn", "Kor" }) do
+            ns.Net.Add({ itemId = 300569, mapFile = "BlackTemple", x = 0.534, y = 0.756, zone = "Black Temple:Temple Summit",
+                npcId = 22917, mob = "Illidan Stormrage", at = time(), by = by })
+        end
+        ns.Net.Add({ itemId = 300569, mapFile = "Tanaris", x = 0.3, y = 0.3, mob = "Old Mob", zone = "Tanaris",
+            at = time() - 100 * 86400, by = "Pat", n = 9 })
+        ns.Fire("SIGHTINGS_CHANGED")
+        Advance(1)
+        local main = ns.Catalog.Get(300569).location
+        Check(main and main.mobs and main.mobs[1] == "Illidan Stormrage" and main.drops == 2 and not main.onMap,
+            "the place seen dropping it the most (2 players) comes first, even without a map point")
+        local farmed = T.Best(300569)
+        Check(farmed and farmed.mob == "Illidan Stormrage" and farmed.near.entrance and farmed.near.checkpoint.id == 10028,
+            "teleport: to it, at the meeting stone of Black Temple (its entrance)")
+        Check(T.Sources(300569)[1].mob == "Illidan Stormrage", "first in the Sources window too")
+        Check(ns.Sources.Show(300569) > 0 and (EbonTomeHunterSourcesListRow1.title:GetText() or ""):find(
+            format(ns.L.SourceDrops, 2), 1, true), "with the drops seen there")
+        EbonTomeHunterSourcesFrame:Hide()
+        local oldFirst = false
+        for i, loc in ipairs(ns.Catalog.Get(300569).locations) do
+            if loc.mobs and loc.mobs[1] == "Old Mob" and i == 1 then oldFirst = true end
+        end
+        Check(not oldFirst, "a place not found for 90 days does not lead, even confirmed by 9 players")
+        -- the corpses counted by Evidence.lua also count: 3 drops seen on the Scarlet Paladins
+        ns.DB.corpses["300569@#4698"] = { n = 0, since = time(), drop = time(), total = 30, drops = 3, stamp = time() }
+        ns.Fire("SIGHTINGS_CHANGED")
+        Advance(1)
+        Check(ns.Catalog.Get(300569).location.placeName == "Hearthglen" and T.Best(300569).mob == "Scarlet Paladins",
+            "3 drops counted on a listed source: it leads again")
+        ns.DB.corpses = {}
+        for i = #places, count + 1, -1 do table.remove(places, i) end
+        table.remove(CHECKPOINTS)
+        ns.Fire("SIGHTINGS_CHANGED")
+        Advance(1)
+    end
 else
     Check(not T.Available() and not T.GoBest(300569) and ChatContains(ns.L.TravelNoPE), "without ProjectEbonhold: no teleport")
     local baneRow = RowOf(300569)
