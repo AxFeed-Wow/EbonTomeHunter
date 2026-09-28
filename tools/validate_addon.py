@@ -702,12 +702,23 @@ def main(argv):
         check_lua_file(lua, addon_dir, rel, whitelist, rep, all_sets, all_gets)
     check_globals(addon_name, meta, all_sets, all_gets, whitelist, rep, named_frames(addon_dir))
     check_xml(addon_dir, rep)
-    if meta.get("Dependencies") or meta.get("RequiredDeps"):
-        rep.info("SMOKE", "skipped: the addon has hard ## Dependencies that the mock cannot provide")
-    elif "--no-smoke" not in argv and not getattr(rep, "syntax_failed", False)             and not any(e.startswith("TOC:") for e in rep.errors):
+    # hard dependencies: given with --with, or ProjectEbonhold (the mock has one in the first pass)
+    hard = [d for key in ("Dependencies", "RequiredDeps") for d in re.split(r"[,\s]+", meta.get(key, "")) if d]
+    given = {d[0].lower(): d for d in deps}
+    missing = [d for d in hard if d.lower() not in given and d.lower() != "projectebonhold"]
+    if missing:
+        rep.info("SMOKE", "skipped: hard ## Dependencies the mock cannot provide: " + ", ".join(missing)
+                 + " (give their folder with --with)")
+    elif "--no-smoke" not in argv and not getattr(rep, "syntax_failed", False) \
+            and not any(e.startswith("TOC:") for e in rep.errors):
         own = set(all_sets)
         smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold=True, own=own, deps=deps)
-        smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold=False, own=own)
+        if any(d.lower() == "projectebonhold" for d in hard):
+            rep.info("SMOKE-noPE", "skipped: the addon requires ProjectEbonhold")
+        else:
+            # without ProjectEbonhold, and without the optional --with addons; a hard one stays
+            required = [given[d.lower()] for d in hard if d.lower() in given]
+            smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold=False, own=own, deps=required)
 
     print(f"=== {addon_name} ===")
     for label, items in (("ERROR", rep.errors), ("WARN ", rep.warnings), ("info ", rep.infos)):
