@@ -361,8 +361,9 @@ function Cat.RaidLocations(itemId)
     return out
 end
 
--- Drop places found by the players (Net.lua) join the static ones. Places with a
--- map point come first: a tome listed as "Unknown location" gets the real place.
+-- Drop places found by the players (Net.lua) and EbonBuilds' atlas (Atlas.lua) join the
+-- static ones. Places with a map point come first: a tome listed as "Unknown location"
+-- gets the real place.
 function Cat.AttachSightings(row)
     local list = {}
     for _, loc in ipairs(row.staticLocations or {}) do list[#list + 1] = loc end
@@ -375,6 +376,19 @@ function Cat.AttachSightings(row)
     local found = ns.Net and ns.Net.Locations(row.itemId)
     if found then
         for _, loc in ipairs(found) do
+            loc.onMap = ns.WorldMap.WorldPosition(loc) ~= nil
+            list[#list + 1] = loc
+        end
+    end
+    -- then the sources of EbonBuilds' atlas that none of them lists (Atlas.lua)
+    if ns.Atlas and ns.Atlas.Available() then
+        local known = {}
+        for _, loc in ipairs(list) do
+            for _, text in ipairs(type(loc.mobs) == "table" and loc.mobs or {}) do
+                for _, name in ipairs(ns.Wowhead.SplitMobs(text)) do known[strlower(name)] = true end
+            end
+        end
+        for _, loc in ipairs(ns.Atlas.Locations(row.itemId, known)) do
             loc.onMap = ns.WorldMap.WorldPosition(loc) ~= nil
             list[#list + 1] = loc
         end

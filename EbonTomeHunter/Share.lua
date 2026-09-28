@@ -167,7 +167,8 @@ function S.Decode(text)
             qtyById[id] = qty
         end
     end
-    local result = { author = author, items = {}, copies = 0, unknown = 0 }
+    -- shown in the preview: no escape sequence from a string made by hand
+    local result = { author = (author:gsub("[|%c]", "")), items = {}, copies = 0, unknown = 0 }
     for _, id in ipairs(order) do
         local row = ns.Catalog.Get(id)
         if row then

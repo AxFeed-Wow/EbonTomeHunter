@@ -4,7 +4,9 @@
 -- api_globals_335.txt) returns nil. Names that do NOT exist on 3.3.5a resolve to nil,
 -- exactly like the real client, so calling them raises "attempt to call global".
 
-WOWMOCK = { notes = {}, errors = {}, known = {}, meta = {}, saved = {}, own = {}, events = {}, withEbonhold = true }
+WOWMOCK = { notes = {}, errors = {}, known = {}, meta = {}, saved = {}, own = {}, events = {}, withEbonhold = true,
+    -- several mocked clients can be linked by validate_addon.py (M.link): each has its player
+    playerName = "Tester", loaded = {}, metaOf = {}, channels = {}, inbox = {}, online = true }
 local M = WOWMOCK
 local realG = _G
 
@@ -590,11 +592,11 @@ API.MAX_PARTY_MEMBERS = 4
 API.MAX_RAID_MEMBERS = 40
 API.BOOKTYPE_SPELL = "spell"
 
-API.UnitName = function(u) if u == "player" then return "Tester", nil end return nil end
+API.UnitName = function(u) if u == "player" then return M.playerName, nil end return nil end
 API.UnitClass = function(u) return "Paladin", "PALADIN", 2 end
 API.UnitRace = function() return "Human", "Human" end
 API.UnitLevel = function() return 80 end
-API.UnitGUID = function(u) if u == "player" then return "0x0000000000000001" end end
+API.UnitGUID = function(u) if u == "player" then return M.playerGUID or "0x0000000000000001" end end
 API.UnitExists = function(u) return u == "player" and 1 or nil end
 API.UnitFactionGroup = function() return "Alliance", "Alliance" end
 -- Scenario-controllable player state
@@ -623,8 +625,8 @@ API.GetLocale = function() return M.locale or "enUS" end
 API.GetBuildInfo = function() return "3.3.5", "12340", "Jun 24 2010", 30300 end
 API.GetFramerate = function() return 60 end
 API.GetNetStats = function() return 0, 0, 50 end
-API.GetAddOnMetadata = function(addon, field) return M.meta[field] end
-API.IsAddOnLoaded = function(name) return name == M.addonName and 1 or nil end
+API.GetAddOnMetadata = function(addon, field) return ((addon and M.metaOf[addon]) or M.meta)[field] end
+API.IsAddOnLoaded = function(name) return (name == M.addonName or M.loaded[name]) and 1 or nil end
 API.GetNumAddOns = function() return 1 end
 API.GetNumPartyMembers = function() return 0 end
 API.GetNumRaidMembers = function() return 0 end
@@ -696,13 +698,80 @@ API.GetBindingKey = function() return nil end
 API.PlaySound = function(s) if type(s) == "number" then error("PlaySound expects a sound NAME string on 3.3.5a, got a number", 2) end end
 API.PlaySoundFile = noop
 API.RegisterAddonMessagePrefix = nil -- does not exist on 3.3.5a: code must guard it
+
+-- Chat channels and addon whispers. A client alone has no chat channel (these functions
+-- return nothing, the scenarios replace them as they need). Clients linked by
+-- validate_addon.py (M.link: --with, several players) keep their channels (join, list,
+-- index) and really exchange their lines: a channel line reaches the other members, a
+-- whisper its target, or "No player named ..." comes back.
+local function ChannelIndex(name)
+    name = tostring(name or ""):lower()
+    for i, n in ipairs(M.channels) do
+        if n:lower() == name then return i end
+    end
+    return nil
+end
+local function Queue(event, ...)
+    M.inbox[#M.inbox + 1] = { n = select("#", ...) + 1, event, ... }
+end
+M.Queue = Queue
+API.GetChannelName = function(id)
+    if not M.link then return end
+    local i = type(id) == "number" and (M.channels[id] and id) or ChannelIndex(id)
+    if i then return i, M.channels[i], 0 end
+    return 0, nil, 0
+end
+API.GetChannelList = function()
+    if not M.link then return end
+    local out = {}
+    for i, n in ipairs(M.channels) do
+        out[#out + 1] = i
+        out[#out + 1] = n
+    end
+    return unpack(out)
+end
+API.JoinChannelByName = function(name)
+    if not M.link or type(name) ~= "string" or name == "" then return nil end
+    local i = ChannelIndex(name)
+    if i then return i end
+    if #M.channels >= 10 then return nil end   -- "You can only be in 10 channels at a time."
+    M.channels[#M.channels + 1] = name
+    i = #M.channels
+    Queue("CHAT_MSG_CHANNEL_NOTICE", "YOU_JOINED", "", "", i .. ". " .. name, "", "", 0, i, name)
+    return i
+end
+API.LeaveChannelByName = function(name)
+    if not M.link then return end
+    local i = ChannelIndex(name)
+    if not i then return end
+    table.remove(M.channels, i)
+    Queue("CHAT_MSG_CHANNEL_NOTICE", "YOU_LEFT", "", "", i .. ". " .. name, "", "", 0, i, name)
+end
 API.SendAddonMessage = function(prefix, msg, chan, target)
     if type(prefix) ~= "string" or type(msg) ~= "string" then error("SendAddonMessage: prefix and message must be strings", 2) end
     if prefix:find("\t", 1, true) then error("SendAddonMessage: prefix may not contain a tab", 2) end
     if #prefix + #msg > 254 then error("SendAddonMessage: prefix+message longer than 254 bytes (" .. (#prefix + #msg) .. ")", 2) end
     if chan == "WHISPER" and not target then error("SendAddonMessage: WHISPER needs a target", 2) end
+    if chan == "WHISPER" and M.link and M.online then M.link.Whisper(M.playerName, target, prefix, msg) end
 end
-API.SendChatMessage = function(msg) if #tostring(msg) > 255 then error("SendChatMessage: message longer than 255 chars", 2) end end
+API.SendChatMessage = function(msg, chatType, language, target)
+    if #tostring(msg) > 255 then error("SendChatMessage: message longer than 255 chars", 2) end
+    if chatType == "CHANNEL" and M.link and M.online then
+        local name = M.channels[tonumber(target) or 0]
+        if name then M.link.Channel(M.playerName, name, tostring(msg)) end
+    end
+end
+-- called by the router of validate_addon.py (delivered at the next step)
+function M.DeliverChannel(name, sender, msg)
+    local i = ChannelIndex(name)
+    if i and M.online then Queue("CHAT_MSG_CHANNEL", msg, sender, "", i .. ". " .. name, "", "", 0, i, name) end
+end
+function M.DeliverWhisper(prefix, msg, sender)
+    if M.online then Queue("CHAT_MSG_ADDON", prefix, msg, "WHISPER", sender) end
+end
+function M.NotFound(target)
+    Queue("CHAT_MSG_SYSTEM", string.format(API.ERR_CHAT_PLAYER_NOT_FOUND_S or "No player named '%s' is currently playing.", target))
+end
 API.ChatFrame_AddMessageEventFilter = noop
 API.ChatFrame_RemoveMessageEventFilter = noop
 
@@ -792,6 +861,7 @@ end
 
 function M.LoadFile(src, name, addonName, ns)
     M.addonName = addonName
+    M.loaded[addonName] = true
     local fn, err = loadstring(src, "@" .. name)
     if not fn then return err end
     setfenv(fn, env)
@@ -810,24 +880,96 @@ local function fire(event, ...)
     end
 end
 
+-- One tick of this client: the lines received since the last one, OnUpdate, timers.
+function M.Step(step)
+    now = now + step
+    local pending = M.inbox
+    M.inbox = {}
+    for _, e in ipairs(pending) do fire(unpack(e, 1, e.n)) end
+    local snapshot = {}
+    for i = 1, #allFrames do snapshot[i] = allFrames[i] end
+    for _, f in ipairs(snapshot) do
+        local s = f.__scripts.OnUpdate
+        if s and f.__shown then M.Call(s, f, step) end
+    end
+    local due = {}
+    for i = #timers, 1, -1 do
+        if timers[i].at <= now then due[#due + 1] = table.remove(timers, i) end
+    end
+    for _, tm in ipairs(due) do M.Call(tm.fn) end
+end
+
+-- Time goes by for this client, and for every client linked to it (same steps).
 local function advance(seconds)
     local step = 0.1
     local t = 0
     while t < seconds do
-        now = now + step
+        M.Step(step)
+        if M.link then M.link.Step(step) end
         t = t + step
-        local snapshot = {}
-        for i = 1, #allFrames do snapshot[i] = allFrames[i] end
-        for _, f in ipairs(snapshot) do
-            local s = f.__scripts.OnUpdate
-            if s and f.__shown then M.Call(s, f, step) end
-        end
-        local due = {}
-        for i = #timers, 1, -1 do
-            if timers[i].at <= now then due[#due + 1] = table.remove(timers, i) end
-        end
-        for _, tm in ipairs(due) do M.Call(tm.fn) end
     end
+end
+M.Advance = advance
+
+-- Saved data of a client, carried to its next login (validate_addon.py: a player logs off,
+-- then comes back later).
+local function Serialize(v, depth)
+    local t = type(v)
+    if t == "string" then return string.format("%q", v) end
+    if t == "number" or t == "boolean" then return tostring(v) end
+    if t ~= "table" or depth > 40 then return "nil" end
+    local parts = {}
+    for k, val in pairs(v) do
+        local kt, vt = type(k), type(val)
+        if (kt == "string" or kt == "number" or kt == "boolean") and vt ~= "function" and vt ~= "userdata" then
+            parts[#parts + 1] = "[" .. Serialize(k, depth + 1) .. "]=" .. Serialize(val, depth + 1)
+        end
+    end
+    return "{" .. table.concat(parts, ",") .. "}"
+end
+function M.Serialize(names)
+    local parts = {}
+    for i = 1, #names do
+        parts[#parts + 1] = "[" .. string.format("%q", names[i]) .. "]=" .. Serialize(rawget(env, names[i]), 0)
+    end
+    return "return {" .. table.concat(parts, ",") .. "}"
+end
+function M.Restore(src)
+    local fn = loadstring(src)
+    local ok, tbl = pcall(fn)
+    if ok and type(tbl) == "table" then M.restored = tbl end
+end
+
+-- A second player's client: its addons loaded, then logged in (no slash tour, no logout).
+function M.Login(names)
+    for name in pairs(M.saved) do rawset(env, name, nil) end
+    for k, v in pairs(M.restored or {}) do rawset(env, k, v) end
+    for i = 1, #names do fire("ADDON_LOADED", names[i]) end
+    fire("VARIABLES_LOADED")
+    fire("PLAYER_LOGIN")
+    fire("PLAYER_ENTERING_WORLD")
+    return M.errors
+end
+function M.Logout() fire("PLAYER_LOGOUT") end
+
+-- Lua run inside this client (another player's side of a scenario): returns ok, value.
+function M.RunCode(src, label)
+    local fn, err = loadstring(src, "@" .. tostring(label))
+    if not fn then addError(tostring(label) .. ": " .. tostring(err)) return false, nil end
+    local senv = setmetatable({
+        Fire = fire,
+        Check = function(cond, message)
+            if not cond then addError(tostring(label) .. ": check failed: " .. tostring(message)) end
+        end,
+        CLEU = function(subEvent, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
+            fire("COMBAT_LOG_EVENT_UNFILTERED", now, subEvent, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
+        end,
+        Chat = chat,
+    }, { __index = env, __newindex = env })
+    setfenv(fn, senv)
+    local result
+    local ok = M.Call(function() result = fn() end)
+    return ok, result
 end
 
 -- Scenario API (tests/scenario.lua inside the addon). Runs in the addon's
@@ -861,13 +1003,16 @@ function M.RunScenario(src)
         CLEU = function(subEvent, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
             fire("COMBAT_LOG_EVENT_UNFILTERED", now, subEvent, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
         end,
+        -- other players (validate_addon.py, when the addon's dependencies are loaded):
+        -- Peers.Start(name, kind), Peers.Stop(name), Peers.Run(name, code), Peers.Online(name, on)
+        Peers = M.peers,
     }, { __index = env, __newindex = env })
     setfenv(fn, senv)
     M.Call(fn)
     return M.errors
 end
 
-function M.Boot(addonName)
+function M.Boot(addonName, deps)
     M.addonName = addonName
     -- The client loads SavedVariables AFTER the addon's files have run, just before
     -- ADDON_LOADED: whatever the files stored in those globals is REPLACED. The run with
@@ -876,6 +1021,7 @@ function M.Boot(addonName)
     if M.withEbonhold then
         for name in pairs(M.saved) do rawset(env, name, {}) end
     end
+    for i = 1, (deps and #deps or 0) do fire("ADDON_LOADED", deps[i]) end   -- loaded before the addon
     fire("ADDON_LOADED", addonName)
     fire("VARIABLES_LOADED")
     fire("PLAYER_LOGIN")

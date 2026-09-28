@@ -228,6 +228,17 @@ function WM.WorldPosition(loc)
     return image.map, worldX, worldY
 end
 
+-- Where the teleport aims: the location's point, else the middle of its zone map (a source
+-- of EbonBuilds' atlas only names its zone); the 4th value is then true (approximate).
+function WM.TravelPosition(loc)
+    local map, worldX, worldY = WM.WorldPosition(loc)
+    if map then return map, worldX, worldY, false end
+    local info = type(loc) == "table" and loc.mapFile and WM.MapInfo(loc.mapFile)
+    if not info or info.continent then return nil end
+    map, worldX, worldY = WM.WorldPosition({ mapFile = loc.mapFile, x = 0.5, y = 0.5 })
+    return map, worldX, worldY, true
+end
+
 -- Position (0..1 from the top-left corner) of a world point on a MapData map.
 function WM.MapPosition(info, map, worldX, worldY)
     if not info or not map or info.map ~= map then return nil end
@@ -290,7 +301,12 @@ function WM.Describe(loc)
 end
 
 function WM.MobsText(loc)
-    if type(loc) ~= "table" or type(loc.mobs) ~= "table" or #loc.mobs == 0 then return nil end
+    if type(loc) ~= "table" then return nil end
+    if (type(loc.mobs) ~= "table" or #loc.mobs == 0) and type(loc.candidates) == "table" and #loc.candidates > 0 then
+        -- a Greedy Scavenger loot: one of the mobs killed then
+        return format(L.SourceCandidates, table.concat(loc.candidates, " / "))
+    end
+    if type(loc.mobs) ~= "table" or #loc.mobs == 0 then return nil end
     local parts = {}
     for _, mob in ipairs(loc.mobs) do parts[#parts + 1] = tostring(mob) end
     return table.concat(parts, ", ")

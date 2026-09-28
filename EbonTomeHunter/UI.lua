@@ -137,7 +137,7 @@ local function RowTooltip(row)
         GameTooltip:AddLine(tome.desc, 1, 0.82, 0, true)
     end
     local hint = ns.Catalog.DropHint(tome)
-    if hint then GameTooltip:AddLine(L.HintLabel .. " : " .. hint, 0.55, 0.8, 1, true) end
+    if hint then GameTooltip:AddLine(L.HintLabel .. L.Colon .. hint, 0.55, 0.8, 1, true) end
     local locations = ns.WorldMap.Locations(tome)
     for i, loc in ipairs(locations) do
         if i > 4 then
@@ -145,14 +145,14 @@ local function RowTooltip(row)
             break
         end
         local where = ns.WorldMap.Describe(loc)
-        GameTooltip:AddLine(L.PlaceLabel .. " : " .. tostring(loc.placeName or L.LocationUnknown)
+        GameTooltip:AddLine(L.PlaceLabel .. L.Colon .. tostring(loc.placeName or L.LocationUnknown)
             .. (where and (" |cff999999(" .. where .. ")|r") or ""), C.place[1], C.place[2], C.place[3], true)
         local mobs = ns.WorldMap.MobsText(loc)
         if mobs then
-            GameTooltip:AddLine("   " .. L.MobsLabel .. " : " .. mobs, 0.7, 0.7, 0.7, true)
+            GameTooltip:AddLine("   " .. L.MobsLabel .. L.Colon .. mobs, 0.7, 0.7, 0.7, true)
         end
-        if (loc.source == "net" or loc.source == "raid") and loc.notes then
-            GameTooltip:AddLine("   " .. loc.notes, 0.45, 0.75, 1, true)   -- found by a player
+        if (loc.source == "net" or loc.source == "raid" or loc.source == "atlas") and loc.notes then
+            GameTooltip:AddLine("   " .. loc.notes, 0.45, 0.75, 1, true)   -- found by players
         end
     end
     local rec = ns.Prices.Get(data.itemId)
@@ -186,16 +186,19 @@ local function TravelTooltip(button)
     local best, sources = T.Best(data.itemId)
     if best then
         GameTooltip:AddLine(format(L.TravelTo, best.near.checkpoint.name), 1, 1, 1)
-        GameTooltip:AddLine(format(L.TravelNear, fmt(best.near.distance), T.SourceName(best)), 0.55, 0.9, 0.55, true)
+        GameTooltip:AddLine(format(L.TravelNear, fmt(best.near.distance, best.near.approx), T.SourceName(best)),
+            0.55, 0.9, 0.55, true)
         if best.near.locked then
-            GameTooltip:AddLine(format(L.TravelLockedCloser, best.near.locked.name, fmt(best.near.lockedDistance)),
+            GameTooltip:AddLine(format(L.TravelLockedCloser, best.near.locked.name,
+                fmt(best.near.lockedDistance, best.near.approx)),
                 1, 0.6, 0.25, true)
         end
         local map, worldX, worldY = T.PlayerPosition()
         for _, source in ipairs(map and sources or {}) do
             local mine = T.PlayerDistance(source, map, worldX, worldY)
             if mine and mine < best.near.distance then
-                GameTooltip:AddLine(format(L.TravelAlreadyCloseTip, fmt(mine), T.SourceName(source)), 1, 0.82, 0, true)
+                GameTooltip:AddLine(format(L.TravelAlreadyCloseTip, fmt(mine, source.near.approx), T.SourceName(source)),
+                    1, 0.82, 0, true)
                 break
             end
         end
@@ -208,7 +211,7 @@ local function TravelTooltip(button)
         elseif not (first and first.near) then
             GameTooltip:AddLine(L.SourceNoPosition, 0.6, 0.6, 0.6, true)
         elseif first.near.locked then
-            GameTooltip:AddLine(format(L.SourceLocked, first.near.locked.name, fmt(first.near.lockedDistance)),
+            GameTooltip:AddLine(format(L.SourceLocked, first.near.locked.name, fmt(first.near.lockedDistance, first.near.approx)),
                 1, 0.6, 0.25, true)
         else
             GameTooltip:AddLine(L.SourceNoCheckpoint, 0.6, 0.6, 0.6, true)
@@ -463,8 +466,8 @@ function UI.Init()
     scanButton = W.Button(frame, L.Scan, 110, 24, function() ns.Scan.Start() end)
     scanButton:SetPoint("RIGHT", optionsButton, "LEFT", -4, 0)
     scanButton:SetTip(L.ScanAll, L.ScanAllTip)
-    -- network: "Up to date" or not; a click asks the users online for everything again
-    syncButton = W.Button(frame, L.SyncUpToDate, 100, 24, function()
+    -- network (EbonAPI): its state; a click announces our datasets to the players online now
+    syncButton = W.Button(frame, L.SyncOnline, 100, 24, function()
         ns.Net.ForceSync()
         UI.RefreshSync()
     end)
@@ -476,7 +479,7 @@ function UI.Init()
         UI.RefreshSync()
         if showTip then showTip(self) end
     end)
-    -- "Up to date" turns into "Not up to date" with time alone: checked every 30 s while shown
+    -- EbonAPI may join its channel or lose it at any time: checked every 30 s while shown
     local elapsed = 0
     syncButton:SetScript("OnUpdate", function(self, delta)
         elapsed = elapsed + (delta or 0)
@@ -561,36 +564,31 @@ function UI.Init()
     return frame
 end
 
--- The network button: its label says whether the data and the addon are up to date, its
--- tooltip gives the details (last complete sync, newer version seen on the network).
+-- The network button: its label says whether the drop places are shared (EbonAPI), its
+-- tooltip gives the details (places, datasets, newer version seen on the network).
 local SYNC_LABELS = {
-    synced = { L.SyncUpToDate, 0.35, 1, 0.35 }, stale = { L.SyncOutdated, 1, 0.6, 0.2 },
-    alone = { L.SyncAlone, 0.7, 0.7, 0.7 }, nochannel = { L.SyncNoChannel, 1, 0.35, 0.35 },
-    off = { L.SyncOff, 0.6, 0.6, 0.6 },
+    online = { L.SyncOnline, 0.35, 1, 0.35 }, joining = { L.SyncJoining, 1, 0.82, 0 },
+    noapi = { L.SyncNoApi, 1, 0.35, 0.35 }, off = { L.SyncOff, 0.6, 0.6, 0.6 },
 }
 
 function UI.SyncTip()
-    local state, synced = ns.Net.SyncState()
-    local lines = {}
-    if state == "synced" then
-        lines[1] = format(L.SyncTipData, ns.Ago(synced) or "?")
-    elseif state == "alone" then
-        lines[1] = L.SyncTipAlone
-    elseif state == "stale" then
-        lines[1] = synced > 0 and format(L.SyncTipStale, ns.Ago(synced) or "?") or L.SyncTipNever
-    else
-        lines[1] = ns.Net.StatusText()
+    local state = ns.Net.SyncState()
+    local lines = { ns.Net.StatusText() }
+    if state == "online" then
+        lines[#lines + 1] = format(L.SyncTipDatasets, ns.Net.DatasetCount())
+    elseif state == "noapi" then
+        lines[#lines + 1] = L.SyncTipNoApi
     end
     local newer = ns.Net.NewerVersion()
-    lines[2] = newer and format(L.SyncTipNewer, newer, ns.version) or format(L.SyncTipAddon, ns.version)
-    if state ~= "off" and state ~= "nochannel" then lines[3] = L.SyncTipClick end
+    lines[#lines + 1] = newer and format(L.SyncTipNewer, newer, ns.version) or format(L.SyncTipAddon, ns.version)
+    if state == "online" then lines[#lines + 1] = L.SyncTipClick end
     return state, table.concat(lines, "\n")
 end
 
 function UI.RefreshSync()
     if not syncButton then return end
     local state, tip = UI.SyncTip()
-    local label = SYNC_LABELS[state] or SYNC_LABELS.stale
+    local label = SYNC_LABELS[state] or SYNC_LABELS.off
     syncButton:SetText(label[1])
     local text = syncButton:GetFontString()
     if text then text:SetTextColor(label[2], label[3], label[4]) end

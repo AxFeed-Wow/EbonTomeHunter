@@ -1,5 +1,65 @@
 # Historique des versions
 
+## Prochaine version (non publiée)
+
+À publier en **3.0.0** : le réseau change complètement et n'est plus compatible avec les 2.x. Au
+moment de publier : renommer ce titre en `## 3.0.0 — AAAA-MM-JJ` et monter la version (Core.lua et
+.toc).
+
+- **Réseau : passage par EbonAPI** ([Siphelis/EbonAPI](https://github.com/Siphelis/EbonAPI)), un
+  addon à part que chaque joueur installe (Ebonhold Addon Manager ou GitHub). Sans lui, tout le reste
+  marche et tes trouvailles restent chez toi ; le chat le dit une fois par version.
+  - Chaque tome est un jeu de données d'EbonAPI : ses lieux de drop, ceux de tous les joueurs mis
+    ensemble. EbonAPI les garde et les passe de joueur en joueur, **même entre joueurs jamais
+    connectés en même temps**, et aussi par ceux qui utilisent un autre addon d'EbonAPI
+    (AutoCallboard, SkillTreeAutoLoad…).
+  - Un seul canal caché pour tous les addons d'EbonAPI, au lieu d'un par addon.
+  - Chaque client fusionne les lieux de la même façon : tout le monde finit avec les mêmes données.
+    Deux joueurs d'un groupe qui publient dans la même seconde ne s'écrasent pas.
+  - Les compteurs de cadavres et les signalements « Plus bon ? » voyagent de la même façon.
+  - Données refusées : un tome inconnu, une position hors carte, une date dans le futur, un code
+    d'échappement de WoW (couleur `|c`, lien `|H`).
+  - `/eth net sync` (et le bouton réseau) annonce tout de suite tes lieux aux joueurs connectés,
+    toutes les 30 s au plus. Le bouton affiche *Réseau*, *Connexion…*, *Sans EbonAPI* ou *Réseau
+    coupé* ; sa bulle d'aide dit combien de tomes sont partagés.
+  - Retirés : `/eth net check`, `/eth net compare`, la synchro automatique toutes les 15 min et
+    l'annonce des versions (EbonAPI prévient lui-même quand une version plus récente existe).
+  - Les lieux déjà connus (2.x) sont gardés et publiés au premier lancement.
+- **Greedy Scavenger : quel monstre a lâché le tome.** Le familier ramasse sans fenêtre de butin ;
+  parmi les monstres tués dans la dernière minute, l'indice du serveur sur le tome (« Can be found
+  on … ») départage :
+  - un sort de l'indice que le monstre a lancé (journal de combat), son type de créature (plaques de
+    nom, cible, survol), sa classe, une source déjà connue du tome, un mot de son nom ;
+  - si aucun ne se détache, le lieu garde jusqu'à 4 monstres possibles (« un de : A / B ») ; chaque
+    nouveau drop au même endroit, par n'importe quel joueur, ne garde que ceux tués à chaque fois, et
+    quand il n'en reste qu'un, c'est le monstre du lieu.
+- **Sources périmées : le seuil suit le taux de drop de la source.**
+  - Un tome rare peut manquer beaucoup de cadavres de suite par simple malchance : une source n'est
+    grisée qu'au-delà du nombre de cadavres sans le tome que la malchance n'explique qu'1 fois sur
+    100 (entre 500 et 5000).
+  - Le taux vient de l'historique de tous les compteurs (drops / cadavres) ; la raison affichée le
+    dit (« d'habitude 1 sur N »).
+  - Un seul drop, même après une longue série sans, rend la source bonne.
+- **Atlas d'EbonBuilds** : les sources de drop que ses utilisateurs ont vues (monstre et zone) sont
+  ajoutées, lues en jeu dans les données d'EbonBuilds, jamais modifiées.
+  - Au plus 8 par tome, celles qu'aucune autre source ne cite déjà.
+  - Point sur la carte quand EbonBuilds en a noté un ; sinon la téléportation vise le centre de la
+    zone, et la distance s'affiche avec « ~ ».
+- **Scan de l'HV** : une annonce d'un tome que le client ne connaissait pas encore (premier passage,
+  cache vidé) arrivait sans nom et était ignorée, et le tome pouvait passer « pas en vente » à tort.
+  - La page attend maintenant ces données, 3 s au plus.
+  - Si elles n'arrivent pas, le chat le dit et rien n'est marqué « pas en vente ».
+- **Sources périmées** : un tome visible dans la fenêtre de butin mais pas pris (sacs pleins, jet
+  gagné par un autre) compte comme un drop, et son lieu est partagé. Avant, ce cadavre comptait
+  « sans le tome ».
+- **Sécurité** : l'auteur d'une chaîne de wishlist partagée est nettoyé des codes d'échappement.
+- Textes anglais : « Hint: » au lieu de « Hint : ».
+- Addon de dev : `/ethdev scav on|off` enregistre tout ce qui entoure un ramassage du Greedy
+  Scavenger (journal de combat, paroles et emotes du familier, sacs, argent) ; `/ethdev stats`
+  passe par EbonAPI.
+- Nouveaux fichiers `Hints.lua` et `Atlas.lua` : **relancer complètement le jeu** après la mise à
+  jour.
+
 ## 2.2.0 — 2026-09-24
 
 - **Import d'un build Echo Builder** (project-ebonhold.com/tools/echo-builder) dans la wishlist :

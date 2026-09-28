@@ -7,7 +7,7 @@
 ## X-Website: https://github.com/AxFeed-Wow/EbonTomeHunter
 ## SavedVariables: EbonTomeHunterDB
 ## SavedVariablesPerCharacter: EbonTomeHunterCharDB
-## OptionalDeps: ProjectEbonhold, EbonholdHub, EbonCompletionist, EbonBuilds, Auctionator
+## OptionalDeps: EbonAPI, ProjectEbonhold, EbonholdHub, EbonCompletionist, EbonBuilds, Auctionator
 Locale.lua
 Core.lua
 TomeData.lua
@@ -26,7 +26,9 @@ Travel.lua
 Sources.lua
 History.lua
 Net.lua
+Atlas.lua
 Comm.lua
+Hints.lua
 Loot.lua
 Evidence.lua
 UI.lua

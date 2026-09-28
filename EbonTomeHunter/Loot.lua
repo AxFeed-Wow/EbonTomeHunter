@@ -29,9 +29,10 @@ local TRANSACTION_FRAMES = {
 }
 
 local lootSource      -- { at, closedAt, name, npcId, place }: the last loot window
-local kills = {}      -- { at, name, npcId }, oldest first: creatures the player or the group killed
+local kills = {}      -- { at, name, npcId, spells }, oldest first: creatures the player or the group killed
 local engaged = {}    -- [guid] = GetTime(): creatures the player or the group fought
 local engagedCount = 0
+local castsBy = {}    -- [guid] = { [spell name, lowercase] = true }: what an engaged creature was seen casting
 local handled = {}    -- [itemId] = { count, at }: tomes announced by their chat line
 local bagTomes        -- [itemId] = count in the bags (nil until the first reading)
 local transactionAt, settleUntil = -TRANSACTION_GAP, 0
@@ -67,6 +68,19 @@ local function DeadUnit(unit)
     return UnitExists(unit) and UnitIsDead(unit) and not UnitIsPlayer(unit)
 end
 
+-- Tomes lying in the loot window: they dropped from this corpse, taken or not (bags full,
+-- roll won by another player).
+local function TomesInLoot()
+    local out = {}
+    for slot = 1, tonumber(GetNumLootItems and GetNumLootItems()) or 0 do
+        local itemId = ns.Scan.ItemIdFromLink(GetLootSlotLink and GetLootSlotLink(slot))
+        if itemId and ns.Catalog.Get(itemId) then out[#out + 1] = itemId end
+    end
+    return out
+end
+
+local Report   -- defined below (drop place sent to the network)
+
 ns.RegisterEvent("LOOT_OPENED", function()
     lootSource = { at = GetTime() }
     if IsFishingLoot and IsFishingLoot() then return end
@@ -77,6 +91,10 @@ ns.RegisterEvent("LOOT_OPENED", function()
     if lootSource.name and lootSource.npcId then ns.Wowhead.Remember(lootSource.name, lootSource.npcId) end
     lootSource.place = Loot.CapturePlace()
     ns.Fire("CORPSE_OPENED", UnitGUID(unit), lootSource.name, lootSource.npcId)   -- Evidence.lua
+    for _, itemId in ipairs(TomesInLoot()) do
+        if lootSource.name then Report(itemId, lootSource.place, lootSource.name, lootSource.npcId) end
+        ns.Fire("TOME_DROPPED", itemId, lootSource.name, lootSource.npcId)
+    end
 end)
 
 ns.RegisterEvent("LOOT_CLOSED", function()
@@ -100,6 +118,15 @@ end
 local band = bit.band
 local OURS = 0x7        -- COMBATLOG_OBJECT_AFFILIATION_MINE / _PARTY / _RAID
 local FRIENDLY = 0x10   -- COMBATLOG_OBJECT_REACTION_FRIENDLY
+local NPC = 0x800       -- COMBATLOG_OBJECT_TYPE_NPC
+local MAX_SPELLS = 16   -- spells remembered per creature
+-- Combat log events that name a spell of their source (Hints.lua compares them with the
+-- server's drop hint: "enemies that cast Frostbolt / Slow").
+local SPELL_EVENTS = {
+    SPELL_CAST_START = true, SPELL_CAST_SUCCESS = true, SPELL_AURA_APPLIED = true, SPELL_DAMAGE = true,
+    SPELL_PERIODIC_DAMAGE = true, SPELL_HEAL = true, SPELL_PERIODIC_HEAL = true, SPELL_MISSED = true,
+    SPELL_SUMMON = true, SPELL_INTERRUPT = true,
+}
 
 local function IsCreature(guid)
     if type(guid) ~= "string" then return false end
@@ -144,27 +171,51 @@ local function ForgetOldFights(now)
     for guid, at in pairs(engaged) do
         if now - at > 600 then
             engaged[guid] = nil
+            castsBy[guid] = nil
             engagedCount = engagedCount - 1
         end
     end
 end
 
-ns.RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", function(_, subEvent, _, _, srcFlags, dstGUID, dstName, dstFlags)
+local function Engage(guid)
+    if not engaged[guid] then
+        engagedCount = engagedCount + 1
+        if engagedCount > 300 then ForgetOldFights(GetTime()) end
+    end
+    engaged[guid] = GetTime()
+end
+
+ns.RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", function(_, subEvent, srcGUID, _, srcFlags, dstGUID, dstName, dstFlags,
+    _, spellName)
     if subEvent == "UNIT_DIED" then
         if not (dstGUID and engaged[dstGUID]) then return end
         engaged[dstGUID] = nil
         engagedCount = engagedCount - 1
         local now = GetTime()
-        kills[#kills + 1] = { at = now, name = dstName, npcId = ns.Wowhead.NpcIdFromGUID(dstGUID) }
+        kills[#kills + 1] = { at = now, name = dstName, npcId = ns.Wowhead.NpcIdFromGUID(dstGUID), spells = castsBy[dstGUID] }
+        castsBy[dstGUID] = nil
         Loot.CountKill(kills[#kills].npcId, dstName)
         while kills[1] and now - kills[1].at > KILL_WINDOW do tremove(kills, 1) end
-    elseif srcFlags and band(srcFlags, OURS) ~= 0 and not (dstFlags and band(dstFlags, FRIENDLY) ~= 0)
-        and IsCreature(dstGUID) then
-        if not engaged[dstGUID] then
-            engagedCount = engagedCount + 1
-            if engagedCount > 300 then ForgetOldFights(GetTime()) end
+        return
+    end
+    if srcFlags and band(srcFlags, OURS) ~= 0 then
+        -- the player or the group hits a creature
+        if not (dstFlags and band(dstFlags, FRIENDLY) ~= 0) and IsCreature(dstGUID) then Engage(dstGUID) end
+    elseif dstFlags and band(dstFlags, OURS) ~= 0 and srcFlags and band(srcFlags, NPC) ~= 0
+        and band(srcFlags, FRIENDLY) == 0 and IsCreature(srcGUID) then
+        Engage(srcGUID)   -- a creature attacks the player or the group
+    end
+    if spellName and SPELL_EVENTS[subEvent] and srcGUID and engaged[srcGUID] then
+        local spells = castsBy[srcGUID]
+        if not spells then
+            spells = { n = 0 }
+            castsBy[srcGUID] = spells
         end
-        engaged[dstGUID] = GetTime()
+        local key = strlower(spellName)
+        if not spells[key] and spells.n < MAX_SPELLS then
+            spells[key] = true
+            spells.n = spells.n + 1
+        end
     end
 end)
 
@@ -181,68 +232,26 @@ function Loot.Alert(text)
     ns.Print(text)
 end
 
-local function Report(itemId, place, mob, npcId)
+-- candidates: the mobs one of which dropped it, when the Scavenger's loot left a doubt.
+function Report(itemId, place, mob, npcId, candidates)
     ns.Net.Report({
         itemId = itemId, mapFile = place.mapFile, x = place.x, y = place.y, npcId = npcId, mob = mob,
         zone = (place.zone or "") .. ((place.sub or "") ~= "" and (":" .. place.sub) or ""),
-        at = time(), by = UnitName("player"),
+        at = time(), by = UnitName("player"), cands = not mob and candidates or nil,
     })
 end
 
--- The mob of the kills of the last minute: all the same one, or nil (several mobs).
--- Second value: false when nothing was killed (no corpse to come from).
-local function RecentMob(now)
-    local mob, npcId, any = nil, nil, false
+-- The kills of the last minute, the most recent first.
+local function RecentKills(now)
+    local out = {}
     for i = #kills, 1, -1 do
         local kill = kills[i]
         if now - kill.at > KILL_WINDOW then break end
-        if not any then
-            mob, npcId, any = kill.name, kill.npcId, true
-        elseif kill.name ~= mob then
-            mob, npcId = nil, nil
-        end
+        out[#out + 1] = kill
     end
-    return mob, any, npcId
+    return out
 end
-
--- Names and NPC ids of the known sources of a tome: its drop places (EbonholdHub, network,
--- raid bosses) and the server's hint ("Can be found on Lord Marrowgar").
-local function KnownSources(itemId)
-    local keys = {}
-    local row = ns.Catalog.Get(itemId)
-    for _, loc in ipairs(ns.WorldMap.Locations(row)) do
-        for _, text in ipairs(type(loc.mobs) == "table" and loc.mobs or {}) do
-            for _, name in ipairs(ns.Wowhead.SplitMobs(text)) do
-                keys[strlower(name)] = true
-                local npcId = (type(loc.npcIds) == "table" and loc.npcIds[name]) or ns.Wowhead.NpcId(name)
-                if npcId then keys["#" .. npcId] = true end
-            end
-        end
-    end
-    local hint = row and ns.Catalog.DropHint(row)
-    local who = hint and hint:match("^Can be found on (.+)$")
-    if who then keys[strlower((who:gsub("^[Tt]he ", "")))] = true end
-    return keys
-end
-
--- Several kinds of mobs died in the last minute: the only one of them that is a known
--- source of this tome, if there is exactly one.
-local function RecentSourceMob(itemId, now)
-    local keys = KnownSources(itemId)
-    local found
-    for i = #kills, 1, -1 do
-        local kill = kills[i]
-        if now - kill.at > KILL_WINDOW then break end
-        local name = kill.name and strlower(kill.name)
-        local known = (name and (keys[name] or keys[(name:gsub("^the ", ""))])) or (kill.npcId and keys["#" .. kill.npcId])
-        if known then
-            if found and found.name ~= kill.name then return nil end   -- two different known sources
-            found = kill
-        end
-    end
-    if found then return found.name, found.npcId end
-    return nil
-end
+Loot.RecentKills = RecentKills
 
 -- A tome just came in (loot window or Scavenger): wishlist alert, then its drop place.
 function Loot.Obtained(itemId)
@@ -259,10 +268,12 @@ function Loot.Obtained(itemId)
         if window.name then ns.Fire("TOME_DROPPED", itemId, window.name, window.npcId) end
         return
     end
-    -- no loot window: the Greedy Scavenger (or a roll won later): the corpses of the last minute
-    local mob, any, npcId = RecentMob(now)
-    if any and not mob then mob, npcId = RecentSourceMob(itemId, now) end
-    if any then Report(itemId, Loot.CapturePlace(), mob, npcId) end
+    -- no loot window: the Greedy Scavenger (or a roll won later): one of the corpses of the
+    -- last minute, told apart with the server's hint (Hints.lua)
+    local recent = RecentKills(now)
+    local mob, npcId, candidates, why = ns.Hints.Attribute(itemId, recent)
+    ns.Fire("TOME_OBTAINED", itemId, mob, npcId, candidates, why, recent)   -- the developer helper logs it
+    if candidates ~= false then Report(itemId, Loot.CapturePlace(), mob, npcId, candidates) end
 end
 
 ------------------------------------------------------------------------

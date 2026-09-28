@@ -12,8 +12,8 @@
 
 | Commande | Rôle |
 |---|---|
-| `python tools/check.py` | **à lancer après chaque modification** : validateur en client anglais puis français, et contrôle de la locale. Il faut ALL CHECKS PASSED (0 erreur, 0 avertissement) |
-| `python tools/validate_addon.py EbonTomeHunter` | le validateur seul, avec le détail des messages (`WOW_LOCALE=frFR` pour un client français) |
+| `python tools/check.py` | **à lancer après chaque modification** : validateur en client anglais puis français, et contrôle de la locale. Il faut ALL CHECKS PASSED (0 erreur, 0 avertissement). Avec EbonAPI trouvé (voir plus bas), les deux passent avec lui, et l'anglais une fois de plus sans lui |
+| `python tools/validate_addon.py EbonTomeHunter [--with <dossier d'addon>]` | le validateur seul, avec le détail des messages (`WOW_LOCALE=frFR` pour un client français). `--with` charge un autre addon avant le nôtre, là où il est (EbonAPI), et permet plusieurs joueurs dans le scénario |
 | `python tools/check_locale.py` | textes : anglais et français au complet, clés utilisées et définies |
 | `python tools/install.py [--wow DIR] [--remove-legacy] [--dry-run]` | copie l'addon dans le jeu (sans `tests/`) après avoir sauvegardé la version installée dans `backups/`, puis vérifie octet par octet |
 | `python tools/package.py` | `dist/EbonTomeHunter-<version>.zip` pour une release (vérifie que les versions du `.toc` et de `Core.lua` concordent) |
@@ -29,12 +29,21 @@ dossier de l'addon, donc ni dans le zip ni dans l'archive installée par Ebonhol
 - Installation : `python tools/install_dev.py --wow <dossier du jeu>`, puis **redémarrage complet**.
 - `/ethdev dump` : photo en lecture seule (Echos de ProjectEbonhold + infobulles des Echos et des
   tomes, Echos appris, checkpoints, services de ProjectEbonhold et leurs fonctions).
-- `/ethdev stats` : demande aux utilisateurs connectés (EbonTomeHunter 2.2.0 et plus) leurs kills par
-  créature ; au bout de 15 s les réponses sont rangées dans `EbonTomeHunterDevDB.stats[joueur] =
-  { at, total, kills = { [npcId] = n } }` (au plus une demande toutes les 30 s). Le dump contient
-  aussi nos propres compteurs (`dump.killStats`, avec les noms).
+- `/ethdev stats` : demande aux utilisateurs connectés (EbonTomeHunter 3.0.0 et plus, par EbonAPI)
+  leurs kills par créature ; au bout de 15 s les réponses sont rangées dans
+  `EbonTomeHunterDevDB.stats[joueur] = { at, total, kills = { [npcId] = n } }` (au plus une demande
+  toutes les 30 s). Le dump contient aussi nos propres compteurs (`dump.killStats`, avec les noms).
 - `/ethdev log on|off` : journal (cadavres ouverts avec id du monstre et position, tomes obtenus,
-  codes des messages serveur `AAM0x9`). `/ethdev clear` vide tout.
+  codes des messages serveur `AAM0x9`).
+- `/ethdev scav on|off` : **enquête Greedy Scavenger** (`EbonTomeHunterDevDB.scav`, 4000 entrées) :
+  tout ce qui entoure un ramassage du familier, avec l'heure (`GetTime`) : lignes du journal de combat
+  qui le nomment (ou son GUID, appris par son menu de dialogue) et morts de créatures, paroles et
+  emotes de créatures (et celles des joueurs qui le nomment), lignes système, de butin et d'argent,
+  objets gagnés ou perdus dans les sacs, argent, fenêtres de butin, messages d'addon, et le verdict
+  d'EbonTomeHunter (`TOME_OBTAINED` : monstre ou candidats, kills de la dernière minute avec leurs
+  sorts). Reste actif après un `/reload` jusqu'à `off`. But : trouver un signal qui dise quel
+  cadavre il a pris.
+- `/ethdev clear` vide tout.
 - Le jeu n'écrit le fichier qu'au `/reload` ou à la déconnexion. À lire ensuite :
   `WTF/Account/<compte>/SavedVariables/EbonTomeHunterDev.lua` (données personnelles : ne jamais
   les copier dans le dépôt).
@@ -58,7 +67,7 @@ chaque push et pull request, et le workflow `Release` construit la release à ch
    puis sans. Chaque fichier est chargé dans l'ordre du `.toc`, puis viennent ADDON_LOADED,
    PLAYER_LOGIN, les commandes slash et les panneaux d'options.
 3. **Scénario** `EbonTomeHunter/tests/scenario.lua`, exécuté dans ce faux client après le démarrage,
-   avec et sans ProjectEbonhold. Environ 260 vérifications.
+   avec et sans ProjectEbonhold. Environ 390 vérifications.
 
 Ce que le faux client reproduit (fidèlement) :
 - **SavedVariables :** comme le client, il **remplace les SavedVariables juste avant ADDON_LOADED**
@@ -67,7 +76,14 @@ Ce que le faux client reproduit (fidèlement) :
   fermées**, comme en jeu. Un test qui simule l'HV doit faire `AuctionFrame:Show()`.
 - **Listes et champs :** `FauxScrollFrame_*` (barre, molette, décalage) ; `frame:GetPoint(i)` pour
   vérifier une position ; `EditBox:SetText` déclenche `OnTextChanged`.
-- **Évènements inconnus :** un évènement inconnu du vrai client fait échouer `RegisterEvent`.
+- **Évènements inconnus :** un évènement inconnu du vrai client fait échouer `RegisterEvent`
+  (`api_events_335.txt` : ceux que FrameXML inscrit, plus les évènements de chat par type,
+  `CHAT_MSG_MONSTER_EMOTE`, `CHAT_MSG_MONEY`…, que le chat inscrit dynamiquement).
+- **Canaux et plusieurs joueurs** (seulement avec `--with`) : chaque joueur est un client simulé
+  complet (son propre Lua). `JoinChannelByName`, `GetChannelName`, `GetChannelList`,
+  `LeaveChannelByName` gèrent ses canaux (10 au plus) ; une ligne de canal atteint les autres membres,
+  un chuchotement d'addon son destinataire, ou « No player named … » revient s'il est absent. Sans
+  `--with`, un client seul n'a aucun canal (ces fonctions ne renvoient rien).
 
 Il reste **permissif** : un « OK » ne prouve pas que ça marche en jeu. Il faut relire la logique
 (ordre de chargement, `nil` possibles, combat) et dire à l'utilisateur ce qui reste à tester en jeu.
@@ -86,6 +102,10 @@ Le scénario est un script Lua exécuté après le démarrage, avec ces fonction
 | `Check(condition, "message")` | vérification (un échec = une erreur du validateur) |
 | `ChatContains("texte")` | le chat contient-il ce texte ? |
 | `Note("texte")` | ligne d'information dans le rapport (pratique pour déboguer) |
+| `Peers.Start(nom[, "api"])` | (avec `--with`) un autre joueur se connecte : les addons `--with` + le nôtre (`"api"` : les addons `--with` seuls) ; ses SavedVariables d'une session précédente sont rendues |
+| `Peers.Stop(nom)` | il se déconnecte (SavedVariables gardées pour son prochain `Start`) |
+| `Peers.Run(nom, "code Lua")` | exécute du code chez lui ; renvoie une valeur simple (`return …`) |
+| `Peers.Online(nom, false / true)` | le coupe du réseau sans le déconnecter (ni envoi ni réception) ; marche aussi pour `"Tester"`, le joueur du scénario |
 
 Techniques utilisées :
 - **Remplacer une globale** du jeu pour simuler un état, par exemple
@@ -98,7 +118,17 @@ Techniques utilisées :
   `StaticPopupDialogs.X.OnAccept(nil, data)`.
 - **Messages serveur ProjectEbonhold :**
   `Fire("CHAT_MSG_ADDON", "AAM0x9", code .. "\t" .. corps, "WHISPER", "Tester")`.
-- **Réseau :** `Fire("CHAT_MSG_CHANNEL", texte, auteur, "", "5. ebontomehunter", "", "", 0, 5, "ebontomehunter")`.
+- **Réseau (EbonAPI) :** le vrai EbonAPI est chargé quand `check.py` le trouve : `EBONAPI_DIR`, sinon
+  `../ModelAddonsEbonhold/EbonAPI/EbonAPI` à côté du dépôt, sinon le dossier AddOns du jeu (il est lu
+  là où il est, jamais copié : sa licence l'interdit). Le scénario a deux branches :
+  `if not EbonAPI` (joueur sans EbonAPI, la CI) et le réseau avec d'autres joueurs (`Peers`).
+  `Advance` fait avancer tous les clients ensemble ; EbonAPI annonce 15 s après un changement et fait
+  un tour toutes les 2 min : prévoir `Advance(40)` à `Advance(150)`. Un joueur qui revient en ligne
+  (`Peers.Online(nom, true)`) ne se reconnecte pas : `api:SyncShares()` fait l'annonce d'une
+  connexion. EbonAPI garde tout ce qu'il reçoit : une section qui publie des données de test les
+  retire à la fin (`api:Unshare(nom)`), sinon elles reviennent dans les sections suivantes.
+- **Lieux reçus sans EbonAPI :** `ns.Net.ImportPlaces(itemId, ns.Net.Encode({ … }), false)`, et
+  `ns.Evidence.ImportShared(itemId, "mob^joueur^n^…")` pour les preuves.
 - **Sacs :** redéfinir `GetContainerNumSlots` / `GetContainerItemLink` / `GetContainerItemInfo`,
   puis `Fire("BAG_UPDATE", 0)` et `Advance(2)`.
 - **Ordre :** l'état est partagé d'une section à l'autre. Remettre ce qu'on a changé (options,
@@ -118,8 +148,14 @@ Sections actuelles :
 - chaîne de partage ;
 - marqueurs de carte ;
 - liens Wowhead et Sources ;
-- loot, réseau, synchronisation et Greedy Scavenger ;
+- loot et réseau (sans EbonAPI, puis avec EbonAPI et plusieurs joueurs) ;
+- sources périmées (seuil selon le taux de drop, preuves des autres joueurs) ;
+- statistiques de kills ;
+- historique des drops ;
+- tomes de raid ;
+- Greedy Scavenger (dont les indices du serveur : sort vu, type de créature, candidats) ;
 - téléportation ;
+- atlas d'EbonBuilds ;
 - envoi direct ;
 - onglets de l'HV : recherche et achat.
 
@@ -146,9 +182,16 @@ modules peuvent écouter le même). Vérifier que l'évènement existe dans `too
 `ns.PE.Service("Service")` pour tester une présence. Toujours prévoir le cas où il est absent.
 Pour savoir ce qui existe, lire sa source (`tools/extract_pe_source.py`) et `docs/EBONHOLD.md`.
 
-**Nouveau message réseau** : garder la compatibilité, car les anciens clients ignorent un type
-inconnu. Pour un changement de format incompatible, passer `ETHN1` en `ETHN2`. Toujours valider ce
-qui est reçu, et rester sous 240 octets sans `|`.
+**Données réseau** (EbonAPI) : un jeu de données par tome (`T<id>` lieux, `E<id>` preuves), 32 Ko
+au plus, jamais de `|`.
+- Le texte doit être **canonique** : le même contenu donne le même texte sur tous les clients (ordre
+  total, champs convergents), sinon deux clients se republient sans fin.
+- Tout ce qui est reçu est validé (`Net.Decode`, `Evidence.ImportShared`) ; la règle `Net.Accept`
+  décide quels états prendre.
+- Changement de format incompatible : un autre préfixe de nom de jeu de données (les anciens clients
+  refusent les noms qu'ils ne connaissent pas), ou un autre nom d'addon pour `EbonAPI:NewAddon`.
+- Message ponctuel : `api:Say(op, corps)` / `api:OnChannel(op, fn)` (op alphanumérique ; EbonAPI
+  découpe un long corps en plusieurs lignes).
 
 **Les frames** : créées une seule fois (à la première ouverture), jamais recréées ; listes
 virtuelles (`W.List`) pour tout ce qui est long.
@@ -168,4 +211,5 @@ virtuelles (`W.List`) pour tout ce qui est long.
 - `C:/ebonhold/Logs/FrameXML.log` : erreurs de chargement (fichier absent du `.toc`, XML…).
   C'est le premier fichier à lire quand l'addon « ne fait rien ».
 - `/eth net` : état du réseau ; `/eth help` : commandes.
+- `/eapi status`, `/eapi trace 20 share` (EbonAPI) : son état, ses pairs, et ses derniers échanges.
 - Après une modification : `/reload`, ou redémarrage complet si le `.toc` a de nouveaux fichiers.

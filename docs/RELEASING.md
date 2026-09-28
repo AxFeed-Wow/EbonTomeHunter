@@ -63,10 +63,14 @@ du jeu, sinon un `/reload` suffit.
 
 ## Prévenir les joueurs d'une nouvelle version
 
-Depuis la 2.2.0, chaque addon annonce sa version sur le réseau caché (message `I`) : un joueur resté
-sur une version plus ancienne voit « Une nouvelle version d'EbonTomeHunter est disponible » dès qu'il
-croise un utilisateur à jour. Rien à faire à la publication : il suffit que des joueurs aient la
-nouvelle version. Les 2.0.0 et 2.1.0 ne connaissent pas ce message.
+Depuis la 3.0.0, EbonAPI annonce la version de chaque addon qui l'utilise (`api:Version`) et prévient
+lui-même un joueur resté sur une version plus ancienne dès qu'il croise un utilisateur à jour. Rien à
+faire à la publication : il suffit que des joueurs aient la nouvelle version. Les 2.x (leur propre
+canal caché, message `I`) ne voient ni les 3.x ni leurs lieux : la 3.0.0 est une version majeure.
+
+EbonAPI n'est jamais inclus dans le zip ni dans le dépôt (licence) : le README et le chat (une fois)
+disent de l'installer. Dans le catalogue d'Ebonhold Addon Manager, l'entrée EbonTomeHunter peut le
+signaler (champ `requires`).
 
 ## Intégration continue
 

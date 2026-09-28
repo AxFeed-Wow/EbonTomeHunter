@@ -2,7 +2,7 @@
 ## Title: EbonTomeHunter Dev
 ## Notes: Development helper of EbonTomeHunter: records game data into SavedVariables for analysis. Not for players.
 ## Author: AxFeed-Wow
-## Version: 1.0.0
+## Version: 1.1.0
 ## SavedVariables: EbonTomeHunterDevDB
-## OptionalDeps: ProjectEbonhold, EbonTomeHunter
+## OptionalDeps: ProjectEbonhold, EbonAPI, EbonTomeHunter
 EbonTomeHunterDev.lua

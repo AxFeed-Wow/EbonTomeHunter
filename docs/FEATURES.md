@@ -18,8 +18,20 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 - **Tome inconnu :** un tome vu à l'HV ou dans les sacs mais absent des données (nouveau patch) est
   ajouté automatiquement.
 - **Lieux de drop :** ils sont lus en jeu dans **EbonholdHub** (ou EbonCompletionist) et convertis en
-  coordonnées de la vraie carte. S'y ajoutent les lieux trouvés par les joueurs (§11). Sans aucun de
-  ces deux addons, seuls les lieux du réseau existent.
+  coordonnées de la vraie carte. S'y ajoutent les lieux trouvés par les joueurs (§11) et les sources
+  de l'atlas d'EbonBuilds. Sans EbonholdHub ni EbonCompletionist, seuls ces deux-là existent.
+- **Atlas d'EbonBuilds :** EbonBuilds note, chez ses utilisateurs, sur quel monstre et dans quelle
+  zone chaque tome est tombé, et met ces sources en commun entre eux. L'addon les lit en jeu dans les
+  données d'EbonBuilds (jamais modifiées) :
+  - pour chaque tome, les **8 sources les plus vues** qu'aucune autre source ne cite déjà (même nom
+    de monstre) ; une source sans monstre seulement si aucune autre de l'atlas ne donne sa zone ;
+  - le lieu est le nom de la zone. Un point sur la carte seulement là où EbonBuilds en a noté un (les
+    loots de son utilisateur) ; sinon la téléportation vise le **centre de la zone** (distance avec
+    « ~ »), et un raid ou un donjon n'a pas de point ;
+  - noms de zone en anglais (client anglais) : sur un client dans une autre langue, la zone reste un
+    nom, sans point ni téléportation ;
+  - la fenêtre Sources et la bulle d'aide disent « atlas EbonBuilds : N drop(s) » ; l'atlas est relu
+    quand il change (vérifié toutes les minutes).
 - **Indice du serveur :** le journal des Echos de ProjectEbonhold donne pour chaque tome une phrase
   « Can be found on … » (type d'ennemis ou boss). L'addon la lit en jeu et l'affiche dans la bulle
   d'aide de la liste et en haut de la fenêtre Sources.
@@ -69,6 +81,10 @@ Distances : en « mètres » du jeu (= yards du client anglais).
   d'annonces. Les 20 derniers relevés de chaque tome sont gardés, pour la tendance (hausse / baisse).
 - **Tome disparu :** après un scan complet, il passe « pas en vente » ; son dernier prix reste affiché
   en gris.
+- **Annonces pas encore chargées :** une annonce d'un objet que le client ne connaît pas encore
+  (premier passage, cache vidé) arrive sans nom. La page attend ses données jusqu'à 3 s. Si elles
+  n'arrivent pas, le chat le dit, les tomes non vus **gardent leur état** (pas de faux « pas en
+  vente ») et une recherche exacte ne change pas le prix enregistré.
 - **Conservation :** prix communs à tous les personnages du compte, gardés d'une session à l'autre.
 - **Options :** scan automatique à l'ouverture de l'HV si le dernier date de plus de 30 min ;
   effacer les prix.
@@ -111,12 +127,14 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 
 - **Une ligne par monstre de chaque lieu**, dans cet ordre :
   1. les sources joignables par téléportation, la plus proche d'un checkpoint en premier ;
-  2. celles sans checkpoint débloqué sur ce continent ;
-  3. celles sans position.
+  2. celles dont seule la zone est connue (atlas d'EbonBuilds), mesurées depuis le centre de la zone ;
+  3. celles sans checkpoint débloqué sur ce continent ;
+  4. celles sans position.
 - **Chaque ligne indique :**
   - le monstre (#id s'il est connu, « recherche » sinon, « créature d'Ebonhold » si elle n'existe pas
     sur Wowhead) et le lieu ;
-  - le checkpoint et sa distance (vert), ou le checkpoint à débloquer (orange) ;
+  - le checkpoint et sa distance (vert), ou le checkpoint à débloquer (orange) ; « ~ » devant la
+    distance quand elle part du centre de la zone ;
   - ta distance si tu es sur le même continent ;
   - les boutons **TP** et **Wowhead**.
 
@@ -138,6 +156,8 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 - **Calcul :**
   - pour chaque lieu du tome, le checkpoint débloqué le plus proche sur le même continent, à vol
     d'oiseau ;
+  - une source dont seule la zone est connue (atlas d'EbonBuilds) : depuis le centre de la zone
+    (distance avec « ~ »), et seulement si aucune source précise n'a de checkpoint ;
   - avec plusieurs sources, la source retenue est celle qui a le checkpoint le plus proche.
 - **Où la lancer :**
   - le bouton portail d'une ligne ;
@@ -189,73 +209,64 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 
 ## 11. Le réseau entre joueurs
 
-- **Canal caché :** l'addon rejoint un canal de discussion caché 10 s après la connexion. Rien ne
-  s'affiche dans le chat.
-- **Quand tu obtiens un tome sur un monstre**, à la main ou par le Greedy Scavenger :
-  - l'addon note le tome, la position, le monstre et son id, la zone, l'heure et **ton nom de
-    personnage** ;
-  - il garde ce lieu et l'envoie aux autres s'il est nouveau, ou pour confirmer un lieu connu.
-- **Chez les autres :**
-  - le message est vérifié (tome connu, position et date plausibles) ;
-  - même carte, à moins de 4 % de la carte et même monstre = même lieu, qui gagne « +1 joueur » ;
-  - au plus 12 lieux par tome.
-- **Résultat :** un tome « Unknown location » finit par avoir un vrai lieu, sur la carte, dans
-  Localiser et pour la téléportation.
-- **Trouvaille faite seul** (aucun autre utilisateur entendu depuis 30 min) : elle part quand même
-  tout de suite, et attend aussi dans une boîte d'envoi (50 au plus, 30 jours). Dès qu'un autre
-  utilisateur se manifeste (sa demande de connexion suffit), elle lui est renvoyée. Couper le réseau
-  vide la boîte.
-- **Synchronisation à la connexion** (15 s après, au plus toutes les 10 min) :
-  - tu demandes ce que les autres ont **appris** depuis ta dernière synchro complète (moins 10 min
-    de marge ; la première fois : tout). Une vieille trouvaille arrivée tard circule donc aussi ;
-  - l'utilisateur qui en sait le plus répond en premier, puis chacun des autres envoie seulement ce
-    que les réponses déjà entendues ne contenaient pas ;
-  - la réponse arrive par lots de 30 lieux, jusqu'à 5 lots par session, et reprend à la connexion
-    suivante ;
-  - à la fin, tu envoies à ton tour ce que tu avais appris depuis ta dernière synchro et que
-    personne n'a cité ;
-  - une ligne dans le chat dit combien de nouveaux lieux la synchro t'a apportés ;
-  - si personne n'a répondu, la demande repart quand un autre utilisateur se manifeste (au plus
-    une fois par minute).
-- **Compatibilité :** les versions 2.0.0 et 2.1.0 se comprennent. Une version 2.0.0 reçoit les
-  réponses comme avant (par date de trouvaille, une seule réponse).
-- **`/eth net check`** : demande aux utilisateurs connectés (2.2.0 et plus) l'empreinte de leurs
-  données, puis affiche pour chacun sa version, son nombre de lieux, sa **dernière info** (date du
-  lieu le plus récent), le nombre de **ses propres trouvailles**, et s'il est **synchronisé** avec
-  toi ou **différent**. Les utilisateurs entendus récemment qui ne répondent pas sont listés (version
-  plus ancienne). Au plus une vérification toutes les 30 s.
-- **Synchro automatique :** en plus de celle de la connexion, chaque utilisateur se resynchronise
-  **toutes les 15 min** (plus 0 à 1 min, pour que tout le monde ne demande pas en même temps).
-- **Bouton réseau** (fenêtre principale, à gauche de Scan) : **À jour** (vert, synchro complète il
-  y a moins de 20 min), **Pas à jour** (orange), **Seul en ligne** (gris : personne n'a répondu à la
-  dernière synchro), **Hors réseau** (canal caché refusé), **Réseau coupé**. Sa bulle d'aide dit quand
-  date la dernière synchro et si une version plus récente de l'addon a été vue ; le clic lance la
-  synchro complète. Il se met à jour à la fin de chaque synchro (automatique ou non), quand le
-  réseau est activé ou coupé, toutes les 30 s tant que la fenêtre est ouverte, et au survol. La bulle d'aide du bouton de la minimap reprend ces lignes.
-- **`/eth net sync`** : synchro complète pour toi seul : tu redemandes tout depuis le début, sans
-  l'attente de 10 min et avec jusqu'à 20 lots de 30 lieux.
-- **`/eth net compare <nom>`** : ce joueur (connecté, 2.2.0 et plus) t'envoie la liste compacte de
-  ses lieux. Le chat montre ses lieux, ses trouvailles, sa dernière info, puis les tomes des lieux
-  **qu'il a et pas toi**, et ceux **que tu as et pas lui** (8 noms au plus, puis « N de plus »). Il
-  répond au plus toutes les 30 s.
-- **Nouvelle version de l'addon :** chaque addon annonce sa version sur le réseau à la connexion. Si
-  un utilisateur a une version plus récente, le chat le dit une fois (« Une nouvelle version
-  d'EbonTomeHunter est disponible : 2.3.0 (vous avez 2.2.0)… »), avec Ebonhold Addon Manager et
-  GitHub. Un utilisateur plus récent répond à l'annonce d'une version plus ancienne (un seul le
-  fait). Une version plus d'une version majeure en avance est ignorée (fausse annonce).
-- `/eth net` affiche l'état réel : connecté, ou canal caché non rejoint. Le réseau se coupe dans
-  les options (sous-panneau « Réseau et alertes »).
+- **EbonAPI :** le partage passe par l'addon **EbonAPI** (Siphelis,
+  [github.com/Siphelis/EbonAPI](https://github.com/Siphelis/EbonAPI), aussi dans Ebonhold Addon
+  Manager), que chaque joueur installe à part. Sans lui, tes trouvailles restent chez toi et tout le
+  reste marche ; le chat le dit une fois par version de l'addon, 20 s après la connexion.
+- **Quand tu obtiens un tome sur un monstre**, à la main ou par le Greedy Scavenger, ou que tu le
+  vois dans la fenêtre de butin sans le prendre (sacs pleins, jet gagné par un autre) :
+  - l'addon note le tome, la position, le monstre et son id (ou les monstres possibles, §12), la
+    zone, l'heure et **ton nom de personnage** ;
+  - il garde ce lieu et le publie s'il est nouveau ou s'il confirme un lieu connu (3 s après :
+    plusieurs changements partent ensemble).
+- **Un jeu de données par tome** (`T<id du tome>`) : ses lieux, ceux de tous les joueurs mis
+  ensemble, 12 au plus (les plus confirmés, puis les plus récents). EbonAPI le transmet de joueur en
+  joueur : annonce 15 s après un changement, échange avec chaque joueur qui arrive, puis un tour
+  toutes les 2 min avec ceux qui n'ont pas les mêmes données.
+- **Permanent :** EbonAPI garde dans ses données sauvegardées les jeux de données de tous ses addons,
+  aussi chez les joueurs qui n'ont pas EbonTomeHunter mais un autre addon d'EbonAPI (AutoCallboard,
+  SkillTreeAutoLoad…). Une trouvaille arrive donc **même entre joueurs jamais connectés en même temps** :
+  elle passe par ceux qui les ont croisés.
+- **Fusion :** chaque client prend un jeu de données plus récent que le sien, y fusionne ce qu'il sait
+  et, s'il sait plus, republie l'union.
+  - Même carte, à moins de 4 % de la carte et même monstre = même lieu, qui gagne « +1 joueur ».
+  - Chaque client garde les mêmes valeurs (plus petit nom de trouveur, plus petit point, texte de
+    zone le plus précis, plus grand nombre de joueurs, date la plus récente) : tout le monde finit
+    avec le même texte, sans republier sans fin.
+  - L'état d'un jeu de données est l'heure × 1000 plus une somme de contrôle de son texte : deux
+    joueurs d'un groupe qui publient des lieux différents dans la même seconde n'ont pas le même
+    état, et l'un prend celui de l'autre.
+- **À la réception :** tome connu, position sur la carte, date plausible. Refusés : un code
+  d'échappement de WoW (`|c` couleur, `|H` lien…) ou un caractère de contrôle (l'addon n'en publie
+  jamais), un jeu de données daté de plus d'un jour dans le futur.
+- **Alerte :** un nouveau lieu d'un tome de ta wishlist, trouvé il y a moins d'une heure, s'affiche
+  dans le chat (qui, quel tome, où, sur quel monstre).
+- **Sources périmées :** les compteurs de cadavres et les signalements (§11 bis) voyagent dans un
+  second jeu de données par tome (`E<id>`) : pour chaque source et chaque joueur, sa ligne la plus
+  récente.
+- **Premier lancement de la 3.0 :** les lieux connus avant (2.x) sont gardés et publiés.
+- **Bouton réseau** (fenêtre principale, à gauche de Scan) : **Réseau** (EbonAPI dans son canal),
+  **Connexion…**, **Sans EbonAPI** ou **Réseau coupé**.
+  - Bulle d'aide : lieux et tomes connus, tomes partagés sur le réseau, version de l'addon (et une
+    plus récente si EbonAPI en a vu une). La bulle d'aide du bouton de la minimap reprend ces lignes.
+  - Clic : annonce tout de suite tes données aux joueurs connectés, toutes les 30 s au plus.
+- **`/eth net`** affiche l'état ; **`/eth net sync`** fait comme le clic.
+- **Couper le réseau** (options, sous-panneau « Réseau et alertes ») : rien n'est publié ni pris en
+  compte. En le rallumant, ce qu'EbonAPI a reçu entre-temps est fusionné et tes trouvailles publiées.
+- **Nouvelle version :** EbonAPI annonce la version de chaque addon et prévient lui-même quand une
+  version plus récente d'EbonTomeHunter existe.
 - **Limites :**
-  - les lieux ne circulent qu'entre utilisateurs connectés en même temps (en principe de la même
-    faction) : une trouvaille voyage de proche en proche, au fil des connexions ;
-  - un lieu appris par un joueur avant ta dernière synchro complète, alors que ceux avec qui tu t'es
-    synchronisé ne l'avaient pas, peut rester chez lui jusqu'à ce qu'un nouvel utilisateur demande
-    tout (les réponses sont publiques : tout le monde en profite) ;
+  - les versions 2.x (leur propre canal caché) et 3.x ne se voient pas ;
   - les lieux reçus ne sont pas vérifiables (chacun affiche qui l'a trouvé et combien l'ont confirmé) ;
-  - WoW limite chaque personnage à **10 canaux de discussion**. S'ils sont tous pris (canaux de zone,
-    canaux « world », canaux cachés d'autres addons…), le jeu refuse le canal caché avec « You can
-    only be in 10 channels at a time. » : ni envoi ni réception pendant la session, et `/eth net`
-    le dit. Pour libérer une place : `/chatlist`, `/leave <numéro>`, puis `/reload`.
+  - EbonAPI ne rejoint son canal que si un addon s'en sert : EbonAPI seul ne transmet rien ;
+  - WoW limite chaque personnage à **10 canaux de discussion**. EbonAPI utilise un canal caché commun
+    à tous ses addons ; s'ils sont tous pris, ni envoi ni réception. Pour libérer une place :
+    `/chatlist`, `/leave <numéro>`, puis `/reload` ;
+  - EbonAPI rejoint son canal dès la connexion, parfois avant que le jeu te rende tes propres
+    canaux : l'un d'eux peut alors changer de numéro ;
+  - un jeu de données forgé, daté très loin dans le futur, est refusé par EbonTomeHunter mais gardé
+    tel quel par EbonAPI chez les joueurs qui n'ont qu'un autre de ses addons : chez eux, ce tome ne
+    se met plus à jour. Les utilisateurs d'EbonTomeHunter continuent de se l'échanger directement.
 
 ## 11 ter. L'historique des drops
 
@@ -272,25 +283,36 @@ Bouton **Historique** de la fenêtre principale, ou `/eth history`.
   tués : une écriture dans une table par kill, 600 créatures au plus (les moins tuées sont
   oubliées). Aucun impact visible sur le jeu.
 - Ces compteurs ne sont envoyés **que sur demande** de l'addon de développement (`/ethdev stats`,
-  pour le mainteneur) : les 60 créatures les plus tuées et le total. Rien n'est envoyé
-  automatiquement. Couper le réseau coupe aussi ces réponses.
+  pour le mainteneur), par le canal d'EbonAPI : les 60 créatures les plus tuées et le total, une
+  réponse toutes les 30 s au plus. Rien n'est envoyé automatiquement. Couper le réseau coupe aussi
+  ces réponses.
 
 ## 11 bis. Les sources qui ne lâchent plus leur tome
 
 Un monstre listé pour un tome (EbonholdHub ou réseau) peut ne plus le lâcher après un patch.
 - **Preuve automatique :** quand tu ouvres le butin d'un cadavre d'un monstre listé et que le tome
   n'y est pas, l'addon compte un « cadavre sans le tome » pour ce tome et ce monstre (un cadavre
-  rouvert ne compte qu'une fois). Seuls les cadavres que **tu** loots comptent : on est sûr qu'il n'y
+  rouvert ne compte qu'une fois). Un tome présent dans la fenêtre mais pas pris (sacs pleins, jet
+  gagné par un autre) compte comme un drop. Seuls les cadavres que **tu** loots comptent : on est sûr qu'il n'y
   avait pas le tome. Le Greedy Scavenger n'est pas compté. Ces compteurs sont partagés sur le réseau.
 - **Signalement :** le bouton **« Plus bon ? »** de la fenêtre Sources signale la source (recliquer :
   « Annuler »).
 - **Source jugée périmée** quand, depuis le dernier drop connu (le tien, celui d'un autre, un lieu du
-  réseau) : **500 cadavres sans le tome** au total (un autre joueur compte pour 250 au plus : il en
-  faut au moins deux, ou toi seul), ou **3 joueurs** l'ont signalée, ou **toi** tu l'as signalée
-  (pour toi seulement).
+  réseau) : **assez de cadavres sans le tome pour que la malchance ne l'explique plus**, ou **3
+  joueurs** l'ont signalée, ou **toi** tu l'as signalée (pour toi seulement).
+- **Malchance :** un tome rare peut manquer beaucoup de cadavres de suite. Le seuil suit donc le taux
+  de drop de la source :
+  - taux = drops ÷ cadavres dans l'historique de tous les compteurs de la source (sans la série en
+    cours, celle qu'on juge), plus un a priori de 1 sur 200 qui pèse comme 200 cadavres ;
+  - seuil = le nombre de cadavres sans le tome que la malchance ne donne qu'1 fois sur 100
+    (ln 0,01 ÷ ln (1 − taux)), entre 500 et 5000. Exemples : rien vu → 1 sur 200 → 919 cadavres ;
+    1 drop sur 3000 cadavres → 5000 ; 20 drops sur 1000 → 500 ;
+  - un autre joueur compte pour la moitié du seuil au plus : il en faut au moins deux, ou toi seul ;
+  - **un seul drop remet la source bonne**, même après une longue série sans : la malchance ne
+    prouve rien.
 - **Rien n'est supprimé :** la source est grisée dans la fenêtre Sources, avec la raison (« ne le
-  lâche probablement plus (0 drop sur 520 cadavres lootés) »), et passe en dernier pour la
-  téléportation et Localiser. Si le tome y retombe, elle redevient normale.
+  lâche probablement plus (0 drop sur 950 cadavres lootés (d'habitude 1 sur 200)) »), et passe en
+  dernier pour la téléportation et Localiser. Si le tome y retombe, elle redevient normale.
 - **Âge des lieux du réseau :** la fenêtre Sources affiche « trouvé il y a … ». Les plus récents
   passent devant, et un lieu non retrouvé depuis 90 jours passe après les autres.
 
@@ -299,14 +321,24 @@ Un monstre listé pour un tome (EbonholdHub ou réseau) peut ne plus le lâcher 
 - **Loot à la main :** le monstre est le cadavre ouvert (celui sous la souris, sinon la cible
   morte), à la position où la fenêtre de butin s'est ouverte.
 - **Greedy Scavenger** (familier d'Ebonhold qui ramasse tout seul) : il ne laisse **aucun message**.
-  - L'addon voit le tome **apparaître dans les sacs**.
-  - Il prend le monstre que toi ou ton groupe avez combattu puis tué dans la dernière minute, si
-    c'est un seul type de monstre.
-  - Plusieurs types de monstres : il garde **celui qui est une source connue du tome** (lieux
-    d'EbonholdHub, du réseau, boss de raid, indice du serveur « Can be found on … »), s'il n'y en a
-    qu'un parmi eux.
-  - Sinon il envoie le lieu seul, qu'un autre joueur pourra compléter. La position est la tienne.
+  - L'addon voit le tome **apparaître dans les sacs**. La position est la tienne.
+  - Un seul type de monstre combattu puis tué dans la dernière minute (toi ou ton groupe) : c'est
+    lui.
+  - Plusieurs : **l'indice du serveur** sur le tome (« Can be found on … ») les départage :
+    - fort : son nom est celui de l'indice, il a été vu **lancer un sort de l'indice** (journal de
+      combat), son **type de créature** est celui de l'indice (vu sur sa plaque de nom, en cible ou
+      au survol) ;
+    - moyen : sa classe correspond (« Mage-type enemies »), c'est une source connue du tome (lieux
+      d'EbonholdHub, du réseau, boss de raid, atlas d'EbonBuilds) ;
+    - faible : un mot de son nom (« Fire Elemental » : flame, ember…) ;
+    - un monstre qui se détache (au moins « moyen ») est retenu.
+  - Sinon le lieu garde jusqu'à **4 monstres possibles**, les plus probables d'abord (« un de : A /
+    B »). Chaque nouveau drop au même endroit, le tien ou celui d'un autre joueur, ne garde que les
+    monstres tués à chaque fois ; quand il n'en reste qu'un, il devient le monstre du lieu (« déduit
+    de plusieurs drops »).
   - Aucun monstre tué dans la dernière minute : pas de lieu.
+  - Les sorts des indices sont en anglais : sur un client dans une autre langue, seuls le nom, la
+    classe, le type et les sources connues servent.
 - **Pas comptés comme du loot :**
   - ce qui arrive par une banque (dont la banque étendue et le stockage du Vide), le courrier, un
     marchand, un échange, l'HV, un métier, une quête, un dialogue de PNJ, la boutique, l'achat ou
@@ -322,7 +354,8 @@ Un monstre listé pour un tome (EbonholdHub ou réseau) peut ne plus le lâcher 
 - **Tu obtiens un tome de ta wishlist :** grand message au centre de l'écran, plus un son.
 - **Un membre du groupe en loote un à la main :** une ligne dans le chat, plus un son. Le Scavenger
   d'un autre joueur ne laisse aucun message : invisible.
-- **Un joueur du réseau en trouve un (nouveau lieu) :** une ligne avec le lieu et le monstre.
+- **Un joueur du réseau en trouve un (nouveau lieu, trouvé il y a moins d'une heure) :** une ligne
+  avec le lieu et le monstre.
 - Chaque alerte se coupe dans les options, le son aussi.
 
 ## 14. Tomes appris
@@ -367,8 +400,9 @@ Un monstre listé pour un tome (EbonholdHub ou réseau) peut ne plus le lâcher 
 |---|---|
 | `/eth` (ou `/tomehunter`) | ouvrir / fermer la fenêtre |
 | `/eth share` (`export`, `import`) | partager / importer une wishlist |
+| `/eth history` | historique des drops |
 | `/eth send <nom>` | envoyer sa wishlist à un joueur |
-| `/eth net` | état du réseau |
+| `/eth net` (`sync`) | état du réseau (annoncer tes lieux maintenant) |
 | `/eth tp <tome>` | se téléporter au checkpoint le plus proche de là où le tome tombe |
 | `/eth tuto` | relancer le tutoriel |
 | `/eth options` | panneau d'options |

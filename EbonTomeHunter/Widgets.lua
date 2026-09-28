@@ -566,7 +566,7 @@ function W.Slider(parent, text, minValue, maxValue, step, getter, setter, format
     if high then high:SetText(formatValue(maxValue)) end
     local updating = false
     local function Label(value)
-        if title then title:SetText(text .. " : " .. formatValue(value)) end
+        if title then title:SetText(text .. L.Colon .. formatValue(value)) end
     end
     slider:SetScript("OnValueChanged", function(self, value)
         value = floor(value / step + 0.5) * step

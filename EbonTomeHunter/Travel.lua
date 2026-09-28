@@ -77,16 +77,18 @@ local function Distance(ax, ay, bx, by)
     return math.sqrt(dx * dx + dy * dy)
 end
 
-function T.FormatDistance(yards)
-    return format(L.TravelYards, floor((yards or 0) + 0.5))
+-- approx: measured from the middle of the zone ("~120 yd"), see WorldMap.TravelPosition.
+function T.FormatDistance(yards, approx)
+    return (approx and "~" or "") .. format(L.TravelYards, floor((yards or 0) + 0.5))
 end
 
 -- Nearest checkpoints of a drop place: the nearest unlocked one, and a nearer one
--- that is still locked (worth unlocking). nil when the place has no position.
+-- that is still locked (worth unlocking). nil when the place has no position; approx
+-- when only its zone is known.
 function T.Nearest(loc, checkpoints)
-    local map, worldX, worldY = ns.WorldMap.WorldPosition(loc)
+    local map, worldX, worldY, approx = ns.WorldMap.TravelPosition(loc)
     if not map then return nil end
-    local near = { map = map, worldX = worldX, worldY = worldY }
+    local near = { map = map, worldX = worldX, worldY = worldY, approx = approx }
     for _, c in ipairs(checkpoints or T.Checkpoints()) do
         if c.map == map then
             local d = Distance(c.worldX, c.worldY, worldX, worldY)
@@ -128,20 +130,22 @@ function T.Sources(itemId)
             }
             if name then
                 local npcId = type(loc.npcIds) == "table" and loc.npcIds[name] or nil
-                source.stale, source.kills, source.voters, source.reported = ns.Evidence.Verdict(itemId, name, npcId)
+                source.stale, source.kills, source.voters, source.reported, source.oneIn, source.needed =
+                    ns.Evidence.Verdict(itemId, name, npcId)
             end
             out[#out + 1] = source
         end
     end
     local function Rank(s)
         local rank = (s.near and s.near.checkpoint) and 1 or (s.near and 2 or 3)
+        if rank == 1 and s.near.approx then rank = 1.5 end   -- only its zone is known: after the precise ones
         if s.stale then return rank + 6 end
         return s.old and rank + 3 or rank
     end
     table.sort(out, function(a, b)
         local ra, rb = Rank(a), Rank(b)
         if ra ~= rb then return ra < rb end
-        if ra == 1 and a.near.distance ~= b.near.distance then return a.near.distance < b.near.distance end
+        if (ra == 1 or ra == 1.5) and a.near.distance ~= b.near.distance then return a.near.distance < b.near.distance end
         return a.order < b.order
     end)
     return out
@@ -195,7 +199,7 @@ function T.Execute(source)
     -- like PE's own map pins; dismounting in flight would be a fall
     if IsMounted() and not IsFlying() then Dismount() end
     ns.PE.Call("CheckpointService", "UseCheckpoint", checkpoint.id)
-    ns.Print(L.TravelGoing, checkpoint.name, T.FormatDistance(source.near.distance), T.SourceName(source))
+    ns.Print(L.TravelGoing, checkpoint.name, T.FormatDistance(source.near.distance, source.near.approx), T.SourceName(source))
     return true
 end
 
@@ -217,7 +221,7 @@ function T.GoTo(source)
             T.Refresh()
             ns.Print(L.TravelNoData)
         elseif near.locked then
-            ns.Print(L.TravelLockedOnly, tome, near.locked.name, T.FormatDistance(near.lockedDistance))
+            ns.Print(L.TravelLockedOnly, tome, near.locked.name, T.FormatDistance(near.lockedDistance, near.approx))
         else
             ns.Print(L.TravelNoCheckpoint, tome)
         end
@@ -229,7 +233,7 @@ function T.GoTo(source)
     end
     if ns.Opt().confirmTeleport then
         StaticPopup_Show("EBONTOMEHUNTER_TRAVEL", near.checkpoint.name,
-            format(L.TravelNear, T.FormatDistance(near.distance), T.SourceName(source)), source)
+            format(L.TravelNear, T.FormatDistance(near.distance, near.approx), T.SourceName(source)), source)
         return true
     end
     return T.Execute(source)
@@ -253,8 +257,8 @@ function T.GoBest(itemId)
         for _, source in ipairs(sources) do
             local mine = T.PlayerDistance(source, map, worldX, worldY)
             if mine and mine < best.near.distance then
-                ns.Print(L.TravelAlreadyClose, T.FormatDistance(mine), T.SourceName(source),
-                    T.FormatDistance(best.near.distance))
+                ns.Print(L.TravelAlreadyClose, T.FormatDistance(mine, source.near.approx), T.SourceName(source),
+                    T.FormatDistance(best.near.distance, best.near.approx))
                 return false
             end
         end

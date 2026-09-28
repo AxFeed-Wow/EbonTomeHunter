@@ -16,6 +16,7 @@ import datetime
 import filecmp
 import os
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -40,6 +41,14 @@ def game_running():
     except OSError:
         return False
     return "ebonhold.exe" in out or "wow.exe" in out
+
+
+def remove_file(path):
+    try:
+        os.remove(path)
+    except PermissionError:
+        os.chmod(path, stat.S_IWRITE)   # read-only on Windows (objects of a git clone, for example)
+        os.remove(path)
 
 
 def source_files():
@@ -89,7 +98,7 @@ def main():
         for name in filenames:
             rel = os.path.relpath(os.path.join(dirpath, name), target)
             if rel not in wanted:
-                os.remove(os.path.join(dirpath, name))
+                remove_file(os.path.join(dirpath, name))
                 print(f"removed (no longer in the addon): {rel}")
         if dirpath != target and not os.listdir(dirpath):
             os.rmdir(dirpath)

@@ -127,7 +127,7 @@ local function CreateTomeRow(row)
         if tome.desc and tome.desc ~= "" then GameTooltip:AddLine(tome.desc, 1, 0.82, 0, true) end
         local rec = ns.Prices.Get(tome.itemId)
         if rec and rec.min and rec.min > 0 then
-            GameTooltip:AddLine(format(L.PriceSeen, ns.Ago(rec.seen or rec.at) or "") .. " : " .. W.Money(rec.min), 0.7, 0.7, 0.7)
+            GameTooltip:AddLine(format(L.PriceSeen, ns.Ago(rec.seen or rec.at) or "") .. L.Colon .. W.Money(rec.min), 0.7, 0.7, 0.7)
         end
         GameTooltip:Show()
     end)

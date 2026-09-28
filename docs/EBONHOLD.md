@@ -121,12 +121,32 @@ Familier (compagnon) de ProjectEbonhold qui **ramasse lui-même le butin des cad
   comportement a été constaté par EbonClearance, qui compte le butin par différence du contenu des
   sacs. EbonTomeHunter fait pareil (`Loot.lua`).
 - Il « parle » dans le chat (« Greedy Scavenger gnaws on the corpse »). EbonClearance sait le rendre
-  muet et le ré-invoquer quand il se perd.
-- **Aucun signal par cadavre** (confirmé par l'utilisateur, 2026-09-24) : il ramasse comme si le
-  joueur avait looté, sans message. On ne sait donc pas quels cadavres il a fouillés : ses kills ne
-  comptent pas comme « cadavres sans le tome » (`Evidence.lua`), sinon des sources encore bonnes
+  muet et le ré-invoquer quand il se perd : il surveille ses lignes sur `CHAT_MSG_MONSTER_SAY`,
+  `_YELL`, `_WHISPER`, `_EMOTE`, `_PARTY` et `CHAT_MSG_SAY`, `_YELL`, `_EMOTE`, `_TEXT_EMOTE`, par
+  l'auteur ou le texte (un familier peut être renommé : « Serv's Scavenger »).
+- **Aucun signal par cadavre connu** (constaté par l'utilisateur, 2026-09-24) : il ramasse comme si
+  le joueur avait looté, sans message. On ne sait donc pas quels cadavres il a fouillés : ses kills
+  ne comptent pas comme « cadavres sans le tome » (`Evidence.lua`), sinon des sources encore bonnes
   seraient grisées à tort. Ses tomes, eux, sont détectés (sacs) et envoyés comme lieux de drop, ce
   qui rétablit la source.
+- **Quel monstre** (`Hints.lua`, 3.0.0) : parmi les kills de la dernière minute, l'indice du serveur
+  (« Can be found on … ») départage (sort vu dans le journal de combat, type de créature, classe,
+  source connue) ; sinon le lieu garde des candidats, réduits à chaque nouveau drop au même endroit.
+- **Enquête en cours** : `/ethdev scav on` (addon de dev) enregistre tout ce qui entoure ses
+  ramassages (journal de combat, paroles et emotes, sacs, argent). Si ses lignes nomment le cadavre,
+  l'attribution pourra s'en servir.
+
+## Canaux « world » de ProjectEbonhold
+
+`modules/worldChannel` propose au joueur (une fenêtre, `/worldchannel`) les canaux `world`,
+`world-fr`, `world-de` et `world-es`, rejoints avec `/join` : ils sont donc gardés dans
+`chat-cache.txt` et rétablis par le client à chaque connexion. ProjectEbonhold attend cette
+restauration (jusqu'à 30 s) avant de proposer quoi que ce soit : rejoindre un canal pendant qu'elle
+se fait l'enregistre deux fois et casse l'envoi (bugs #2664/#2676). Avec les canaux de zone et les
+canaux cachés d'autres addons (EbonAffixAlert, EbonBuilds, EbonClearance, Nexus…), la limite des 10
+canaux est vite atteinte. EbonTomeHunter 2.x rejoignait son propre canal après cette restauration ;
+depuis 3.0.0 il passe par le canal commun d'EbonAPI, qu'EbonAPI rejoint dès `PLAYER_LOGIN` (avant la
+restauration : un canal du joueur peut changer de numéro ; à signaler à son auteur).
 
 ## Fenêtres de ProjectEbonhold qui font entrer des objets dans les sacs
 
@@ -143,6 +163,7 @@ Familier (compagnon) de ProjectEbonhold qui **ramasse lui-même le butin des cad
 |---|---|---|
 | `EbonholdOpenURL(url)` | DLL Ebonhold | ouvrir un lien Wowhead dans le navigateur (toujours tester sa présence, appeler sous `pcall`) |
 | `CopyToClipboard(text)` | AwesomeWotLK | bouton Copier (sinon : EditBox sélectionnée pour Ctrl+C) |
+| unités `nameplate1`… | client Ebonhold | chaque plaque de nom a une vraie unité (`UnitClass`, `UnitCreatureType`… marchent), documenté par `modules/nameplates` de ProjectEbonhold ; `Hints.lua` y lit classe et type des monstres (`NAME_PLATE_UNIT_ADDED` quand l'extension a l'évènement, sinon relecture en combat) |
 
 La DLL fournit aussi `EbonholdLog`, `EbonholdWorldToScreen`, `EbonholdGetPlayerPosition`,
 `EbonholdRequestQuestPOI`, `ExtBank*`… ProjectEbonhold fournit un `C_Timer` en Lua, mais
@@ -160,6 +181,56 @@ EbonTomeHunter ne s'y fie pas et garde ses propres timers.
 - « Unknown location » / « Anywhere » : coordonnées factices, ignorées.
 - Licence d'EbonholdHub : **All rights reserved**. Ses données sont **lues en jeu à l'exécution**,
   jamais copiées dans ce dépôt.
+- **Origine** : `EchoMapData.SOURCE_URL = "https://worldofechoes.pages.dev"`, carte web de fans citée
+  par le guide du joueur officiel. Ses données (`assets/data/tomes.json` : `zones`, `tomes`,
+  `locations` au même format) étaient identiques à celles d'EbonholdHub 2.0.4 le 2026-09-26 : 128
+  tomes, 173 lieux, 98 tomes avec un vrai lieu. Licence non indiquée : ne rien copier non plus.
+
+## Atlas d'EbonBuilds (sources de drop, depuis 3.0.0)
+
+- **EbonBuilds** (5.5.4) tient un atlas communautaire des tomes, partagé entre ses utilisateurs
+  (guilde, groupe, canal `ebonbuildssync`) : `EbonBuildsDB.tomeAtlas[itemId] = { name, sources =
+  { ["Monstre\031Zone"] = nombre de drops } }` (`core/TomeAtlas.lua`, fusion par `max`). La zone est
+  `GetRealZoneText()` (langue du client), le monstre la cible morte à l'ouverture du butin
+  (« Unknown » sinon).
+- Coordonnées : `EbonBuildsDB.tomeAtlasPinCoords[zone][nom du tome] = { x, y, n }`, moyenne des loots
+  de l'utilisateur lui-même, **jamais partagées** entre joueurs.
+- EbonBuilds n'expose pas de globale : seule sa sauvegarde (compte) se lit, après son chargement
+  (`OptionalDeps`).
+- Beaucoup de sources sont des raids et donjons (Ulduar, Naxxramas…) : pas de carte de zone.
+- Sans licence indiquée : **lecture en jeu seulement** (`Atlas.lua`), jamais copié ni modifié.
+
+## EbonAPI (réseau, depuis 3.0.0)
+
+- Addon de Siphelis ([github.com/Siphelis/EbonAPI](https://github.com/Siphelis/EbonAPI), aussi dans
+  Ebonhold Addon Manager), utilisé par les addons de Siphelis (AutoCallboard, SkillTreeAutoLoad, son
+  EbonBuilds). Licence **PolyForm Strict** :
+  usage non commercial permis, **ni redistribution ni modification** : il n'est jamais copié dans ce
+  dépôt ni modifié ; chaque joueur l'installe, les tests le lisent là où il est.
+- `EbonAPI:NewAddon(nom, majeure, mineure)` : poignée de l'addon (nil si EbonAPI est trop ancien, il
+  le dit au joueur). Évènements `READY`, `CHANNEL_JOINED` (collants), `CHANNEL_LOST`,
+  `SHARE_RECEIVED(évènement, addon, nom, état, expéditeur)`.
+- **Jeux de données** : `Share(nom, état, texte)` (nom `[%w_]`, état entier, texte de 32 Ko au plus),
+  `GetShared(nom[, addon])`, `SharedNames()`, `ShareRule(fn(nom, leurÉtat, monÉtat))` (par défaut :
+  un état plus grand), `SyncShares()` (annonce manuelle, 30 s entre deux), `Unshare(nom)`. EbonAPI
+  garde les jeux de **tous** les addons dans `EbonAPIDB` (compte) et les transmet : annonce 2 s après
+  l'entrée dans le canal et 15 s après un changement, tour toutes les 2 min avec les pairs dont les
+  données diffèrent (oubliés après 10 min), récupération par chuchotements.
+- **Canal** : un seul canal caché, `ebonapi` (lignes `EA1:`), commun à ses addons, rejoint à
+  `PLAYER_LOGIN` **seulement si un addon s'est inscrit** (`NewAddon`). File d'envoi : une ligne
+  toutes les 0,15 s ; joueur absent détecté par « No player named … ».
+- **Messages** : `Say(op, corps)` / `OnChannel(op, fn(expéditeur, corps))` (op alphanumérique, corps
+  sans `|`, découpé en 16 lignes au plus).
+- **Versions** : `Version(texte, url)` ; EbonAPI annonce les versions et prévient lui-même le joueur
+  d'une version plus récente (`AvailableUpdate()`).
+- Commandes : `/eapi status`, `/eapi trace 20 share`.
+
+## Autres sources de données vues (non utilisées)
+
+- **Site officiel** : `https://project-ebonhold.com/assets/dbc/echoes.json` (Echoes : nom, qualité,
+  `requiredSpell` = tome, `tome = true`) et une API publique en lecture, `https://api.project-ebonhold.com/api/updates`
+  (notes de mise à jour en Markdown, sans authentification). Le reste de l'API (bugs, personnages…)
+  demande une connexion.
 
 ## Cartes particulières
 
@@ -173,6 +244,9 @@ et de Kalimdor (`shownOn` dans `MapData.lua`). Il ne faut pas les comparer aux p
 |---|---|
 | Auctionator | les onglets de l'HV cohabitent : EbonTomeHunter s'ajoute après ses onglets |
 | EbonholdHub / EbonCompletionist | source des lieux de drop (optionnelle) |
+| EbonAPI | réseau entre joueurs (optionnel : sans lui, les lieux restent locaux) |
+| EbonBuilds (vook) | atlas des tomes lu en jeu (sources en plus) |
+| AutoCallboard, SkillTreeAutoLoad | utilisent EbonAPI : leurs utilisateurs transmettent aussi nos jeux de données |
 | EbonClearance | gère aussi le Scavenger et le butin (aucun conflit connu) |
 | GreedyScavengerUI | menus du Scavenger |
 | PallyPilot / CallboardHunter | autre façon de se téléporter vers une zone (CallboardHunter) |

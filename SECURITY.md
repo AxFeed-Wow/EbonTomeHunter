@@ -24,8 +24,8 @@ Do not include passwords, account names or other personal data.
 
 ## What counts as a vulnerability
 
-EbonTomeHunter receives messages from other players: drop places on a hidden chat channel, and
-wishlists sent by addon message. For example:
+EbonTomeHunter receives data from other players: drop places and stale-source reports through
+EbonAPI (a separate addon), and wishlists sent by addon message. For example:
 
 * a message that triggers an action (purchase, teleport, message sending) without the player's
   consent;
@@ -40,8 +40,8 @@ please wait for it before disclosing the problem publicly.
 ## Scope
 
 This policy covers the EbonTomeHunter addon and the tools of this repository. The game client, the
-Project Ebonhold server, the ProjectEbonhold and EbonholdHub addons and the other third-party
-addons are maintained by their own authors: report their problems to them.
+Project Ebonhold server, the ProjectEbonhold, EbonholdHub, EbonBuilds and EbonAPI addons and the
+other third-party addons are maintained by their own authors: report their problems to them.
 
 ---
 
@@ -72,8 +72,8 @@ N'inclus ni mot de passe, ni nom de compte, ni autre donnée personnelle.
 
 ## Ce qui compte comme une vulnérabilité
 
-EbonTomeHunter reçoit des messages d'autres joueurs : des lieux de drop sur un canal de discussion
-caché, et des wishlists envoyées par message d'addon. Par exemple :
+EbonTomeHunter reçoit des données d'autres joueurs : des lieux de drop et des preuves de sources
+périmées par EbonAPI (un addon à part), et des wishlists envoyées par message d'addon. Par exemple :
 
 * un message qui déclenche une action (achat, téléportation, envoi de message) sans l'accord du
   joueur ;
@@ -89,5 +89,5 @@ dans une nouvelle release ; attends-la avant de rendre le problème public.
 ## Périmètre
 
 Cette politique couvre l'addon EbonTomeHunter et les outils de ce dépôt. Le client du jeu, le serveur
-Project Ebonhold, les addons ProjectEbonhold et EbonholdHub et les autres addons tiers sont maintenus
-par leurs propres auteurs : leurs problèmes se signalent à eux.
+Project Ebonhold, les addons ProjectEbonhold, EbonholdHub, EbonBuilds et EbonAPI et les autres addons
+tiers sont maintenus par leurs propres auteurs : leurs problèmes se signalent à eux.

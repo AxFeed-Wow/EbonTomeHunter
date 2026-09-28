@@ -9,32 +9,38 @@ local L = ns.L
 --    sure "no": nobody else took its loot, and a group kill is counted once;
 --  * reports: the "Gone?" button of the Sources window.
 -- A source is marked, never removed, when since the last drop known anywhere the corpses
--- reach STALE_KILLS (another user weighs STALE_KILLS / 2 at most: two users at least, or
--- the player alone), or STALE_VOTES users reported it (the player's own report marks it
--- for them). A new drop clears everything before it.
--- Wire (types unknown to 2.0.0, which ignores them):
---   K  counters: itemId^mob^corpses^since^lastDrop;...    mob = "#npcId", else its name
---   V  reports:  itemId^mob^time;...                       time 0: report withdrawn
+-- make bad luck very unlikely, or STALE_VOTES users reported it (the player's own report
+-- marks it for them). A new drop clears everything before it.
+-- Bad luck: a tome that drops 1 time in 200 can miss 500 corpses in a row (8 % of the
+-- time), a rarer one far more. The drop rate of the source is estimated from every counter
+-- (drops / corpses, plus a prior of 1 in 200 worth 200 corpses) and the source is stale only
+-- past the number of corpses without the tome that bad luck gives less than 1 % of the time
+-- (500 at least, 5000 at most). Another user weighs half of it at most: two users at least,
+-- or the player alone.
+-- Shared through EbonAPI (Net.lua), one dataset per tome, "E<itemId>": every counter and
+-- report known for the tome, each player's own the newest one (stamp):
+--   mob^player^corpses^since^lastDrop^totalCorpses^drops^report^stamp;...
+--   mob = "#npcId", else its name; report = time of the player's "Gone?" (0: none)
 ns.Evidence = {}
 local E = ns.Evidence
 
-E.STALE_KILLS = 500
+E.STALE_KILLS = 500     -- corpses without the tome, at least
+E.STALE_MAX = 5000      -- ... and at most, whatever the rate
 E.STALE_VOTES = 3
-local SEND_EVERY = 25       -- a counter is announced every 25 corpses
-local SEND_MIN = 10         -- counters below this stay home
-local BUNDLE_GAP = 600      -- our counters and reports, sent again at most every 10 min
+local PRIOR_DROPS, PRIOR_CORPSES = 1, 200   -- what is assumed before any drop is seen: 1 in 200
+local BAD_LUCK = 0.01   -- chance left to bad luck when a source is called stale
+local SEND_EVERY = 25       -- a counter is published every 25 corpses
 local CLOSE_GRACE = 5       -- loot lines can come just after the window closed
 local MAX_PLAYERS = 50      -- per source
 
 local corpse                -- the corpse being looted: { tomes = { [itemId] = key }, name, dropped }
 local counted = {}          -- [guid] = true: a corpse opened twice counts once
 local countedSize = 0
-local lastBundle = -math.huge
 
 local function Data()
     local db = ns.DB
-    if type(db.corpses) ~= "table" then db.corpses = {} end     -- [key] = { n, since, drop }: ours
-    if type(db.evidence) ~= "table" then db.evidence = {} end   -- [key][player] = { n, since, drop }
+    if type(db.corpses) ~= "table" then db.corpses = {} end     -- [key] = { n, since, drop, total, drops, stamp }: ours
+    if type(db.evidence) ~= "table" then db.evidence = {} end   -- [key][player] = { n, since, drop, total, drops, stamp }
     if type(db.reports) ~= "table" then db.reports = {} end     -- [key][player] = time
     return db.corpses, db.evidence, db.reports
 end
@@ -108,13 +114,42 @@ local function LastDrop(itemId, keys)
     return last
 end
 
+-- The corpses and drops of a counter BEFORE its current run without the tome: the run itself
+-- is what is being judged (counting it in the rate would push the threshold away forever).
+local function History(c)
+    local total, run = tonumber(c.total) or 0, tonumber(c.n) or 0
+    return math.max(0, total - run), tonumber(c.drops) or 0
+end
+
+-- Drop rate of a source: the history of every counter (ours, the other users' last ones),
+-- with the prior. Returns the rate and the corpses without the tome that make it stale.
+function E.Threshold(itemId, keys)
+    local corpses, evidence = Data()
+    local drops, total = PRIOR_DROPS, PRIOR_CORPSES
+    for _, key in ipairs(keys) do
+        local k = Key(itemId, key)
+        local counters = {}
+        if corpses[k] then counters[1] = corpses[k] end
+        for _, e in pairs(evidence[k] or {}) do counters[#counters + 1] = e end
+        for _, c in ipairs(counters) do
+            local seen, dropped = History(c)
+            total, drops = total + seen, drops + dropped
+        end
+    end
+    local rate = math.min(0.5, drops / total)
+    local needed = math.ceil(math.log(BAD_LUCK) / math.log(1 - rate))
+    return rate, math.max(E.STALE_KILLS, math.min(E.STALE_MAX, needed))
+end
+
 -- Is this mob a stale source of the tome? Returns stale, corpses without the tome since
--- the last drop, users who reported it, whether the player reported it.
+-- the last drop, users who reported it, whether the player reported it, and how many
+-- corpses give one drop on average.
 function E.Verdict(itemId, name, npcId)
     itemId = tonumber(itemId)
     if not itemId or not name then return false, 0, 0, false end
     local keys = Keys(name, npcId)
     local lastDrop = LastDrop(itemId, keys)
+    local rate, needed = E.Threshold(itemId, keys)
     local corpses, evidence, reports = Data()
     local kills, voters, mine, me = 0, 0, false, Me()
     for _, key in ipairs(keys) do
@@ -123,7 +158,7 @@ function E.Verdict(itemId, name, npcId)
         if own and (tonumber(own.since) or 0) >= lastDrop then kills = kills + (tonumber(own.n) or 0) end
         for _, e in pairs(evidence[k] or {}) do
             if (tonumber(e.since) or 0) >= lastDrop then
-                kills = kills + math.min(tonumber(e.n) or 0, E.STALE_KILLS / 2)
+                kills = kills + math.min(tonumber(e.n) or 0, needed / 2)
             end
         end
         for player, at in pairs(reports[k] or {}) do
@@ -133,12 +168,13 @@ function E.Verdict(itemId, name, npcId)
             end
         end
     end
-    return kills >= E.STALE_KILLS or voters >= E.STALE_VOTES or mine, kills, voters, mine
+    local stale = kills >= needed or voters >= E.STALE_VOTES or mine
+    return stale, kills, voters, mine, floor(1 / rate + 0.5), needed
 end
 
 -- The reason shown next to a stale source.
-function E.Reason(kills, voters, mine)
-    if kills >= E.STALE_KILLS then return format(L.StaleKills, kills) end
+function E.Reason(kills, voters, mine, oneIn, needed)
+    if kills >= (needed or E.STALE_KILLS) then return format(L.StaleKills, kills, oneIn or 200) end
     if voters >= E.STALE_VOTES then return format(L.StaleVotes, voters) end
     if mine then return L.StaleMine end
     return nil
@@ -170,43 +206,6 @@ local function Changed()
     end)
 end
 
--- Entries packed into as few messages as possible.
-local function SendEntries(msgType, entries)
-    local line = ""
-    for _, entry in ipairs(entries) do
-        if line ~= "" and 8 + #line + 1 + #entry > 240 then
-            ns.Net.Send(msgType, line)
-            line = ""
-        end
-        line = line == "" and entry or (line .. ";" .. entry)
-    end
-    if line ~= "" then ns.Net.Send(msgType, line) end
-end
-
-local function CounterEntry(key, c)
-    local itemId, mob = key:match("^(%d+)@(.+)$")
-    if not itemId then return nil end
-    return table.concat({ itemId, mob, floor(tonumber(c.n) or 0), floor(tonumber(c.since) or 0),
-        floor(tonumber(c.drop) or 0) }, "^")
-end
-
--- All our counters and reports (a user just showed up): at most every 10 min.
-local function SendBundle()
-    if GetTime() - lastBundle < BUNDLE_GAP then return end
-    lastBundle = GetTime()
-    local corpses, _, reports = Data()
-    local counters, votes, me = {}, {}, Me()
-    for key, c in pairs(corpses) do
-        if (tonumber(c.n) or 0) >= SEND_MIN then counters[#counters + 1] = CounterEntry(key, c) end
-    end
-    for key, players in pairs(reports) do
-        if players[me] then votes[#votes + 1] = key:gsub("@", "^", 1) .. "^" .. floor(players[me]) end
-    end
-    SendEntries("K", counters)
-    SendEntries("V", votes)
-end
-ns.On("NET_PEER_ARRIVED", SendBundle)
-
 local function Plausible(stamp)
     local now = time()
     return stamp == 0 or (stamp <= now + 86400 and stamp >= now - 2 * 365 * 86400)
@@ -227,38 +226,144 @@ local function Keep(tbl, key, player, value)
     if n < MAX_PLAYERS then players[player] = value end
 end
 
-ns.On("NET_MESSAGE", function(msgType, payload, author)
-    if not author or author == "" or author == Me() then return end
-    local _, evidence, reports = Data()
-    local changed = false
-    for entry in tostring(payload):gmatch("[^;]+") do
-        if msgType == "K" then
-            local itemId, mob, n, since, drop = entry:match("^(%d+)%^([^%^]+)%^(%d+)%^(%d+)%^(%d+)$")
-            itemId, n, since, drop = tonumber(itemId), tonumber(n), tonumber(since), tonumber(drop)
-            if itemId and ns.Catalog.Get(itemId) and #mob <= 41 and n <= 100000 and Plausible(since) and Plausible(drop) then
-                Keep(evidence, Key(itemId, mob), author, { n = n, since = since, drop = drop })
-                changed = true
+-- Our counter of a source (created for a report without any corpse counted yet).
+local function Own(k)
+    local corpses = Data()
+    local c = corpses[k]
+    if not c then
+        c = { n = 0, since = time(), drop = 0 }
+        corpses[k] = c
+    end
+    return c
+end
+
+-- Every entry held for a tome: { mob, player, counter, report }, ours included.
+local function Entries(itemId)
+    local corpses, evidence, reports = Data()
+    local prefix, me, out = itemId .. "@", Me(), {}
+    local function Entry(mob, player)
+        for _, e in ipairs(out) do
+            if e.mob == mob and e.player == player then return e end
+        end
+        local e = { mob = mob, player = player }
+        out[#out + 1] = e
+        return e
+    end
+    for k, c in pairs(corpses) do
+        if k:sub(1, #prefix) == prefix and c.stamp then Entry(k:sub(#prefix + 1), me).counter = c end
+    end
+    for k, players in pairs(evidence) do
+        if k:sub(1, #prefix) == prefix then
+            for player, c in pairs(players) do
+                if player ~= me then Entry(k:sub(#prefix + 1), player).counter = c end
             end
-        elseif msgType == "V" then
-            local itemId, mob, at = entry:match("^(%d+)%^([^%^]+)%^(%d+)$")
-            itemId, at = tonumber(itemId), tonumber(at)
-            if itemId and ns.Catalog.Get(itemId) and #mob <= 41 and Plausible(at) then
-                Keep(reports, Key(itemId, mob), author, at > 0 and math.min(at, time()) or nil)
+        end
+    end
+    for k, players in pairs(reports) do
+        if k:sub(1, #prefix) == prefix then
+            for player, at in pairs(players) do
+                local e = Entry(k:sub(#prefix + 1), player)
+                e.report = at
+                if player == me then e.counter = e.counter or corpses[k] end
+            end
+        end
+    end
+    table.sort(out, function(a, b)
+        if a.mob ~= b.mob then return a.mob < b.mob end
+        return a.player < b.player
+    end)
+    return out
+end
+
+-- The text of the tome's dataset E<itemId> (Net.lua): one line per source and player. EbonAPI
+-- takes 32 KB per dataset: past TEXT_MAX, the newest lines are kept (the same choice on every
+-- client, so that they all write the same text).
+local TEXT_MAX = 30000
+function E.SharedText(itemId)
+    itemId = tonumber(itemId)
+    if not itemId then return "" end
+    local lines, size = {}, 0
+    for i, e in ipairs(Entries(itemId)) do
+        local c = e.counter or {}
+        local text = table.concat({ e.mob, e.player, floor(tonumber(c.n) or 0), floor(tonumber(c.since) or 0),
+            floor(tonumber(c.drop) or 0), floor(math.max(tonumber(c.total) or 0, tonumber(c.n) or 0)),
+            floor(tonumber(c.drops) or 0), floor(tonumber(e.report) or 0), floor(tonumber(c.stamp) or 0) }, "^")
+        lines[i] = { text = text, stamp = floor(tonumber(c.stamp) or 0), index = i }
+        size = size + #text + 1
+    end
+    if size > TEXT_MAX then
+        local newest = {}
+        for i, line in ipairs(lines) do newest[i] = line end
+        table.sort(newest, function(a, b)
+            if a.stamp ~= b.stamp then return a.stamp > b.stamp end
+            return a.text < b.text
+        end)
+        local keep, total = {}, 0
+        for _, line in ipairs(newest) do
+            if total + #line.text + 1 > TEXT_MAX then break end
+            keep[line.index], total = true, total + #line.text + 1
+        end
+        for i = #lines, 1, -1 do
+            if not keep[i] then tremove(lines, i) end
+        end
+    end
+    local out = {}
+    for i, line in ipairs(lines) do out[i] = line.text end
+    return table.concat(out, ";")
+end
+
+-- The tomes that have evidence to share (Net.lua publishes them at start).
+function E.SharedTomes()
+    local out = {}
+    local corpses, evidence, reports = Data()
+    for _, tbl in ipairs({ corpses, evidence, reports }) do
+        for k in pairs(tbl) do
+            local itemId = tonumber(k:match("^(%d+)@"))
+            if itemId then out[itemId] = true end
+        end
+    end
+    return out
+end
+
+-- A dataset E<itemId> received: each player's entry is kept when newer than ours (its
+-- stamp), our own too (a new computer gets its counters back). Returns true when we know
+-- more than the dataset said (Net.lua publishes it again).
+function E.ImportShared(itemId, text)
+    itemId = tonumber(itemId)
+    if not (itemId and ns.Catalog.Get(itemId)) then return false end
+    local corpses, evidence, reports = Data()
+    local me, changed = Me(), false
+    for line in tostring(text or ""):gmatch("[^;]+") do
+        local mob, player, n, since, drop, total, drops, report, stamp =
+            line:match("^([^%^]+)%^([^%^]+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)$")
+        n, since, drop, total, drops = tonumber(n), tonumber(since), tonumber(drop), tonumber(total), tonumber(drops)
+        report, stamp = tonumber(report), tonumber(stamp)
+        if mob and #mob <= 41 and #player <= 24 and not line:find("[|%c]") and n <= 100000 and drops <= total
+            and total <= 1000000 and Plausible(since) and Plausible(drop) and Plausible(report) and Plausible(stamp) then
+            local k = Key(itemId, mob)
+            local held
+            if player == me then held = corpses[k] else held = evidence[k] and evidence[k][player] end
+            if not held or (tonumber(held.stamp) or 0) < stamp then
+                local counter = { n = n, since = since, drop = drop, total = total, drops = drops, stamp = stamp }
+                if player == me then corpses[k] = counter else Keep(evidence, k, player, counter) end
+                Keep(reports, k, player, report > 0 and math.min(report, time()) or nil)
                 changed = true
             end
         end
     end
     if changed then Changed() end
-end)
+    return E.SharedText(itemId) ~= text
+end
 
 -- The player's report ("Gone?" button): on, or withdrawn. Shared right away.
 function E.Report(itemId, name, npcId, on)
     local mob = E.MobKey(name, npcId)
     if not (tonumber(itemId) and mob) then return false end
     local _, _, reports = Data()
-    local at = on and time() or nil
-    Keep(reports, Key(itemId, mob), Me(), at)
-    ns.Net.Send("V", table.concat({ itemId, mob, at or 0 }, "^"))
+    local k = Key(itemId, mob)
+    Keep(reports, k, Me(), on and time() or nil)
+    Own(k).stamp = time()
+    ns.Net.PublishEvidence(itemId)
     Changed()
     return true
 end
@@ -273,9 +378,15 @@ end
 ------------------------------------------------------------------------
 -- Our corpses (Loot.lua)
 ------------------------------------------------------------------------
+-- A drop: the corpses without the tome start again from 0; the totals (every corpse, every
+-- drop) keep the rate of the source.
 local function Dropped(itemId, key)
     local corpses = Data()
-    corpses[Key(itemId, key)] = { n = 0, since = time(), drop = time() }
+    local k = Key(itemId, key)
+    local old = corpses[k] or {}
+    corpses[k] = { n = 0, since = time(), drop = time(), stamp = time(),
+        total = math.max(tonumber(old.total) or 0, tonumber(old.n) or 0) + 1, drops = (tonumber(old.drops) or 0) + 1 }
+    ns.Net.PublishEvidence(itemId)
 end
 
 local function Finish()
@@ -291,9 +402,13 @@ local function Finish()
                 c = { n = 0, since = time(), drop = 0 }
                 corpses[k] = c
             end
+            c.total = math.max(tonumber(c.total) or 0, c.n) + 1
             c.n = c.n + 1
-            if c.n % SEND_EVERY == 0 then ns.Net.Send("K", CounterEntry(k, c)) end
-            if c.n == E.STALE_KILLS then Changed() end
+            if c.n % SEND_EVERY == 0 then
+                c.stamp = time()
+                ns.Net.PublishEvidence(itemId)
+                Changed()   -- the verdict may have turned (its threshold follows the drop rate)
+            end
         end
     end
 end

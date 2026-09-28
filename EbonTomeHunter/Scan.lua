@@ -15,6 +15,8 @@ local QUERY_TIMEOUT = 8              -- seconds without answer: send the page ag
 local MAX_PAGE_RETRIES = 2
 local SCAN_MAX_PAGES = 60
 local SEARCH_MAX_PAGES = 5
+local NAMES_WAIT = 3                 -- seconds a page waits for the items the client does not know yet
+local NAMES_STEP = 0.5
 
 Scan.job = nil       -- query in progress
 Scan.queue = {}      -- searches waiting for their turn
@@ -171,14 +173,16 @@ local function FinishScan(job)
         if acc.min > 0 then priced = priced + 1 end
     end
     -- Tomes absent from a complete scan are not listed right now (their last
-    -- price is kept as a reference).
-    if job.complete then
+    -- price is kept as a reference). A page read with unknown items may have hidden
+    -- some of them: the scan then says nothing about the absent ones.
+    if job.complete and not job.partial then
         for itemId in pairs(ns.Prices.All()) do
             if not job.found[itemId] then ns.Prices.Set(itemId, 0, 0) end
         end
     end
     ns.Prices.SetLastScan(time())
     ns.Print(L.ScanDone, total, priced)
+    if job.partial then ns.Print(L.ScanPartial) end
     if job.learned > 0 then
         ns.Print(L.ScanLearned, job.learned)
         ns.Fire("CATALOG_CHANGED")
@@ -189,7 +193,8 @@ end
 local function FinishSearch(job)
     SortListings(job.listings)
     Scan.results[job.itemId] = { at = time(), listings = job.listings, total = #job.listings }
-    if not job.singlePage then
+    -- listings of unknown items may be missing: the saved price stays as it was
+    if not job.singlePage and not job.partial then
         StorePrice(job.itemId, job.listings)
         ns.Fire("PRICES_CHANGED")
     end
@@ -222,6 +227,7 @@ SendPage = function(job)
     generation = generation + 1
     job.gen = generation
     job.awaiting = true
+    job.namesSince = nil
     Scan.sending = true
     local ok = pcall(QueryAuctionItems, job.query, nil, nil, 0, 0, 0, job.page, false, nil)
     Scan.sending = false
@@ -379,6 +385,36 @@ end
 ------------------------------------------------------------------------
 -- Events
 ------------------------------------------------------------------------
+-- Auctions of items the client has not cached yet come without a name (Blizzard's own
+-- list hides them: "Bug 145328"); the game fires AUCTION_ITEM_LIST_UPDATE again when
+-- their data arrives.
+local function UnnamedCount(batch)
+    local missing = 0
+    for i = 1, batch do
+        if not GetAuctionItemInfo("list", i) then missing = missing + 1 end
+    end
+    return missing
+end
+
+-- True while the page should wait for the names still missing (read again shortly).
+local function WaitForNames(job, batch)
+    if UnnamedCount(batch) == 0 then return false end
+    job.namesSince = job.namesSince or GetTime()
+    if GetTime() - job.namesSince >= NAMES_WAIT then
+        job.partial = true   -- never came: this page may lack listings
+        return false
+    end
+    if not job.namesPending then
+        job.namesPending = true
+        local gen = job.gen
+        ns.Timer.After(NAMES_STEP, function()
+            job.namesPending = nil
+            if Scan.job == job and job.awaiting and job.gen == gen then Scan.OnAuctionUpdate() end
+        end)
+    end
+    return true
+end
+
 function Scan.OnAuctionUpdate()
     local job = Scan.job
     if not (job and job.awaiting) then
@@ -395,10 +431,11 @@ function Scan.OnAuctionUpdate()
         end
         return
     end
-    job.awaiting = false
-    job.retries = 0
     local batch, total = GetNumAuctionItems("list")
     batch = tonumber(batch) or 0
+    if WaitForNames(job, batch) then return end
+    job.awaiting = false
+    job.retries = 0
     job.total = tonumber(total) or batch
     if job.kind == "scan" then
         ParseScanPage(job, batch)

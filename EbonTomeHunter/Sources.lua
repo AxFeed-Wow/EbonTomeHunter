@@ -72,7 +72,10 @@ local function CreateRow(row)
 end
 
 local function UpdateRow(row, source)
-    local title = source.mob or L.SourceNoMob
+    local loc = source.loc or {}
+    local candidates = not source.mob and type(loc.candidates) == "table" and #loc.candidates > 0
+    local title = source.mob or (candidates and format(L.SourceCandidates, table.concat(loc.candidates, " / ")))
+        or L.SourceNoMob
     if source.mob then
         if source.custom then
             title = title .. Muted(L.SourceCustomMob)
@@ -81,11 +84,15 @@ local function UpdateRow(row, source)
         else
             title = title .. Muted("(" .. L.WowheadSearch .. ")")
         end
+        if loc.inferred then title = title .. Muted(L.SourceInferred) end
     end
-    if source.loc and source.loc.source == "net" and source.loc.at then
-        title = title .. Muted(format(L.SourceFound, ns.Ago(source.loc.at) or "?"))
+    if loc.source == "net" and loc.at then
+        title = title .. Muted(format(L.SourceFound, ns.Ago(loc.at) or "?"))
+    elseif loc.source == "atlas" then
+        title = title .. Muted(format(L.SourceAtlas, loc.count or 1))
     end
-    local reason = source.stale and ns.Evidence.Reason(source.kills or 0, source.voters or 0, source.reported)
+    local reason = source.stale and ns.Evidence.Reason(source.kills or 0, source.voters or 0, source.reported,
+        source.oneIn, source.needed)
     if reason then
         title = "|cff888888" .. (source.mob or L.SourceNoMob) .. "|r" .. Muted(format(L.SourceStale, reason))
     end
@@ -94,12 +101,12 @@ local function UpdateRow(row, source)
 
     local near, fmt = source.near, ns.Travel.FormatDistance
     if near and near.checkpoint then
-        local text = format(L.SourceCheckpoint, near.checkpoint.name, fmt(near.distance))
-        if source.you then text = text .. Muted(format(L.SourceYou, fmt(source.you))) end
+        local text = format(L.SourceCheckpoint, near.checkpoint.name, fmt(near.distance, near.approx))
+        if source.you then text = text .. Muted(format(L.SourceYou, fmt(source.you, near.approx))) end
         row.travel:SetText(text)
         row.travel:SetTextColor(0.55, 0.9, 0.55)
     elseif near and near.locked then
-        row.travel:SetText(format(L.SourceLocked, near.locked.name, fmt(near.lockedDistance)))
+        row.travel:SetText(format(L.SourceLocked, near.locked.name, fmt(near.lockedDistance, near.approx)))
         row.travel:SetTextColor(1, 0.6, 0.25)
     else
         row.travel:SetText(near and L.SourceNoCheckpoint or L.SourceNoPosition)
@@ -173,7 +180,7 @@ function S.Show(itemId)
     frame.titleText:SetText(L.SourcesTitle .. " - " .. (row and row.name or "?"))
     local hintText = type(EbonholdOpenURL) == "function" and L.SourcesHintOpen or L.SourcesHintCopy
     local dropHint = ns.Catalog.DropHint(row)
-    if dropHint then hintText = "|cff8cccff" .. L.HintLabel .. " : " .. dropHint .. "|r\n" .. hintText end
+    if dropHint then hintText = "|cff8cccff" .. L.HintLabel .. L.Colon .. dropHint .. "|r\n" .. hintText end
     if not ns.Travel.Available() then hintText = hintText .. "\n" .. L.TravelNoPE end
     hint:SetText(hintText)
     urlBox.url = nil

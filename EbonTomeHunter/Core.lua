@@ -19,9 +19,6 @@ local DB_DEFAULTS = {
     tomes = {},     -- tomes learned from Auction House scans and from the bags
     sightings = {}, -- [itemId] = drop places found by the players (Net.lua)
     npcIds = {},    -- [mob name] = NPC id, for the Wowhead links (Wowhead.lua)
-    lastSync = 0,
-    syncedAt = 0,   -- start (our clock) of the last sync that went to the end (Net.lua)
-    netOutbox = {}, -- own finds made while no other user was online, sent when one shows up
     killStats = {}, -- [npcId] = { n, name, last }: creatures killed by the player or the group (Loot.lua)
     tutorialDone = 0,   -- version of the guided tour already seen (Tutorial.lua)
     options = {
@@ -40,7 +37,7 @@ local DB_DEFAULTS = {
         onlyPriced = false,
         onlyLocated = false,
         onlyUnknown = false,        -- main list: only the tomes this character has not learned
-        netEnabled = true,          -- share tome drops with the other users (hidden channel)
+        netEnabled = true,          -- share tome drops with the other players (through EbonAPI, Net.lua)
         alertSelf = true,           -- alert when I loot a wishlist tome
         alertGroup = true,          -- tell me when my group loots a wishlist tome
         alertNetwork = true,        -- chat line when a user finds a wishlist tome
@@ -70,6 +67,9 @@ function ns.InitDatabase()
     ApplyDefaults(EbonTomeHunterDB, DB_DEFAULTS)
     ApplyDefaults(EbonTomeHunterCharDB, CHAR_DEFAULTS)
     EbonTomeHunterCharDB.autoImported = nil   -- flag of the locked-echoes import (removed in 1.5.1)
+    -- the own hidden channel of 2.x (replaced by EbonAPI in 3.0.0): its sync state and outbox
+    local db = EbonTomeHunterDB
+    db.lastSync, db.syncedAt, db.syncFrom, db.netOutbox = nil, nil, nil, nil
     EbonTomeHunterDB.meta.version = ns.version
     ns.DB = EbonTomeHunterDB
     ns.CDB = EbonTomeHunterCharDB
@@ -191,7 +191,8 @@ local function TimerUpdate()
     local now = GetTime()
     for i = #timers, 1, -1 do
         local t = timers[i]
-        if now >= t.at then
+        -- nil when a callback emptied the list (ns.Timer.CancelAll) during this loop
+        if t and now >= t.at then
             tremove(timers, i)
             local fn = t.fn
             t.fn = nil
@@ -324,13 +325,8 @@ SlashCmdList["EBONTOMEHUNTER"] = function(input)
             ns.Share.ShowDialog()
         end
     elseif command == "net" then
-        local sub = strlower(argument or "")
-        if sub == "check" then
-            ns.Net.Check()
-        elseif sub == "sync" then
+        if strlower(argument or "") == "sync" then
             ns.Net.ForceSync()
-        elseif sub:match("^compare") then
-            ns.Net.Compare((argument or ""):match("^%S+%s*(.*)$"))
         else
             ns.Print(ns.Net.StatusText())
         end

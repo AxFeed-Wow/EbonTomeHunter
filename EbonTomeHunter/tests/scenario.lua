@@ -89,6 +89,31 @@ Check(mystery and ns.Prices.GetMin(mystery.itemId) == 777000, "learned tome pric
 ns.Catalog.Build()
 Check(ns.Catalog.FindByTomeName("Tome of Echo: Mystery Power") ~= nil, "learned tome survives a rebuild")
 
+-- an auction whose item the client has not cached yet comes without a name (3.3.5a), until
+-- AUCTION_ITEM_LIST_UPDATE fires again with its data
+local loading   -- index of the auction still loading
+GetAuctionItemInfo = function(list, i)
+    local l = LISTINGS[i]
+    if not l or i == loading then return nil end
+    return l.name, "", l.count, 3, true, 80, l.buyout, 1, l.buyout
+end
+loading = 3   -- DragonKin Bane, the only auction of its tome
+ns.Scan.Start()
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Advance(1)
+Check(ns.Scan.IsScanning(), "a page with an auction still loading waits for its data")
+loading = nil
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Advance(1)
+Check(not ns.Scan.IsScanning() and ns.Prices.GetListings(300570) == 1, "its data arrived: the page is read in full")
+loading = 3   -- this time it never comes
+ns.Scan.Start()
+Fire("AUCTION_ITEM_LIST_UPDATE")
+Advance(5)
+Check(not ns.Scan.IsScanning() and ChatContains(ns.L.ScanPartial), "never loaded: the scan ends and says so")
+Check(ns.Prices.GetListings(300570) == 1, "a tome the scan could not see is not marked 'not for sale'")
+loading = nil
+
 AuctionFrame:Hide()   -- the Auction House is closed again
 
 -- --- Wishlist ---------------------------------------------------------------------
@@ -560,21 +585,12 @@ for _, link in ipairs(WH.Links(300569)) do
     Check(not link.url:find("item=", 1, true), "never an item page (Ebonhold tomes are not on Wowhead)")
 end
 
--- --- Loot: wishlist alert, drop place shared with the network --------------------------------
-local sentChat = {}
-SendChatMessage = function(msg, chatType, language, channel)
-    sentChat[#sentChat + 1] = { msg = msg, chatType = chatType, channel = channel }
-end
-GetChannelName = function(id)
-    if id == "ebontomehunter" or id == 5 then return 5, "ebontomehunter" end
-    return 0, nil
-end
+-- --- Loot: wishlist alert, drop place recorded ------------------------------------------------
 GetRealZoneText = function() return "Crystalsong Forest" end
 GetSubZoneText = function() return "Forlorn Woods" end
 GetPlayerMapPosition = function(unit) return 0.49, 0.54 end
 WorldMapFrame:Hide()
 shownMap = "CrystalsongForest"
-ns.Net.Join()
 for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
 ns.Wishlist.SetQty(300569, 1)
 
@@ -582,406 +598,241 @@ unitState.target = { name = "Sinewy Wolf", guid = "0xF130006F12000042", dead = t
 Fire("LOOT_OPENED")
 Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300569, "Tome of Echo: Beast Bane")))
 Check(ChatContains(format(ns.L.AlertSelf, "Beast Bane")), "alert: wishlist tome looted")
-local mine = ns.DB.sightings[300569] and ns.DB.sightings[300569][1]
-Check(mine and mine.mapFile == "CrystalsongForest" and mine.npcId == 28434 and mine.mob == "Sinewy Wolf"
-    and math.abs(mine.x - 0.49) < 0.001, "drop place recorded (zone map, position, mob)")
-Advance(1)
-local sentDrop = sentChat[#sentChat]
-Check(sentDrop and sentDrop.chatType == "CHANNEL" and sentDrop.channel == 5
-    and sentDrop.msg:find("^ETHN1~D~300569%^CrystalsongForest%^490%^540%^28434%^Sinewy Wolf%^") ~= nil,
-    "drop sent on the hidden channel: " .. tostring(sentDrop and sentDrop.msg))
+do
+    local mine = ns.DB.sightings[300569] and ns.DB.sightings[300569][1]
+    Check(mine and mine.mapFile == "CrystalsongForest" and mine.npcId == 28434 and mine.mob == "Sinewy Wolf"
+        and math.abs(mine.x - 0.49) < 0.001, "drop place recorded (zone map, position, mob)")
+end
 Check(WH.NpcId("Sinewy Wolf") == 28434, "the looted mob's id is learned too")
-Check(#ns.DB.netOutbox == 1, "no other user online: the find also waits in the outbox")
 unitState.target = nil
-
--- a tome listed as "Unknown location": another user drops it -> real place for everybody
-local hazardRow = ns.Catalog.byName["arcane hazard"]
-Check(hazardRow and not ns.WorldMap.WorldPosition(hazardRow.location), "Arcane Hazard has no map point yet")
-local function ChannelMessage(text, author)
-    Fire("CHAT_MSG_CHANNEL", text, author, "", "5. ebontomehunter", "", "", 0, 5, "ebontomehunter")
-end
-local found = ns.Net.Encode({ itemId = hazardRow.itemId, mapFile = "Tanaris", x = 0.512, y = 0.498, npcId = 5420,
-    mob = "Wastewander Bandit", zone = "Tanaris:Wavestrider Beach", at = time(), by = "Bob" })
-ns.Wishlist.SetQty(hazardRow.itemId, 1)
-before = #sentChat
-ChannelMessage("ETHN1~D~" .. found, "Bob")
-Check(ChatContains("Bob") and ChatContains("Wastewander Bandit"), "wishlist tome found by another user: told in chat")
-Advance(2)
-local resent = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~S~0~0~300569%^CrystalsongForest%^") then resent = true end
-end
-Check(resent and #ns.DB.netOutbox == 0, "a user shows up: the find made alone is sent again, outbox emptied")
-Check(hazardRow.location and hazardRow.location.mapFile == "Tanaris" and hazardRow.location.source == "net",
-    "the catalogue now places Arcane Hazard where Bob looted it")
-local hzFile, _, hzx, hzy = ns.WorldMap.BestZone(hazardRow.location)
-Check(hzFile == "Tanaris" and math.abs(hzx - 0.512) < 0.001, "its zone and coordinates")
-ns.WorldMap.Locate(hazardRow.itemId)
-Check(WorldMapFrame:IsShown() and shownMap == "Tanaris", "Locate now opens Tanaris")
-WorldMapFrame:Hide()
-ChannelMessage("ETHN1~D~" .. found:gsub("%^Bob%^", "^Carl^"), "Carl")
-Advance(2)
-Check(#ns.DB.sightings[hazardRow.itemId] == 1 and hazardRow.location.notes:find("2", 1, true) ~= nil,
-    "same spot from a second player: confirmed, not duplicated")
-ChannelMessage("ETHN1~D~399999^Tanaris^500^500^^Bandit^Tanaris^" .. time() .. "^Eve", "Eve")
-ChannelMessage("ETHN1~D~" .. hazardRow.itemId .. "^Tanaris^5000^500^^Bandit^Tanaris^" .. time() .. "^Eve", "Eve")
-Advance(2)
-Check(ns.DB.sightings[399999] == nil and #ns.DB.sightings[hazardRow.itemId] == 1, "unknown tome or bad position ignored")
-Fire("CHAT_MSG_CHANNEL", "ETHN1~D~" .. found, "Mallory", "", "1. General", "", "", 0, 1, "General")
-Check(#ns.DB.sightings[hazardRow.itemId] == 1, "other channels are ignored")
-
--- sync: a user who comes online asks what they missed; the first to answer wins
-local before = #sentChat
-ChannelMessage("ETHN1~Q~ab12^0", "Newbie")
-Advance(8)
-local answered = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~S~ab12~") then answered = true end
-end
-Check(answered, "sync request answered with the known drops")
-before = #sentChat
-ChannelMessage("ETHN1~Q~cd34^0", "Newbie2")
-ChannelMessage("ETHN1~S~cd34~0~" .. found, "Dan")
-Advance(8)
-local duplicate = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~S~cd34~") then duplicate = true end
-end
-Check(not duplicate, "no answer when another user already answered")
-ns.DB.lastSync = 0
-Check(ns.Net.RequestSync() and not ns.Net.RequestSync(), "sync request, then a 10 min cooldown")
-Advance(6)
+Fire("LOOT_CLOSED")
+Advance(4)
 
 -- names are cut to a byte length, never in the middle of a French character
-local function ZoneField(zone)
-    return ({ strsplit("^", ns.Net.Encode({ itemId = 300569, zone = zone, at = time() })) })[7]
-end
-local eAcute = string.char(195, 169)   -- "é" in UTF-8
-Check(ZoneField(string.rep("a", 59) .. eAcute) == string.rep("a", 59), "a 2-byte character is not cut in two")
-Check(ZoneField(string.rep("a", 58) .. eAcute) == string.rep("a", 58) .. eAcute, "a character that fits is kept")
-
--- large backlog: answered oldest first, 30 at a time, with the "more" flag
--- (catalogue rows of tomes whose item id is still unknown are keyed by name: skipped)
-local tomeIds = {}
-for _, row in ipairs(ns.Catalog.rows) do
-    if type(row.itemId) == "number" then tomeIds[#tomeIds + 1] = row.itemId end
-end
-local keptSightings = ns.DB.sightings
-ns.DB.sightings = {}
-local base = time() - 5000
-for i = 1, 35 do
-    ns.Net.Add({ itemId = tomeIds[i], mapFile = "Durotar", x = 0.5, y = 0.5, mob = "Mob" .. i,
-        zone = "Durotar", at = base + i, by = "P" .. i })
-end
-before = #sentChat
-ChannelMessage("ETHN1~Q~ef56^" .. (base + 2), "Newbie3")
-Advance(10)
-local times, flags, inOrder = {}, {}, true
-for i = before + 1, #sentChat do
-    local more, body = sentChat[i].msg:match("^ETHN1~S~ef56~(%d)~(.*)$")
-    if body then
-        flags[more] = true
-        for encoded in body:gmatch("[^;]+") do
-            local record = ns.Net.Decode(encoded)
-            times[#times + 1] = record and (record.at - base) or -1
-            if times[#times] ~= #times + 2 then inOrder = false end
-        end
-    end
-end
-Check(#times == 30 and inOrder and flags["1"] and not flags["0"],
-    "backlog: the 30 oldest after the asked time, in order, flagged 'more' (" .. #times .. " sent)")
-
--- our own request: asks again from the last record received while there are more
-ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, 0
-before = #sentChat
-Check(ns.Net.RequestSync(), "sync requested")
-Advance(1)
--- the last sync request sent after message n° `from` (other messages, like the version
--- announcement, may follow it); waits for it: messages waiting in the queue go first
-local function LastQ(from)
-    for _ = 1, 40 do
-        for i = #sentChat, (from or 0) + 1, -1 do
-            local q, s = sentChat[i].msg:match("^ETHN1~Q~(%x+)%^(%d+)$")
-            if q then return q, s end
-        end
-        Advance(1)
-    end
-end
-local qid, since = LastQ(before)
-Check(qid and #qid == 5 and tonumber(since) == 0, "never synced: asks for everything (2.1.0 request)")
-local function Rec(i, at)
-    return ns.Net.Encode({ itemId = tomeIds[i], mapFile = "Barrens", x = 0.3, y = 0.3,
-        mob = "Quilboar", zone = "The Barrens", at = at, by = "Vet" })
-end
-ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(40, base + 100), "Vet")
-ChannelMessage("ETHN1~S~" .. qid .. "~1~" .. Rec(41, base + 101), "Vet")
-local afterAnswers = #sentChat
-Advance(6)
-local qid2, since2 = LastQ(afterAnswers)
-Check(qid2 and tonumber(since2) == base + 101 and ns.DB.syncFrom == base + 101,
-    "more to come: asks again from the last record received, kept for the next login")
-ChannelMessage("ETHN1~S~" .. qid2 .. "~0~" .. Rec(42, base + 102), "Vet")
-Advance(6)
-Check(ns.DB.syncFrom == nil and #ns.DB.sightings[tomeIds[42]] == 1 and ns.DB.syncedAt > 0,
-    "answer complete: up to date")
-Check(ChatContains(format(ns.L.NetSynced, 3)), "the sync tells how many places it brought")
-ns.DB.sightings = keptSightings
-ns.Fire("SIGHTINGS_CHANGED")
-
--- 2.1.0: sync by time learned, answers completed by every user, what the asker adds
-keptSightings = ns.DB.sightings
-ns.DB.sightings = {}
-local now = time()
-local oldFind = { itemId = tomeIds[1], mapFile = "Durotar", x = 0.2, y = 0.2, mob = "Boar", zone = "Durotar",
-    at = now - 5 * 86400, by = "Old", rx = now - 60 }
-ns.Net.Add(oldFind)
-local function SentFor(qidPattern, from)
-    local out = {}
-    for i = from + 1, #sentChat do
-        local body = sentChat[i].msg:match("^ETHN1~S~" .. qidPattern .. "~[01]~(.*)$")
-        if body then
-            for encoded in body:gmatch("[^;]+") do out[#out + 1] = (ns.Net.Decode(encoded)) end
-        end
-    end
-    return out
-end
-before = #sentChat
-ChannelMessage("ETHN1~Q~a0000^" .. (now - 3600), "Ann")
-ChannelMessage("ETHN1~Q~a001^" .. (now - 3600), "Ann")
-Advance(8)
-Check(#SentFor("a0000", before) == 1, "2.1.0 request: a find of 5 days ago learned a minute ago is sent")
-Check(#SentFor("a001", before) == 0, "2.0.0 request: by time found, as before")
-
-local second = { itemId = tomeIds[2], mapFile = "Durotar", x = 0.4, y = 0.4, mob = "Scorpid", zone = "Durotar",
-    at = now - 100, by = "Mia", rx = now - 50 }
-ns.Net.Add(second)
-before = #sentChat
-ChannelMessage("ETHN1~Q~b0000^0", "Ben")
-ChannelMessage("ETHN1~S~b0000~0~" .. ns.Net.Encode(oldFind), "Cid")
-Advance(8)
-local complement = SentFor("b0000", before)
-Check(#complement == 1 and complement[1].itemId == tomeIds[2],
-    "another user answered first: only what the answer lacked is sent")
-before = #sentChat
-ChannelMessage("ETHN1~Q~c0000^0", "Ben")
-ChannelMessage("ETHN1~S~c0000~0~" .. ns.Net.Encode(oldFind) .. ";" .. ns.Net.Encode(second), "Cid")
-Advance(8)
-Check(#SentFor("c0000", before) == 0, "the answer already said everything: silent")
-
-ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, now - 3600
-before = #sentChat
-Check(ns.Net.RequestSync(), "sync requested (last complete sync an hour ago)")
-Advance(1)
-local q3, s3 = LastQ(before)
-Check(q3 and tonumber(s3) == now - 3600 - 600, "asks what was learned since the last complete sync, minus a margin")
-local fromDee = ns.Net.Encode({ itemId = tomeIds[3], mapFile = "Mulgore", x = 0.5, y = 0.5, mob = "Plainstrider",
-    zone = "Mulgore", at = now - 30, by = "Dee" })
-ChannelMessage("ETHN1~S~" .. q3 .. "~0~" .. ns.Net.Encode(oldFind) .. ";" .. fromDee, "Dee")
-Advance(8)
-local added = SentFor("0", before)
-Check(#added == 1 and added[1].itemId == tomeIds[2], "then the asker sends what it knew and nobody said")
-Check(ns.DB.syncedAt >= now and ns.DB.syncFrom == nil, "sync complete: noted for the next one")
-
--- our sync went unanswered: asked again as soon as a user shows up
-ns.DB.syncFrom, ns.DB.lastSync, ns.DB.syncedAt = nil, 0, 0
-Check(ns.Net.RequestSync(), "sync requested with nobody answering")
-Advance(75)
-before = #sentChat
-ChannelMessage("ETHN1~D~" .. fromDee, "Gus")
-Advance(7)
-local reasked = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^") then reasked = true end
-end
-Check(reasked, "a user showed up after an unanswered sync: asked again")
-
--- places sent without a request: stored, no wishlist alert (they are not new finds)
-ns.Wishlist.SetQty(tomeIds[4], 1)
-ChannelMessage("ETHN1~S~0~0~" .. ns.Net.Encode({ itemId = tomeIds[4], mapFile = "Tanaris", x = 0.6, y = 0.6,
-    mob = "Hyena", zone = "Tanaris", at = now - 7200, by = "Fay" }), "Fay")
-Advance(2)
-Check(ns.DB.sightings[tomeIds[4]] and #ns.DB.sightings[tomeIds[4]] == 1 and not ChatContains("Fay"),
-    "pushed place stored without an alert")
-ns.Wishlist.Remove(tomeIds[4])
-
--- the status tells whether the hidden channel is really joined
-local realChannelName = GetChannelName
-GetChannelName = function() return 0, nil end
-Check(ns.Net.StatusText():find(ns.L.NetNoChannel, 1, true) ~= nil and not ns.Net.IsJoined(),
-    "channel refused by the game: the status says so")
-GetChannelName = realChannelName
-Check(ns.Net.StatusText():find(ns.L.NetOn, 1, true) ~= nil and ns.Net.IsJoined(), "in the channel: connected")
-
 do
--- /eth net check: who has the same data
-local myDigest = ns.Net.Digest()
-local myPlaces = ns.Net.Count()
-before = #sentChat
-ChannelMessage("ETHN1~H~r^e0000", "Omar")
-ChannelMessage("ETHN1~H~r^e0000", "Omar")
-Advance(4)
-local checkAnswers = {}
-for i = before + 1, #sentChat do
-    local version, digest = sentChat[i].msg:match("^ETHN1~H~a%^e0000%^([^%^]+)%^%d+%^%d+%^(%x+)%^%d+%^%d+$")
-    if version then checkAnswers[#checkAnswers + 1] = { version = version, digest = digest } end
+    local function ZoneField(zone)
+        return ({ strsplit("^", ns.Net.Encode({ itemId = 300569, zone = zone, at = time() })) })[7]
+    end
+    local eAcute = string.char(195, 169)   -- "é" in UTF-8
+    Check(ZoneField(string.rep("a", 59) .. eAcute) == string.rep("a", 59), "a 2-byte character is not cut in two")
+    Check(ZoneField(string.rep("a", 58) .. eAcute) == string.rep("a", 58) .. eAcute, "a character that fits is kept")
 end
-Check(#checkAnswers == 1 and checkAnswers[1].version == ns.version and checkAnswers[1].digest == myDigest,
-    "a check request is answered once, with our version and fingerprint")
-before = #sentChat
-Slash("/eth net check")
-Advance(1)
-local checkQid
-for i = before + 1, #sentChat do checkQid = checkQid or sentChat[i].msg:match("^ETHN1~H~r%^(%x+)$") end
-Check(checkQid ~= nil and ChatContains(ns.L.NetCheckStart), "/eth net check asks the users online")
-ChannelMessage("ETHN1~H~a^" .. checkQid .. "^2.2.0^" .. myPlaces .. "^3^" .. myDigest, "Pia")
-ChannelMessage("ETHN1~H~a^" .. checkQid .. "^2.2.0^9^7^abcdef", "Quin")
-Advance(7)
-Check(ChatContains(format(ns.L.NetCheckSame, "Pia", "2.2.0", myPlaces, "-", 0)), "same fingerprint: in sync")
-Check(ChatContains(format(ns.L.NetCheckDiff, "Quin", "2.2.0", 9, "-", 0, myPlaces, "Quin")) and ChatContains(ns.L.NetCheckHint),
-    "different fingerprint: told, with the command to fix it")
-Check(ChatContains(ns.L.NetCheckSilent:match("^(.-)%%s")) and ChatContains("Gus"),
-    "users heard recently who did not answer are listed (older version)")
-Slash("/eth net check")
-Check(ChatContains(ns.L.NetCheckWait), "a second check right away: wait")
 
--- /eth net sync: everything again, right away, just for the player
-ns.DB.lastSync = time()
-before = #sentChat
-Slash("/eth net sync")
-Advance(1)
-local fullAsked = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^0$") then fullAsked = true end
-end
-Check(fullAsked and ChatContains(ns.L.NetSyncFull), "/eth net sync asks for everything, even within the 10 min")
-end
-Advance(15)
-
+-- places of the network: validated, merged, the same text on every client
 do
--- /eth net compare: another user asks for our places (the test character is "Tester")
-before = #sentChat
-ChannelMessage("ETHN1~H~d^f0000^Tester", "Rex")
-ChannelMessage("ETHN1~H~d^f0001^Somebody", "Rex")
-Advance(3)
-local ourKeys, notForUs = {}, false
-for i = before + 1, #sentChat do
-    local keys = sentChat[i].msg:match("^ETHN1~H~k%^f0000%^%d+%^%d+%^%d+%^%d+%^(.*)$")
-    if keys then for key in keys:gmatch("[^,]+") do ourKeys[#ourKeys + 1] = key end end
-    if sentChat[i].msg:find("^ETHN1~H~k%^f0001") then notForUs = true end
-end
-Check(#ourKeys == ns.Net.Count() and not notForUs, "asked for our places: all their short keys sent, only when we are named")
--- we compare with Sam: one place in common, one we lack
-local lacking
-for i = #tomeIds, 1, -1 do
-    if not ns.DB.sightings[tomeIds[i]] then lacking = tomeIds[i] break end
-end
-Slash("/eth net compare Sam")
-Advance(1)
-local cq
-for i = before + 1, #sentChat do cq = cq or sentChat[i].msg:match("^ETHN1~H~d%^(%x+)%^Sam$") end
-Check(cq ~= nil and ChatContains(format(ns.L.NetCompareStart, "Sam")), "/eth net compare asks that user")
-ChannelMessage("ETHN1~H~k^" .. cq .. "^1^1^4^" .. time() .. "^" .. ourKeys[1] .. "," .. (lacking - 300000) .. ".1", "Sam")
-Advance(1)
-Check(ChatContains(format(ns.L.NetCompareHead, "Sam", 2, 4, ns.L.JustNow, #ourKeys)), "the comparison: their places, finds, latest")
-Check(ChatContains(format(ns.L.NetCompareTheyHave, 1, ns.Catalog.Get(lacking).name)), "what they have that we don't")
-Check(ChatContains(ns.L.NetCompareYouHave:match("^(.-)%%d")), "what we have that they don't")
-Advance(31)
-Slash("/eth net compare Nobody")
-Advance(13)
-Check(ChatContains(format(ns.L.NetCompareNoAnswer, "Nobody")), "nobody answers: said so")
-
--- addon versions: a newer one is announced, a forged one ignored, an older user told
-local major, minor = ns.version:match("^(%d+)%.(%d+)")
-local newer = major .. "." .. (tonumber(minor) + 1) .. ".0"
-ChannelMessage("ETHN1~I~99.0.0", "Troll")
-Check(ns.Net.NewerVersion() == nil and not ChatContains("99.0.0"), "a forged far-away version is ignored")
-ChannelMessage("ETHN1~I~" .. newer, "Uma")
-Check(ChatContains(format(ns.L.NewVersion, newer, ns.version)) and ns.Net.NewerVersion() == newer,
-    "a user with a newer addon: the player is told to update")
-before = #sentChat
-ChannelMessage("ETHN1~I~2.0.0", "Vic")
-Advance(6)
-local toldVic = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg == "ETHN1~I~" .. ns.version then toldVic = true end
-end
-Check(toldVic, "a user with an older addon: we tell it our version")
-before = #sentChat
-ChannelMessage("ETHN1~I~2.0.0", "Wes")
-ChannelMessage("ETHN1~I~" .. ns.version, "Xan")
-Advance(6)
-local toldWes = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg == "ETHN1~I~" .. ns.version then toldWes = true end
-end
-Check(not toldWes, "another user already told it: we stay silent")
+    local hazardId = ns.Catalog.byName["arcane hazard"].itemId
+    local found = time()
+    local function Place(extra)   -- (false removes a field)
+        local r = { itemId = hazardId, mapFile = "Tanaris", x = 0.512, y = 0.498, npcId = 5420, mob = "Wastewander Bandit",
+            zone = "Tanaris:Wavestrider Beach", at = found, by = "Bob", finders = { Bob = true } }
+        for k, v in pairs(extra or {}) do
+            if v == false then r[k] = nil else r[k] = v end
+        end
+        return ns.Net.Encode(r)
+    end
+    ns.SetOption("netEnabled", false)   -- these test places must not reach EbonAPI
+    local kept = ns.DB.sightings
+    ns.DB.sightings = {}
+    local hazardRow = ns.Catalog.Get(hazardId)
+    Check(hazardRow and not ns.WorldMap.WorldPosition(hazardRow.location), "Arcane Hazard has no map point yet")
+    Check(ns.Net.ImportPlaces(hazardId, Place(), false) == 1, "a place of a dataset is taken")
+    Advance(2)
+    local hzFile, _, hzx = ns.WorldMap.BestZone(hazardRow.location)
+    Check(hazardRow.location.source == "net" and hzFile == "Tanaris" and math.abs(hzx - 0.512) < 0.001,
+        "the catalogue now places Arcane Hazard where the other player looted it")
+    Check(ns.Net.PlacesText(hazardId) == Place(), "a dataset that says all we know is written back the same")
+    ns.Net.ImportPlaces(hazardId, Place({ by = "Carl", finders = { Carl = true }, x = 0.515 }), false)
+    local text = ns.Net.PlacesText(hazardId)
+    Check(#ns.DB.sightings[hazardId] == 1 and text:find("%^512%^498%^", 1) and text:find("%^Bob%^2$"),
+        "the same spot from a second player: one place, 2 players, the smallest name and point on every client")
+    Check(ns.Net.ImportPlaces(hazardId, "399999^Tanaris^500^500^^Bandit^Tanaris^" .. time() .. "^Eve^1", false) == 0
+        and ns.Net.ImportPlaces(hazardId, Place({ x = 5, mob = "Other" }), false) == 0, "unknown tome or bad position ignored")
+    Check(ns.Net.ImportPlaces(hazardId, Place({ mob = "Bandit", npcId = 7 }):gsub("%^Bandit%^", "^|cffff0000Bandit|r^"),
+        false) == 0, "a place with an escape sequence is refused")
+    local function State(at) return format("%.0f", at * 1000) end   -- a dataset state (Net.lua)
+    Check(ns.Net.Accept("T" .. hazardId, State(time() + 60), State(time())) and not ns.Net.Accept("T" .. hazardId,
+        State(time() + 3 * 86400), nil) and not ns.Net.Accept("X1", "5", nil) and not ns.Net.Accept("T" .. hazardId, "5", "9"),
+        "datasets taken: ours, newer, not dated in the future")
+    -- Greedy Scavenger drops at one spot, from several players: only the mobs killed every time remain
+    local function Scav(by, list)
+        return Place({ mob = false, npcId = false, by = by, finders = { [by] = true }, cands = list })
+    end
+    ns.DB.sightings = {}
+    ns.Net.ImportPlaces(hazardId, Scav("Fay", { { npcId = 3113, name = "Razormane Dustrunner" },
+        { npcId = 3114, name = "Razormane Battleguard" }, { npcId = 3111, name = "Razormane Quilboar" } }), false)
+    local place = ns.DB.sightings[hazardId][1]
+    Check(place and not place.mob and #place.cands == 3, "a Scavenger drop: the place with its 3 candidate mobs")
+    ns.Net.ImportPlaces(hazardId, Scav("Gil", { { npcId = 3114, name = "Razormane Battleguard" },
+        { npcId = 3111, name = "Razormane Quilboar" }, { npcId = 3112, name = "Razormane Hunter" } }), false)
+    Check(#ns.DB.sightings[hazardId] == 1 and #place.cands == 2, "another drop there: the mobs killed both times remain")
+    ns.Net.ImportPlaces(hazardId, Scav("Hal", { { npcId = 3111, name = "Razormane Quilboar" },
+        { npcId = 3108, name = "Vile Familiar" } }), false)
+    Check(place.mob == "Razormane Quilboar" and place.npcId == 3111 and place.inferred,
+        "a third: one mob left, the place has its mob")
+    Check(ns.WorldMap.MobsText(ns.Net.Locations(hazardId)[1]) == "Razormane Quilboar", "shown with its mob")
+    ns.DB.sightings = kept
+    ns.SetOption("netEnabled", true)
+    ns.Fire("SIGHTINGS_CHANGED")
+    Advance(2)
 end
 
--- "Up to date" button of the main window, and the automatic sync every 15 min
-do
+-- --- Network through EbonAPI (Siphelis: a separate addon, read where it is) --------------------
+if not EbonAPI then
+    Check(ns.Net.SyncState() == "noapi" and not ns.Net.Available(), "without EbonAPI: no network, the places stay here")
+    Check(ChatContains(ns.L.NetNeedApi), "the player is told once to install EbonAPI")
+    Check(not ns.Net.RequestStats(), "no statistics request without EbonAPI")
+else
+    local api = EbonAPI:NewAddon("EbonTomeHunter", 1, 0)
+    local ownTomes = {}   -- (the tests below start again from these)
+    for itemId in pairs(ns.DB.sightings) do ownTomes[itemId] = true end
+    local function Places(name, itemId)   -- places another player holds for a tome
+        return tonumber(Peers.Run(name, "local s = EbonTomeHunterDB.sightings[" .. itemId .. "] return s and #s or 0"))
+    end
+    local function Share(name, dataset, text)   -- another player's EbonAPI publishes a dataset of ours
+        return Peers.Run(name, "return EbonAPI:NewAddon('EbonTomeHunter', 1, 0):Share('" .. dataset .. "', "
+            .. "(time() + 5) * 1000, " .. string.format("%q", text) .. ")")
+    end
+    Check(ns.Net.Available() and ns.Net.SyncState() == "online", "connected to EbonAPI, in its channel")
+    Check(api:GetShared("T300569") and api:GetShared("T300569"):find("^300569%^CrystalsongForest%^490%^540%^28434%^Sinewy Wolf%^"),
+        "our find is the dataset of its tome (T300569)")
+
+    -- another EbonTomeHunter user comes online: our places reach him, his reach us
+    Check(Peers.Start("Bob"), "Bob logs in")
+    Advance(40)
+    Check(Places("Bob", 300569) == 1, "Bob got our drop place through EbonAPI")
+    local hazardId = ns.Catalog.byName["arcane hazard"].itemId
+    ns.Wishlist.SetQty(hazardId, 1)
+    Peers.Run("Bob", "EbonTomeHunter.Net.Report({ itemId = " .. hazardId .. ", mapFile = 'Tanaris', x = 0.512, y = 0.498, "
+        .. "npcId = 5420, mob = 'Wastewander Bandit', zone = 'Tanaris:Wavestrider Beach', at = time(), by = 'Bob' })")
+    Advance(40)
+    local hazard = ns.Catalog.Get(hazardId)
+    Check(ns.DB.sightings[hazardId] and #ns.DB.sightings[hazardId] == 1 and hazard.location and hazard.location.source == "net"
+        and hazard.location.mapFile == "Tanaris", "Bob's find reached us: the catalogue places Arcane Hazard where he looted it")
+    Check(ChatContains("Bob") and ChatContains("Wastewander Bandit"), "a wishlist tome found by another player: told in chat")
+    ns.WorldMap.Locate(hazardId)
+    Check(WorldMapFrame:IsShown() and shownMap == "Tanaris", "Locate now opens Tanaris")
+    WorldMapFrame:Hide()
+
+    -- permanent: Alice and Bob are never online together; Bob's find reaches her through Carol,
+    -- who does not run EbonTomeHunter but another addon of EbonAPI (AutoCallboard, SkillTreeAutoLoad...):
+    -- EbonAPI keeps and passes on the datasets of every addon
+    Peers.Online("Tester", false)   -- we stay out of it
+    Check(Peers.Start("Alice") and Peers.Start("Carol", "api"), "Alice logs in, Carol too (EbonAPI, no EbonTomeHunter)")
+    Peers.Run("Carol", "EbonAPI:NewAddon('OtherAddon', 1, 0)")   -- (EbonAPI joins its channel for its addons)
+    Advance(40)
+    Check(Places("Alice", 300569) == 1, "Alice got our place from Bob")
+    Check(Peers.Stop("Alice"), "Alice logs off")
+    Peers.Run("Bob", "EbonTomeHunter.Net.Report({ itemId = 300446, mapFile = 'Durotar', x = 0.4, y = 0.5, npcId = 3099, "
+        .. "mob = 'Dire Mottled Boar', zone = 'Durotar', at = time(), by = 'Bob' })")
+    Advance(60)
+    Check(Peers.Run("Carol", "return (EbonAPI:NewAddon('OtherAddon', 1, 0):GetShared('T300446', 'EbonTomeHunter'))")
+        == Peers.Run("Bob", "return EbonTomeHunter.Net.PlacesText(300446)"), "Carol's EbonAPI holds Bob's find")
+    Check(Peers.Stop("Bob"), "Bob logs off")
+    Check(Peers.Start("Alice"), "Alice logs in again, Bob is gone")
+    Check(Places("Alice", 300569) == 1 and Places("Alice", 300446) == 0, "Alice kept her places (saved data), no boar yet")
+    Advance(60)
+    Check(Places("Alice", 300446) == 1 and Peers.Run("Alice", "return EbonTomeHunterDB.sightings[300446][1].by") == "Bob",
+        "Bob's find reached Alice through Carol: they were never online together")
+    Peers.Online("Tester", true)
+    Check(api:SyncShares(), "we log in again: EbonAPI announces what it holds")
+    Advance(40)
+    local boar = ns.DB.sightings[300446] and ns.DB.sightings[300446][1]
+    Check(boar and boar.mob == "Dire Mottled Boar" and boar.by == "Bob", "back on the network, we have it too")
+    Check(Peers.Start("Bob"), "Bob logs in again")
+    Check(Places("Bob", 300446) == 1 and Places("Bob", 300569) == 1, "Bob kept his places between two sessions (saved data)")
+    Advance(20)
+
+    -- Scavenger drops of two players at one spot: merged on every client
+    Peers.Run("Bob", "EbonTomeHunter.Net.Report({ itemId = 300447, mapFile = 'Barrens', x = 0.3, y = 0.3, zone = 'The Barrens', "
+        .. "at = time(), by = 'Bob', cands = { { npcId = 3113, name = 'Razormane Dustrunner' }, "
+        .. "{ npcId = 3111, name = 'Razormane Quilboar' } } })")
+    Advance(40)
+    ns.Net.Report({ itemId = 300447, mapFile = "Barrens", x = 0.31, y = 0.3, zone = "The Barrens", at = time(), by = "Tester",
+        cands = { { npcId = 3111, name = "Razormane Quilboar" }, { npcId = 3108, name = "Vile Familiar" } } })
+    Advance(40)
+    local quilboar = ns.DB.sightings[300447] and ns.DB.sightings[300447][1]
+    Check(quilboar and quilboar.mob == "Razormane Quilboar", "our Scavenger drop and Bob's: the only mob killed both times")
+    Check(Peers.Run("Bob", "local s = EbonTomeHunterDB.sightings[300447] return s and s[1] and s[1].mob") == "Razormane Quilboar",
+        "Bob deduced the same mob")
+
+    -- two players publish different places of one tome in the same second (a group farming
+    -- together): their states still differ, the one who takes the other's publishes the union
+    Peers.Run("Bob", "EbonTomeHunter.Net.Report({ itemId = 300449, mapFile = 'Mulgore', x = 0.2, y = 0.2, npcId = 2956, "
+        .. "mob = 'Adult Plainstrider', zone = 'Mulgore', at = time(), by = 'Bob' })")
+    ns.Net.Report({ itemId = 300449, mapFile = "Mulgore", x = 0.7, y = 0.7, npcId = 2957, mob = "Elder Plainstrider",
+        zone = "Mulgore", at = time(), by = "Tester" })
+    Advance(90)
+    Check(ns.DB.sightings[300449] and #ns.DB.sightings[300449] == 2 and Places("Bob", 300449) == 2,
+        "published in the same second: both places on both clients")
+    Check(api:GetShared("T300449") == Peers.Run("Bob", "return (EbonAPI:NewAddon('EbonTomeHunter', 1, 0):GetShared('T300449'))"),
+        "and the same dataset text")
+
+    -- evidence of stale sources travels the same way (dataset E<itemId>)
+    Share("Bob", "E300569", "#4698^Lea^0^0^0^0^0^" .. time() .. "^" .. time() .. ";#4698^Max^0^0^0^0^0^" .. time()
+        .. "^" .. time() .. ";#4698^Ned^0^0^0^0^0^" .. time() .. "^" .. time())
+    Advance(40)
+    local _, _, voters = ns.Evidence.Verdict(300569, "Scarlet Paladins", 4698)
+    Check(voters == 3, "3 players' reports reached us: the source is stale for everybody")
+
+    -- a forged dataset (dated in the future) is not taken
+    Peers.Run("Bob", "EbonTomeHunter.Net.Report({ itemId = 300448, mapFile = 'Mulgore', x = 0.5, y = 0.5, "
+        .. "mob = 'Plainstrider', zone = 'Mulgore', at = time(), by = 'Bob' })")
+    Peers.Run("Bob", "EbonAPI:NewAddon('EbonTomeHunter', 1, 0):Share('T300448', (time() + 3 * 86400) * 1000, "
+        .. "EbonTomeHunter.Net.PlacesText(300448))")
+    Advance(40)
+    Check(not ns.DB.sightings[300448], "a dataset dated 3 days ahead is refused")
+
+    -- kill statistics (asked by the developer helper): answered by the EbonTomeHunter users only
+    ns.DB.killStats = { [29120] = { n = 7, name = "Test Mob" } }
+    for i = 1, 30 do ns.DB.killStats[600600 + i] = { n = 12345 + i, name = "Custom " .. i } end
+    local stats
+    ns.On("NET_STATS", function(results) stats = results end)
+    Check(ns.Net.RequestStats(), "statistics asked to the players online")
+    Advance(20)
+    Check(stats and stats.Bob and not stats.Carol, "Bob answered, Carol (no EbonTomeHunter) did not")
+    Peers.Run("Bob", "EbonTomeHunter.On('NET_STATS', function(r) BobStats = r end) EbonTomeHunter.Net.RequestStats()")
+    Advance(20)
+    Check(Peers.Run("Bob", "local s = BobStats and BobStats.Tester local n = 0 for _ in pairs(s and s.kills or {}) do "
+        .. "n = n + 1 end return n") == 31 and Peers.Run("Bob", "return BobStats.Tester.kills[29120]") == 7,
+        "our 31 creatures reached Bob (a long answer: several lines, put together again by EbonAPI)")
+    ns.DB.killStats = {}
+
+    -- the network button of the main window
     if not EbonTomeHunterFrame:IsShown() then UI.Toggle() end
     local button = UI.syncButton
-    ns.DB.syncedAt = time()
     UI.RefreshSync()
+    Check(button:GetText() == ns.L.SyncOnline, "EbonAPI in its channel: 'Network'")
     local _, tip = UI.SyncTip()
-    Check(button:GetText() == ns.L.SyncUpToDate and tip:find(format(ns.L.SyncTipData, ns.L.JustNow), 1, true),
-        "a sync went to the end just now: 'Up to date'")
-    local newer = ns.Net.NewerVersion()
-    Check(newer and tip:find(format(ns.L.SyncTipNewer, newer, ns.version), 1, true),
-        "the tooltip also says a newer addon version exists")
-    ns.DB.syncedAt = time() - 7200
-    UI.RefreshSync()
-    local label = button:GetText()
-    Check(label == ns.L.SyncOutdated or label == ns.L.SyncAlone,
-        "last complete sync 2 h ago: no longer 'Up to date' (or 'Alone online' after unanswered syncs)")
-    before = #sentChat
+    Check(tip:find(format(ns.L.SyncTipDatasets, ns.Net.DatasetCount()), 1, true) and ns.Net.DatasetCount() >= 4,
+        "the tooltip counts the tomes shared")
     button:GetScript("OnClick")(button)
-    Advance(1)
-    local full = false
-    for i = before + 1, #sentChat do
-        if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^0$") then full = true end
-    end
-    Check(full, "the button asks the users online for everything")
-    Advance(14)
-    UI.RefreshSync()
-    Check(button:GetText() == ns.L.SyncAlone, "nobody answered: 'Alone online'")
-    local realName = GetChannelName
-    GetChannelName = function() return 0, nil end
-    UI.RefreshSync()
-    Check(button:GetText() == ns.L.SyncNoChannel, "hidden channel refused: 'No network'")
-    GetChannelName = realName
-
-    -- a sync that goes to the end (automatic or not) turns the button to "Up to date" by itself
-    ns.DB.syncedAt = 0
-    UI.RefreshSync()
-    before = #sentChat
-    Check(ns.Net.RequestSync(true), "a sync starts")
-    local sq = LastQ(before)
-    ChannelMessage("ETHN1~S~" .. sq .. "~0~" .. ns.Net.Encode({ itemId = tomeIds[5], mapFile = "Durotar", x = 0.7, y = 0.7,
-        mob = "Raptor", zone = "Durotar", at = time(), by = "Bea" }), "Bea")
-    Advance(5)
-    Check(button:GetText() == ns.L.SyncUpToDate, "the sync ended: the button says 'Up to date' without being asked")
-    -- and it follows time alone (checked every 30 s while the window is shown)
-    ns.DB.syncedAt = time() - 7200
-    Advance(31)
-    Check(button:GetText() ~= ns.L.SyncUpToDate, "2 h later: no longer 'Up to date', by itself")
+    Check(ChatContains(ns.L.NetSyncAsked), "the button announces our datasets now")
+    Slash("/eth net sync")
+    Check(ChatContains(ns.L.NetSyncWait), "again right away: EbonAPI waits 30 s")
+    ns.SetOption("netEnabled", false)
+    Check(button:GetText() == ns.L.SyncOff, "network off: 'Network off'")
+    ns.SetOption("netEnabled", true)
     EbonTomeHunterFrame:Hide()
-    Check(not ns.Net.StartAutoSync(), "the automatic sync runs from the login on (started once)")
-    before = #sentChat
-    Advance(961)
-    local auto = false
-    for i = before + 1, #sentChat do
-        if sentChat[i].msg:find("^ETHN1~Q~%x%x%x%x%x%^") then auto = true end
+    Peers.Stop("Alice")
+    Peers.Stop("Bob")
+    Peers.Stop("Carol")
+    -- the tests below start again from our own finds: the other players' places leave, and the
+    -- datasets of these tests (EbonAPI keeps every dataset it received)
+    for itemId in pairs(ns.DB.sightings) do
+        if not ownTomes[itemId] then ns.DB.sightings[itemId] = nil end
     end
-    Check(auto, "15 min later: a sync by itself")
+    for _, name in ipairs(api:SharedNames()) do
+        if name ~= "T300569" then api:Unshare(name) end
+    end
+    ns.Fire("SIGHTINGS_CHANGED")
+    Advance(2)
 end
-ns.DB.sightings = keptSightings
-ns.Fire("SIGHTINGS_CHANGED")
 
 -- --- Stale sources (Evidence.lua) --------------------------------------------------------
 local EV = ns.Evidence
 local keptForEvidence = ns.DB.sightings
 ns.DB.sightings = {}
+shownMap = "CrystalsongForest"   -- (Locate may have left Tanaris)
 ns.Fire("SIGHTINGS_CHANGED")
 Advance(2)
 ns.DB.corpses, ns.DB.evidence, ns.DB.reports = {}, {}, {}
@@ -999,17 +850,34 @@ LootCorpse("1001")
 Check(ns.DB.corpses[wolfKey] and ns.DB.corpses[wolfKey].n == 1,
     "a looted corpse of a listed source without the tome counts, once")
 ns.DB.corpses[wolfKey].n = 24
-before = #sentChat
 LootCorpse("1002")
-local announced = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~K~300569%^#28434%^25%^") then announced = true end
+do
+    local text = EV.SharedText(300569)
+    Check(text:find("#28434^Tester^25^", 1, true), "the counter is shared every 25 corpses: " .. text)
+    if EbonAPI then
+        Advance(3)
+        Check(EbonAPI:NewAddon("EbonTomeHunter", 1, 0):GetShared("E300569") == text, "published as the dataset E300569")
+    end
 end
-Check(announced, "the counter is shared every 25 corpses")
 Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "25 corpses: still a good source")
-ns.DB.corpses[wolfKey].n = 500
-local staleNow, kills = EV.Verdict(300569, "Sinewy Wolf", 28434)
-Check(staleNow and kills == 500, "500 looted corpses without the tome: probably no longer drops it")
+do
+    -- bad luck: the threshold follows the drop rate of the source (1 % left to bad luck)
+    local _, _, _, _, oneIn, needed = EV.Verdict(300569, "Sinewy Wolf", 28434)
+    Check(oneIn == 200 and needed == 919, "no drop seen yet: 1 in 200 assumed, stale past 919 corpses, got "
+        .. tostring(oneIn) .. " / " .. tostring(needed))
+    ns.DB.corpses[wolfKey].n = 600
+    Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "600 corpses without the tome, rate unknown: bad luck possible")
+    ns.DB.corpses[wolfKey].n = 919
+    Check(EV.Verdict(300569, "Sinewy Wolf", 28434), "919 corpses without the tome: probably no longer drops it")
+    -- a rare tome (1 drop in 3000 corpses before): 2000 corpses without it are still bad luck
+    ns.DB.corpses[wolfKey] = { n = 2000, since = time(), drop = time() - 10, total = 5000, drops = 1 }
+    local rareStale, _, _, _, rareOneIn, rareNeeded = EV.Verdict(300569, "Sinewy Wolf", 28434)
+    Check(not rareStale and rareOneIn == 1600 and rareNeeded == EV.STALE_MAX, "rare tome: 2000 corpses are not enough")
+    -- a frequent one (20 drops in 1000 corpses before): 500 corpses without it are not bad luck
+    ns.DB.corpses[wolfKey] = { n = 500, since = time(), drop = time() - 10, total = 1500, drops = 20 }
+    local staleNow, kills = EV.Verdict(300569, "Sinewy Wolf", 28434)
+    Check(staleNow and kills == 500, "frequent tome: 500 corpses without it, probably no longer drops it")
+end
 local staleSeen, orderOk = false, true
 for _, source in ipairs(ns.Travel.Sources(300569)) do
     if source.stale then staleSeen = true elseif staleSeen then orderOk = false end
@@ -1018,39 +886,75 @@ Check(staleSeen and orderOk, "stale sources come last (teleport, Sources window)
 LootCorpse("1003", true)
 Check(ns.DB.corpses[wolfKey].n == 0 and not EV.Verdict(300569, "Sinewy Wolf", 28434),
     "the tome drops from it again: counter back to 0, good source")
+Check(ns.DB.corpses[wolfKey].drops == 21 and ns.DB.corpses[wolfKey].total == 1501,
+    "the drop is kept in the history of the source (its rate)")
 
--- other users' counters: one weighs half the threshold at most; a later drop clears them
+-- the tome lies in the corpse but is not taken (bags full, roll won by another player): it
+-- dropped, the corpse is not one "without the tome", and the place is recorded all the same
+ns.DB.corpses[wolfKey].n = 40
+ns.DB.sightings[300569] = nil   -- a place the network does not know yet
+GetNumLootItems = function() return 1 end
+GetLootSlotLink = function(slot) return slot == 1 and Link(300569, "Tome of Echo: Beast Bane") or nil end
+LootCorpse("1004")
+GetNumLootItems, GetLootSlotLink = function() return 0 end, function() return nil end
+Check(ns.DB.corpses[wolfKey].n == 0, "a tome left in the loot window counts as a drop, not a corpse without it")
+Check(ns.DB.sightings[300569] and #ns.DB.sightings[300569] == 1, "and its drop place is recorded (for the network too)")
+
+-- other players' counters (dataset E<itemId>): one weighs half the threshold at most; a later
+-- drop clears them
 ns.DB.corpses = {}
 local nowEv = time()
-ChannelMessage("ETHN1~K~300569^#28434^900^" .. nowEv .. "^0", "Hal")
-local _, halKills = EV.Verdict(300569, "Sinewy Wolf", 28434)
-Check(halKills == EV.STALE_KILLS / 2 and not EV.Verdict(300569, "Sinewy Wolf", 28434),
-    "a single other user cannot mark a source alone")
-ChannelMessage("ETHN1~K~300569^#28434^260^" .. nowEv .. "^0", "Ivy")
-Check(EV.Verdict(300569, "Sinewy Wolf", 28434), "two users with enough corpses: stale")
-ChannelMessage("ETHN1~K~300569^#28434^3^" .. (nowEv + 30) .. "^" .. (nowEv + 30), "Kim")
+local function Line(mob, player, n, since, drop, total, drops, report, stamp)
+    return table.concat({ mob, player, n, since, drop, total, drops, report, stamp }, "^")
+end
+EV.ImportShared(300569, Line("#28434", "Hal", 900, nowEv, 0, 900, 0, 0, nowEv))
+do
+    local _, halKills, _, _, _, halNeeded = EV.Verdict(300569, "Sinewy Wolf", 28434)
+    Check(halKills == halNeeded / 2 and not EV.Verdict(300569, "Sinewy Wolf", 28434),
+        "a single other player cannot mark a source alone")
+end
+EV.ImportShared(300569, Line("#28434", "Ivy", 700, nowEv, 0, 700, 0, 0, nowEv))
+Check(ns.DB.evidence[wolfKey].Ivy.total == 700, "the totals of another player's counter are kept")
+Check(EV.Verdict(300569, "Sinewy Wolf", 28434), "two players with enough corpses: stale")
+EV.ImportShared(300569, Line("#28434", "Kim", 3, nowEv + 30, nowEv + 30, 3, 1, 0, nowEv + 30))
 Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "a drop reported after their counts: good source again")
+EV.ImportShared(300569, Line("#28434", "Joe", 5, nowEv, 0, 5, 9, 0, nowEv))
+Check(not ns.DB.evidence[wolfKey].Joe, "a counter with more drops than corpses is refused")
+Check(EV.ImportShared(300569, "") and not EV.ImportShared(300569, EV.SharedText(300569)),
+    "a dataset that knows less than we do is published again, one that says all we know is not")
+do   -- EbonAPI takes 32 KB per dataset: past 30 000 bytes, the newest lines are kept
+    local many = {}
+    for source = 1, 40 do
+        for player = 1, 20 do
+            many[#many + 1] = Line("#" .. (70000 + source), "Player" .. player, 5, nowEv, 0, 5, 0, 0,
+                nowEv - source * 100 - player)
+        end
+    end
+    local sent = table.concat(many, ";")
+    EV.ImportShared(300570, sent)
+    local text = EV.SharedText(300570)
+    Check(#sent > 30000 and #text <= 30000 and text:find("#70001^Player1^", 1, true)
+        and not text:find("#70040^Player20^", 1, true), "a big dataset: under 30 000 bytes, the newest lines kept ("
+        .. #sent .. " -> " .. #text .. " bytes)")
+    Check(not EV.ImportShared(300570, text), "that text is the same on every client: not published again")
+end
 
--- reports: 3 users, or the player alone for themselves; withdrawn from the Sources window
+-- reports: 3 players, or the player alone for themselves; withdrawn from the Sources window
 ns.DB.evidence, ns.DB.reports = {}, {}
 local later = nowEv + 60
-ChannelMessage("ETHN1~V~300569^#4698^" .. later, "Lea")
-ChannelMessage("ETHN1~V~300569^#4698^" .. later, "Max")
+EV.ImportShared(300569, Line("#4698", "Lea", 0, 0, 0, 0, 0, later, later) .. ";" .. Line("#4698", "Max", 0, 0, 0, 0, 0, later, later))
 Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "2 reports: not enough")
-ChannelMessage("ETHN1~V~300569^#4698^" .. later, "Ned")
+EV.ImportShared(300569, Line("#4698", "Ned", 0, 0, 0, 0, 0, later, later))
 local byVotes, _, voters = EV.Verdict(300569, "Scarlet Paladins", 4698)
-Check(byVotes and voters == 3, "3 users reported it: stale")
-ChannelMessage("ETHN1~V~300569^#4698^0", "Ned")
-Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "a report withdrawn")
-before = #sentChat
+Check(byVotes and voters == 3, "3 players reported it: stale")
+EV.ImportShared(300569, Line("#4698", "Ned", 0, 0, 0, 0, 0, 0, later + 1))
+Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "a report withdrawn (a newer entry of that player)")
+EV.ImportShared(300569, Line("#4698", "Ned", 0, 0, 0, 0, 0, later, later))
+Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "an older entry of that player does not bring it back")
 Check(EV.Report(300569, "Scarlet Paladins", 4698, true), "the player reports a source")
 local mineStale, _, _, mine = EV.Verdict(300569, "Scarlet Paladins", 4698)
-Advance(2)
-local shared = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~V~300569%^#4698%^%d+$") then shared = true end
-end
-Check(mineStale and mine and shared, "own report: stale for the player, shared with the others")
+Check(mineStale and mine and EV.SharedText(300569):find("#4698%^Tester%^0%^%d+%^0%^0%^0%^[1-9]%d*%^%d+") ~= nil,
+    "own report: stale for the player, in the dataset shared with the others")
 Check(WH.Show(300569) > 0, "Sources window opened")
 local reportRow
 for i = 1, 6 do
@@ -1065,30 +969,24 @@ Advance(2)
 Check(not EV.Verdict(300569, "Scarlet Paladins", 4698), "clicked again: report withdrawn")
 EbonTomeHunterSourcesFrame:Hide()
 
--- our counters and reports go to a user who shows up (at most every 10 min)
-ns.DB.corpses[wolfKey] = { n = 30, since = time(), drop = 0 }
-Advance(601)
-before = #sentChat
-ChannelMessage("ETHN1~Q~d0000^" .. time(), "Zed")
-Advance(3)
-local bundled = false
-for i = before + 1, #sentChat do
-    if sentChat[i].msg:find("^ETHN1~K~.*300569%^#28434%^30%^") then bundled = true end
-end
-Check(bundled, "a user shows up: our counters are sent")
-
 -- network places: the most recent first, those not found for 90 days flagged
 ns.Net.Add({ itemId = 300569, mapFile = "Tanaris", x = 0.1, y = 0.1, mob = "Old Mob", zone = "Tanaris",
     at = time() - 100 * 86400, by = "Pat" })
 local netLocs = ns.Net.Locations(300569)
 Check(netLocs and #netLocs >= 2 and not netLocs[1].old and netLocs[#netLocs].old and netLocs[1].at >= netLocs[#netLocs].at,
     "network places: most recent first, the old ones flagged")
+Advance(4)
 ns.DB.sightings = keptForEvidence
 ns.DB.corpses, ns.DB.evidence, ns.DB.reports = {}, {}, {}
+if EbonAPI then   -- EbonAPI keeps what these tests published: it leaves with them
+    EbonAPI:NewAddon("EbonTomeHunter", 1, 0):Unshare("T300569")
+    EbonAPI:NewAddon("EbonTomeHunter", 1, 0):Unshare("E300569")
+    EbonAPI:NewAddon("EbonTomeHunter", 1, 0):Unshare("E300570")
+end
 ns.Fire("SIGHTINGS_CHANGED")
 Advance(2)
 
--- --- Kill statistics (counted by Loot.lua, shared on request for /ethdev stats) ---------------
+-- --- Kill statistics (counted by Loot.lua, asked on the network by /ethdev stats) -------------
 do
     ns.DB.killStats = {}
     local function Kill(guid, name)
@@ -1102,34 +1000,22 @@ do
     local counted = ns.DB.killStats[wyrm]
     Check(counted and counted.n == 2 and counted.name == "Frost Wyrm",
         "kills per creature: the ones fought by the player or the group, counted")
-    before = #sentChat
-    ChannelMessage("ETHN1~H~t^a1b2c", "Yan")
-    Advance(6)
-    local shared = false
-    for i = before + 1, #sentChat do
-        if sentChat[i].msg:find("^ETHN1~H~u%^a1b2c%^1%^1%^2%^" .. wyrm .. ":2$") then shared = true end
-    end
-    Check(shared, "a statistics request is answered with our kills")
-    local got
-    ns.On("NET_STATS", function(results) got = results end)
-    Check(ns.Net.RequestStats(), "statistics asked to the users online")
-    Advance(1)
-    local sq
-    for i = before + 1, #sentChat do sq = sq or sentChat[i].msg:match("^ETHN1~H~t%^(%x+)$") end
-    ChannelMessage("ETHN1~H~u^" .. sq .. "^1^1^500^29120:300;1234:200", "Zoe")
-    Advance(15)
-    Check(got and got.Zoe and got.Zoe.total == 500 and got.Zoe.kills[29120] == 300 and got.Zoe.kills[1234] == 200,
-        "the answers are collected and handed over (NET_STATS)")
+    -- (asking the other players and their answers: see the EbonAPI tests above)
     Advance(61)   -- these kills must not count as the recent kills of the Scavenger tests
 end
 
 -- --- Drop history window (/eth history) ------------------------------------------------------
 do
+    local hazardId = ns.Catalog.byName["arcane hazard"].itemId
+    for _, by in ipairs({ "Bob", "Carl" }) do   -- a place of another player, confirmed by a third one
+        ns.Net.Add({ itemId = hazardId, mapFile = "Tanaris", x = 0.512, y = 0.498, npcId = 5420, mob = "Wastewander Bandit",
+            zone = "Tanaris:Wavestrider Beach", at = time() - 60, by = by })
+    end
     local entries = ns.History.Entries(false)
     local sorted, bob = true, nil
     for i, e in ipairs(entries) do
         if i > 1 and e.at > entries[i - 1].at then sorted = false end
-        if e.by == "Bob" then bob = e end
+        if e.by == "Bob" and e.itemId == hazardId then bob = e end
     end
     Check(#entries == ns.Net.Count() and sorted, "history: every shared drop, the most recent first")
     Check(bob and bob.mob == "Wastewander Bandit" and bob.others == 1 and bob.place:find("Tanaris", 1, true),
@@ -1243,17 +1129,21 @@ Check(ChatContains("Groupie"), "a group member looted a wishlist tome: told in c
 
 -- network off: nothing leaves any more
 shownMap = "CrystalsongForest"   -- the zone map of the zone texts (Locate had left Tanaris)
-ns.DB.netOutbox[1] = { wire = "pending", at = time() }
 ns.SetOption("netEnabled", false)
-Check(#ns.DB.netOutbox == 0, "network turned off: the finds waiting to be sent are dropped")
-before = #sentChat
+local heldBefore = EbonAPI and EbonAPI:NewAddon("EbonTomeHunter", 1, 0):GetShared("T300569")
 unitState.target = { name = "Sinewy Wolf", guid = "0xF130006F12000042", dead = true }
 GetPlayerMapPosition = function(unit) return 0.20, 0.30 end
 Fire("LOOT_OPENED")
 Fire("CHAT_MSG_LOOT", format(LOOT_ITEM_SELF, Link(300569, "Tome of Echo: Beast Bane")))
-Advance(2)
-Check(#sentChat == before and #ns.DB.sightings[300569] == 2, "network off: kept locally, not sent")
+Advance(4)
+Check(#ns.DB.sightings[300569] == 2 and (not EbonAPI or EbonAPI:NewAddon("EbonTomeHunter", 1, 0):GetShared("T300569") == heldBefore),
+    "network off: kept locally, not published")
 ns.SetOption("netEnabled", true)
+if EbonAPI then
+    Advance(4)
+    local _, count = EbonAPI:NewAddon("EbonTomeHunter", 1, 0):GetShared("T300569"):gsub("300569%^", "")
+    Check(count == 2, "network on again: the find made meanwhile is published")
+end
 unitState.target = nil
 
 -- the corpse under the mouse wins over the target
@@ -1328,9 +1218,12 @@ bagSlots[4] = { link = Link(300025, "Tome of Echo: Frost Bite"), count = 1 }
 BagsChanged()
 local mixed = ns.DB.sightings[300025] and ns.DB.sightings[300025][1]
 Check(mixed and mixed.mob == nil and mixed.mapFile == "CrystalsongForest" and math.abs(mixed.x - 0.60) < 0.001,
-    "two kinds of mobs killed in the last minute: the place only")
-ChannelMessage("ETHN1~D~" .. ns.Net.Encode({ itemId = 300025, mapFile = "CrystalsongForest", x = 0.61, y = 0.21,
-    npcId = tonumber("0071C0", 16), mob = "Frostbite Bear", zone = "Crystalsong Forest", at = time(), by = "Zed" }), "Zed")
+    "two kinds of mobs killed in the last minute: the place, no mob")
+Check(mixed and mixed.cands and #mixed.cands == 2 and mixed.cands[1].name == "Frostbite Bear"
+    and mixed.cands[2].name == "Snowblind Wolf", "with the two candidates, the most recent kill first")
+ns.Net.ImportPlaces(300025, ns.Net.Encode({ itemId = 300025, mapFile = "CrystalsongForest", x = 0.61, y = 0.21,
+    npcId = tonumber("0071C0", 16), mob = "Frostbite Bear", zone = "Crystalsong Forest", at = time(), by = "Zed",
+    finders = { Zed = true } }), false)
 Check(#ns.DB.sightings[300025] == 1 and ns.DB.sightings[300025][1].mob == "Frostbite Bear",
     "a player who knows the mob confirms that spot: merged, the mob is now known")
 
@@ -1382,6 +1275,79 @@ Fire("LOOT_CLOSED")
 unitState.mouseover = nil
 Check(#alerts == alertsBefore + 1, "looted by hand: the chat line and the bag increase make one alert, got "
     .. (#alerts - alertsBefore))
+
+-- several kinds of mobs killed: the server's hint of the tome tells which one (Hints.lua)
+do
+    local HT = ns.Hints
+    local frost = HT.Parse("Can be found on enemies that cast Frostbolt / Slow")
+    Check(frost and frost.spells.frostbolt and frost.spells.slow, "hint 'enemies that cast ...': the spells to watch")
+    Check((HT.Parse("Can be found on Beast-type enemies (Paladin, Warrior)") or {}).ctype == "beast",
+        "hint 'Beast-type enemies': the creature type")
+    local boss = HT.Parse("Can be found on Lord Marrowgar")
+    Check(boss and boss.names and boss.names["lord marrowgar"], "hint naming a creature: its name")
+    local fire = HT.Parse("Can be found on Fire Elemental-type enemies")
+    Check(fire and fire.ctype == "elemental" and #fire.words > 0, "hint 'Fire Elemental-type enemies': elementals, fire words")
+    Check(HT.Parse("Can be found on enemies with high armor") == nil, "a hint with nothing to observe: no test")
+
+    -- stand-in hints (in game they come from ProjectEbonhold's Echo journal)
+    local savedHint = ns.Catalog.DropHint
+    local hints = { [300450] = "Can be found on enemies that cast Frostbolt / Slow",
+        [300508] = "Can be found on Beast-type enemies (Paladin, Warrior)",
+        [300509] = "Can be found on Fire Elemental-type enemies" }
+    ns.Catalog.DropHint = function(row)
+        return row and hints[row.itemId] or savedHint(row)
+    end
+    GetPlayerMapPosition = function(unit) return 0.45, 0.55 end
+
+    -- a mob seen casting a spell of the hint (combat log)
+    Advance(61)
+    Kill("0xF1300071BE0000C1", "Snowblind Wolf")
+    CLEU("SPELL_CAST_SUCCESS", "0xF1300077AB0000C2", "Crystalsong Frostcaller", 0xa48, "0x0000000000000042", "Tester",
+        0x511, 116, "Frostbolt")
+    Kill("0xF1300077AB0000C2", "Crystalsong Frostcaller")
+    bagSlots[9] = { link = Link(300450, "Tome of Echo: Insulated Soul"), count = 1 }
+    BagsChanged()
+    local byCast = ns.DB.sightings[300450] and ns.DB.sightings[300450][1]
+    Check(byCast and byCast.mob == "Crystalsong Frostcaller" and byCast.npcId == 0x77AB,
+        "Scavenger: the mob seen casting a spell of the tome's hint dropped it")
+
+    -- the creature types shown by the nameplates (the Ebonhold client gives them units)
+    Advance(61)
+    local savedType = UnitCreatureType
+    UnitCreatureType = function(unit) return unitState[unit] and unitState[unit].ctype or nil end
+    unitState.nameplate1 = { name = "Crystal Spider", guid = "0xF1300077AC0000D1", ctype = "Beast" }
+    unitState.nameplate2 = { name = "Ice Revenant", guid = "0xF1300077AD0000D2", ctype = "Elemental" }
+    Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+    Fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
+    unitState.nameplate1, unitState.nameplate2 = nil, nil
+    Check(HT.UnitInfo(0x77AC) and HT.UnitInfo(0x77AC).ctype == "beast" and HT.UnitInfo(0x77AD).ctype == "elemental",
+        "the nameplates tell the creature types")
+    Kill("0xF1300077AD0000D3", "Ice Revenant")
+    Kill("0xF1300077AC0000D4", "Crystal Spider")
+    bagSlots[10] = { link = Link(300508, "Tome of Echo: Ember Ward"), count = 1 }
+    BagsChanged()
+    local byType = ns.DB.sightings[300508] and ns.DB.sightings[300508][1]
+    Check(byType and byType.mob == "Crystal Spider", "Scavenger: the only beast killed dropped the 'Beast-type' tome")
+    UnitCreatureType = savedType
+
+    -- a weak clue only (a word of the name): not enough, the candidates go with the place
+    Advance(61)
+    Kill("0xF1300077AE0000E1", "Blazing Ember")
+    Kill("0xF1300077AF0000E2", "Crystalsong Wisp")
+    bagSlots[11] = { link = Link(300509, "Tome of Echo: Frost Ward"), count = 1 }
+    BagsChanged()
+    local unsure = ns.DB.sightings[300509] and ns.DB.sightings[300509][1]
+    Check(unsure and not unsure.mob and unsure.cands and #unsure.cands == 2 and unsure.cands[1].name == "Blazing Ember",
+        "a weak clue only: no mob, both candidates kept, the likeliest first")
+    Check(ns.WorldMap.MobsText(ns.Net.Locations(300509)[1]) == format(ns.L.SourceCandidates, "Blazing Ember / Crystalsong Wisp"),
+        "shown as 'one of' the candidates")
+    ns.Catalog.DropHint = savedHint
+    bagSlots[9], bagSlots[10], bagSlots[11] = nil, nil, nil
+    BagsChanged()
+    ns.DB.sightings[300450], ns.DB.sightings[300508], ns.DB.sightings[300509] = nil, nil, nil
+    ns.Fire("SIGHTINGS_CHANGED")
+    Advance(2)
+end
 
 Fire("PLAYER_ENTERING_WORLD")
 Kill(wolfGUID, "Snowblind Wolf")
@@ -1558,6 +1524,58 @@ else
     Check(baneRow and not baneRow.travel:IsEnabled(), "without ProjectEbonhold: teleport button disabled")
     Check(ns.Sources.Show(300569) >= 3 and not EbonTomeHunterSourcesListRow1.tp:IsEnabled(), "Sources: no TP either")
     EbonTomeHunterSourcesFrame:Hide()
+end
+
+-- --- EbonBuilds' Tome Atlas (its saved data, read where it is, never written) ------------------
+do
+    local SEP = string.char(31)   -- EbonBuilds' separator between the mob and the zone
+    EbonBuildsDB = {
+        tomeAtlas = {
+            [300450] = { name = "Tome of Echo: Insulated Soul", sources = {
+                ["Venture Co. Shredder" .. SEP .. "Stonetalon Mountains"] = 12,
+                ["Unknown" .. SEP .. "Stonetalon Mountains"] = 2,
+                ["Ignis the Furnace Master" .. SEP .. "Ulduar"] = 5,
+                ["Sandfury Hideskinner" .. SEP .. "Tanaris"] = 3,
+                ["Bad|cffff0000Mob" .. SEP .. "Durotar"] = 1,
+            } },
+            [300569] = { name = "Tome of Echo: Beast Bane", sources = { ["Sinewy Wolf" .. SEP .. "Crystalsong Forest"] = 4 } },
+        },
+        tomeAtlasPinCoords = { ["Stonetalon Mountains"] = { ["Tome of Echo: Insulated Soul"] = { x = 0.6, y = 0.4, n = 3 } } },
+    }
+    Advance(61)   -- (EbonBuilds records drops while we play: its atlas is read again when it changes)
+    local function AtlasPlaces(itemId)
+        local out = {}
+        for _, loc in ipairs(ns.WorldMap.Locations(ns.Catalog.Get(itemId))) do
+            if loc.source == "atlas" then out[loc.mobs and loc.mobs[1] or "?"] = loc end
+        end
+        return out
+    end
+    local atlas = AtlasPlaces(300450)
+    local shredder, ignis = atlas["Venture Co. Shredder"], atlas["Ignis the Furnace Master"]
+    Check(shredder and shredder.mapFile == "StonetalonMountains" and shredder.onMap and shredder.count == 12
+        and math.abs(shredder.x - 0.6) < 0.001, "EbonBuilds atlas: the zone map, and the point EbonBuilds noted")
+    Check(ignis and not ignis.onMap and ignis.placeName == "Ulduar", "a raid source: its place, no map point")
+    Check(not atlas["?"], "a source without mob, in a zone another source gives: left out")
+    Check(atlas["Badcffff0000Mob"] and not atlas["Bad|cffff0000Mob"], "no escape sequence taken from its data")
+    Check(next(AtlasPlaces(300569)) == nil, "a mob another source of the tome lists already: not repeated")
+    Check(ns.Hints.KnownSources(300450)["venture co. shredder"], "its mobs are known sources (Greedy Scavenger)")
+    Check(ns.Sources.Show(300450) > 0, "Sources window of the tome")
+    local told = false
+    for i = 1, 8 do
+        local r = _G["EbonTomeHunterSourcesListRow" .. i]
+        if r and r:IsShown() and (r.title:GetText() or ""):find(format(ns.L.SourceAtlas, 12), 1, true) then told = true end
+    end
+    Check(told, "the Sources window tells the atlas and how many drops it saw")
+    EbonTomeHunterSourcesFrame:Hide()
+    if T.Available() then
+        local near = atlas["Sandfury Hideskinner"] and T.Nearest(atlas["Sandfury Hideskinner"])
+        Check(near and near.approx and near.checkpoint and near.checkpoint.id == 39,
+            "only its zone known: the teleport aims at the middle of Tanaris (Gadgetzan)")
+        Check(T.FormatDistance(120, true) == "~" .. format(ns.L.TravelYards, 120), "an approximate distance shows '~'")
+    end
+    EbonBuildsDB = nil
+    Advance(61)
+    Check(next(AtlasPlaces(300450)) == nil, "EbonBuilds gone: its sources too")
 end
 
 -- --- Sending a wishlist to a player (addon whisper) ------------------------------------------

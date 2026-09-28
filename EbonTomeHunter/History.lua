@@ -24,13 +24,15 @@ function H.Entries(mineOnly)
         for _, r in ipairs(places) do
             local mine = r.by == me or (type(r.finders) == "table" and r.finders[me])
             if not mineOnly or mine then
-                local others = 0
-                for name in pairs(type(r.finders) == "table" and r.finders or {}) do
-                    if name ~= r.by then others = others + 1 end
-                end
                 local zone, sub = tostring(r.zone or ""):match("^([^:]*):?(.*)$")
+                local candidates
+                if not r.mob and type(r.cands) == "table" then
+                    candidates = {}
+                    for i, c in ipairs(r.cands) do candidates[i] = c.name end
+                end
                 out[#out + 1] = {
-                    itemId = itemId, at = tonumber(r.at) or 0, by = r.by, others = others, mob = r.mob,
+                    itemId = itemId, at = tonumber(r.at) or 0, by = r.by, mob = r.mob, candidates = candidates,
+                    others = math.max(0, ns.Net.FinderCount(r) - 1),
                     place = (sub and sub ~= "") and (zone .. " - " .. sub) or (zone ~= "" and zone or L.LocationUnknown),
                 }
             end
@@ -68,7 +70,10 @@ local function UpdateRow(row, entry)
     row.tome:SetTextColor(r, g, b)
     row.who:SetText((entry.by or "?") .. (entry.others > 0 and (" |cff888888+" .. entry.others .. "|r") or ""))
     row.where:SetText(entry.place)
-    row.mob:SetText(entry.mob or ("|cff888888" .. L.SourceNoMob .. "|r"))
+    local mob = entry.mob
+        or (entry.candidates and format(L.SourceCandidates, table.concat(entry.candidates, " / ")))
+        or L.SourceNoMob
+    row.mob:SetText(entry.mob and mob or ("|cff888888" .. mob .. "|r"))
 end
 
 function H.Refresh()

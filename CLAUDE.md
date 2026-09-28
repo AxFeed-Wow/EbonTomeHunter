@@ -12,7 +12,8 @@ farmer les tomes d'Echo** de Project Ebonhold (serveur WotLK 3.3.5a « Rogue-Lit
 - tomes déjà appris ;
 - lieux de drop sur la carte du monde et téléportation au checkpoint le plus proche des monstres ;
 - liens Wowhead (WotLK) des monstres ;
-- réseau caché entre utilisateurs qui partage les lieux de drop ;
+- réseau entre joueurs qui partage les lieux de drop, par **EbonAPI** (addon de Siphelis, installé à
+  part) ; sources de l'atlas d'EbonBuilds lues en jeu ;
 - alertes de loot (y compris le familier *Greedy Scavenger*) ;
 - partage de wishlist ;
 - tutoriel en jeu.
@@ -50,7 +51,10 @@ docs/                     documentation détaillée (index ci-dessous)
 
 1. Python 3.10+ puis `pip install lupa mpyq` (`lupa` : Lua 5.1 du validateur ; `mpyq` : lecture
    des archives MPQ du client, seulement pour l'extraction de données).
-2. `python tools/check.py` → doit afficher `ALL CHECKS PASSED`. C'est l'état de référence.
+2. `python tools/check.py` → doit afficher `ALL CHECKS PASSED`. C'est l'état de référence. Les
+   tests réseau à plusieurs joueurs demandent EbonAPI **présent sur la machine** (`EBONAPI_DIR`,
+   `../ModelAddonsEbonhold/EbonAPI/EbonAPI`, ou l'addon installé dans le jeu) : `check.py` dit s'il
+   l'a trouvé. Sans lui (CI), seule la branche « sans EbonAPI » tourne.
 3. Dossier du jeu : par défaut `C:/ebonhold` (sinon variable d'environnement `WOW_DIR`, ou
    `--wow <dossier>` des outils). Demander à l'utilisateur s'il est ailleurs sur cette machine.
 
@@ -61,15 +65,20 @@ docs/                     documentation détaillée (index ci-dessous)
 2. **ProjectEbonhold en lecture seule** : passer par `ns.PE.Service/Call` (fail-closed), ne jamais
    écrire dans ses tables, ne jamais appeler `ProjectEbonhold.onEventReceived` (il écrase son handler).
    L'addon doit marcher (en mode dégradé) **sans** ProjectEbonhold : le validateur teste les deux cas.
-3. **Données d'EbonholdHub** (lieux de drop) : « All rights reserved » → lues en jeu à l'exécution,
-   **jamais copiées** dans ce dépôt.
+3. **Données d'EbonholdHub** (lieux de drop, « All rights reserved ») **et d'EbonBuilds** (atlas des
+   tomes, sans licence) : lues en jeu à l'exécution, **jamais copiées** dans ce dépôt ni modifiées.
+3 bis. **EbonAPI** (réseau) : licence PolyForm Strict → **jamais copié dans ce dépôt, jamais
+   modifié**, même pour un test ou un contournement ; les tests le chargent là où il est. C'est une
+   dépendance facultative : l'addon doit marcher sans lui (les lieux restent locaux). Un défaut
+   d'EbonAPI se contourne de notre côté ou se signale à son auteur.
 4. **Ne jamais commiter ni publier** : la source de ProjectEbonhold (`_extracted/`, locale),
    les SavedVariables / `WTF` de l'utilisateur, des noms de personnages ou de compte réels, les
-   données d'EbonholdHub. `.gitignore` couvre les dossiers ; relire les diffs quand même.
+   données d'EbonholdHub et d'EbonBuilds, le code d'EbonAPI. `.gitignore` couvre les dossiers ; relire les diffs quand même.
 5. **Tout texte affiché** passe par `ns.L.Clé`, avec la version anglaise ET française.
 6. **Un seul global public** : `EbonTomeHunter` (= `ns`), plus `EbonTomeHunterDB`,
    `EbonTomeHunterCharDB` (SavedVariables) et `SLASH_EBONTOMEHUNTER*`. Tout le reste est `local`.
-7. **Pas de bibliothèque externe** (Ace3, LibDBIcon…) : `Widgets.lua` fournit le kit d'UI.
+7. **Pas de bibliothèque embarquée** (Ace3, LibDBIcon…) : `Widgets.lua` fournit le kit d'UI. EbonAPI
+   n'est pas embarqué : c'est un addon à part (`## OptionalDeps`).
 8. **Actions à conséquences** (acheter, téléporter, envoyer des messages) : une à la fois, avec
    délai, jamais en combat quand c'est protégé, confirmation disponible en option.
 9. **Après chaque modification : `python tools/check.py`**. Il faut 0 erreur ET 0 avertissement, en
@@ -124,9 +133,20 @@ Dépôt : **github.com/AxFeed-Wow/EbonTomeHunter** (compte `gh` : AxFeed-Wow). D
 - Nom : EbonTomeHunter, commandes `/eth` et `/tomehunter`. Licence MIT, auteur affiché **AxFeed-Wow**.
 - Présentation GitHub calquée sur AxFeed-Wow/EbonholdAddonManager (README bilingue, CONTRIBUTING,
   SECURITY, CI). Les mises à jour automatiques passent par ce logiciel, pas par l'addon.
+- **Réseau par EbonAPI** (2026-09-28, à la place du canal caché propre des 2.x) : un jeu de données
+  EbonAPI par tome, fusionné pareil sur chaque client ; incompatible avec les 2.x (3.0.0). EbonAPI
+  garde et relaie les données : c'est lui qui rend le réseau permanent, pas une base livrée avec
+  l'addon.
 - Limite des 10 canaux de discussion de WoW (« You can only be in 10 channels at a time. ») : quand
-  le personnage est déjà dans 10 canaux, le réseau ne rejoint pas son canal caché. Décision : ne pas
-  contourner, le signaler comme limite connue (README, `docs/FEATURES.md`).
+  le personnage est déjà dans 10 canaux, EbonAPI ne rejoint pas son canal. Décision : ne pas
+  contourner, le signaler comme limite connue (README, `docs/FEATURES.md`). EbonAPI rejoint son canal
+  dès `PLAYER_LOGIN`, avant la restauration des canaux du joueur : limite connue, à signaler à son
+  auteur (on ne modifie pas EbonAPI).
+- Greedy Scavenger : le monstre se déduit des indices du serveur et du journal de combat, sinon le
+  lieu garde des candidats que les drops suivants réduisent ; enquête en jeu avec `/ethdev scav`.
+  Écarté : demander au joueur de laisser les tomes au sol.
+- Sources périmées : le seuil suit le taux de drop de la source (1 % laissé à la malchance), et un
+  seul drop remet la source bonne.
 - Téléportation **directe** au clic (la confirmation reste une option désactivée par défaut).
 - Réseau activé par défaut (sinon personne ne partagerait), désactivable dans les options.
 - Import des Echoes verrouillés **retiré** (jugé inutile) : ne pas le remettre.

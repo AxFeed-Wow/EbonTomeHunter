@@ -1,6 +1,6 @@
 """Validate a WoW 3.3.5a addon for Project Ebonhold -- without starting the game.
 
-    python validate_addon.py <AddonFolder> [--no-smoke] [--strict]
+    python validate_addon.py <AddonFolder> [--no-smoke] [--strict] [--with <OtherAddonFolder>]...
 
 Checks, in order:
   1. TOC      : Interface 30300, Title, every listed file exists (exact case), no
@@ -17,6 +17,10 @@ Checks, in order:
                 every slash command with "" -> runtime errors reported.
 
 Set WOW_LOCALE=frFR to boot the mock client in another locale.
+--with <folder> loads another addon first (a dependency such as EbonAPI, read where it is,
+never copied) in the pass with ProjectEbonhold. The scenario can then start other players
+(Peers.Start / Stop / Run / Online): several mocked clients whose channel lines and addon
+whispers reach each other, moved by the same Advance().
 
 Exit code: 0 = no errors (warnings allowed), 1 = errors (or warnings with --strict).
 Requires: pip install lupa
@@ -389,8 +393,8 @@ def check_lua_file(lua, addon_dir, rel, whitelist, rep, all_sets, all_gets):
     if re.search(r"\bthis\b\s*[:.]", code) or re.search(r"\barg1\b", code):
         rep.warn(rel, "uses legacy implicit globals this/arg1 -- use handler parameters (self, event, ...)")
     for fn in GUARDED_FUNCS:
-        if re.search(r"%s\s*\(" % fn, code) and not re.search(
-            r"(?:type\s*\(\s*%s\s*\)|%s\s+and|if\s+not\s+%s|if\s+%s|pcall\s*\(\s*%s)" % ((fn,) * 5), code
+        if re.search(r"\b%s\s*\(" % fn, code) and not re.search(
+            r"(?:type\s*\(\s*%s\s*\)|\b%s\s+and\b|if\s+not\s+%s\b|if\s+%s\b|\bpcall\s*\(\s*%s\b)" % ((fn,) * 5), code
         ):
             rep.warn(rel, f"{fn} comes from the AwesomeWotLK client extension -- guard it "
                           f"(if {fn} then ... end) so the addon still works on a stock client")
@@ -415,7 +419,7 @@ def named_frames(addon_dir):
             if low.endswith(".lua"):
                 names.update(re.findall(r"""CreateFrame\s*\(\s*["'][A-Za-z]+["']\s*,\s*["']([A-Za-z_][A-Za-z0-9_]*)["']""", text))
             else:
-                names.update(re.findall(r'name="([A-Za-z_][A-Za-z0-9_]*)"', text))
+                names.update(re.findall(r'\bname="([A-Za-z_][A-Za-z0-9_]*)"', text))
     return names
 
 
@@ -470,9 +474,16 @@ def check_xml(addon_dir, rep):
 
 
 # --------------------------------------------------------------------------- smoke test
-def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold, own=()):
-    """Boot the addon in a fresh mocked client. Pass 1 has ProjectEbonhold, pass 2 does not."""
-    label = "SMOKE+PE" if with_ebonhold else "SMOKE-noPE"
+def saved_names(meta):
+    out = []
+    for key in ("SavedVariables", "SavedVariablesPerCharacter"):
+        out += [n for n in re.split(r"[,\s]+", meta.get(key, "")) if n]
+    return out
+
+
+def new_client(player, addons, whitelist, with_ebonhold, own, rep, label):
+    """A mocked client with its own Lua state. addons = [(name, dir, meta, files)] in load
+    order: the dependencies (--with) first, the addon last. Returns lua, mock."""
     lua = lua51.LuaRuntime(encoding=None, unpack_returned_tuples=True)
     with open(os.path.join(HERE, "wow_mock.lua"), "rb") as fh:
         lua.execute(fh.read())
@@ -487,12 +498,15 @@ def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold
     if os.path.isfile(const_path):
         with open(const_path, "rb") as fh:
             mock.SetConstants(fh.read())
-    for key, value in meta.items():
-        mock.meta[key.encode()] = value.encode()
-    for key in ("SavedVariables", "SavedVariablesPerCharacter"):
-        for n in re.split(r"[,\s]+", meta.get(key, "")):
-            if n:
-                mock.saved[n.encode()] = True
+    mock.playerName = player.encode()
+    for name, _, meta, _ in addons:
+        table = lua.table()
+        for key, value in meta.items():
+            table[key.encode()] = value.encode()
+            mock.meta[key.encode()] = value.encode()   # the last one (the addon) wins
+        mock.metaOf[name.encode()] = table
+        for n in saved_names(meta):
+            mock.saved[n.encode()] = True
     for n in own:
         mock.own[n.encode()] = True
     locale = os.environ.get("WOW_LOCALE")
@@ -502,18 +516,122 @@ def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold
         mock.InstallEbonhold()
     else:
         mock.RemoveEbonhold()
-    ns_holder = mock.NewNamespace()
-    for rel in files:
-        if not rel.lower().endswith(".lua"):
-            continue
-        path = os.path.join(addon_dir, rel)
-        if not os.path.isfile(path):
-            continue
-        raw, _ = read_source(path)
-        err = mock.LoadFile(raw, rel.encode(), addon_name.encode(), ns_holder)
-        if err:
-            rep.error(f"{label} {rel}", "error while loading: " + err.decode("utf-8", "replace"))
-    errs = mock.Boot(addon_name.encode())
+    for name, addon_dir, _, files in addons:
+        ns_holder = mock.NewNamespace()
+        for rel in files:
+            if not rel.lower().endswith(".lua"):
+                continue
+            path = os.path.join(addon_dir, rel)
+            if not os.path.isfile(path):
+                continue
+            raw, _ = read_source(path)
+            err = mock.LoadFile(raw, rel.encode(), name.encode(), ns_holder)
+            if err:
+                rep.error(f"{label} {name}/{rel}", "error while loading: " + err.decode("utf-8", "replace"))
+    return lua, mock
+
+
+class Network:
+    """Several mocked clients whose channel lines and addon whispers reach each other. The
+    first one runs the scenario; its Advance() moves every client by the same steps."""
+
+    def __init__(self, rep, label, deps, main, whitelist, own):
+        self.rep, self.label = rep, label
+        self.deps, self.main_addon, self.whitelist, self.own = deps, main, whitelist, own
+        self.clients = {}   # lowercase player name -> (player, lua, mock)
+        self.saved = {}     # player -> saved data of its last session (Lua source)
+        self.errors_seen = {}
+
+    def link(self, lua, mock, driver):
+        net = self
+
+        def whisper(sender, target, prefix, msg):
+            other = net.clients.get(bytes(target).decode("utf-8", "replace").lower())
+            if other and other[2].online:
+                other[2].DeliverWhisper(prefix, msg, sender)
+            else:
+                mock.NotFound(target)
+
+        def channel(sender, name, msg):
+            for _, _, other in list(net.clients.values()):
+                if other is not mock:
+                    other.DeliverChannel(name, sender, msg)
+
+        def step(dt):
+            if not driver:
+                return
+            for _, _, other in list(net.clients.values()):
+                if other is not mock:
+                    other.Step(dt)
+
+        mock.link = lua.table_from({b"Whisper": whisper, b"Channel": channel, b"Step": step})
+
+    def add(self, player, lua, mock, driver=False):
+        self.link(lua, mock, driver)
+        self.clients[player.lower()] = (player, lua, mock)
+
+    def collect(self, player, mock):
+        errs = mock.errors
+        for i in range(1, len(errs) + 1):
+            text = errs[i].decode("utf-8", "replace")
+            key = (player, text)
+            if key not in self.errors_seen:
+                self.errors_seen[key] = True
+                self.rep.error(f"{self.label} player {player}", text)
+
+    # --- the Peers table of the scenario ---------------------------------------------
+    def start(self, player, kind=b"full"):
+        player = bytes(player).decode("utf-8", "replace")
+        if player.lower() in self.clients:
+            return False
+        addons = list(self.deps) + ([self.main_addon] if bytes(kind or b"full") == b"full" else [])
+        lua, mock = new_client(player, addons, self.whitelist, True, self.own, self.rep, f"{self.label} player {player}")
+        if player in self.saved:
+            mock.Restore(self.saved[player])
+        self.add(player, lua, mock)
+        mock.Login(lua.table_from([a[0].encode() for a in addons]))
+        return True
+
+    def stop(self, player):
+        player = bytes(player).decode("utf-8", "replace")
+        entry = self.clients.pop(player.lower(), None)
+        if not entry:
+            return False
+        _, lua, mock = entry
+        mock.Logout()
+        names = [n for a in self.deps + [self.main_addon] for n in saved_names(a[2])]
+        self.saved[player] = mock.Serialize(lua.table_from([n.encode() for n in names]))
+        self.collect(player, mock)
+        return True
+
+    def run(self, player, code):
+        entry = self.clients.get(bytes(player).decode("utf-8", "replace").lower())
+        if not entry:
+            return None
+        result = entry[2].RunCode(code, f"player {entry[0]}".encode())
+        self.collect(entry[0], entry[2])
+        return result[1] if isinstance(result, tuple) and len(result) > 1 else None
+
+    def online(self, player, on):
+        entry = self.clients.get(bytes(player).decode("utf-8", "replace").lower())
+        if entry:
+            entry[2].online = bool(on)
+        return entry is not None
+
+
+def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold, own=(), deps=()):
+    """Boot the addon in a fresh mocked client. Pass 1 has ProjectEbonhold (and the --with
+    addons), pass 2 has neither."""
+    label = "SMOKE+PE" if with_ebonhold else "SMOKE-noPE"
+    main = (addon_name, addon_dir, meta, files)
+    deps = list(deps)
+    lua, mock = new_client("Tester", deps + [main], whitelist, with_ebonhold, own, rep, label)
+    if deps:
+        net = Network(rep, label, deps, main, whitelist, own)
+        net.add("Tester", lua, mock, driver=True)
+        mock.peers = lua.table_from({b"Start": net.start, b"Stop": net.stop, b"Run": net.run, b"Online": net.online})
+        rep.info(label, "with " + ", ".join(d[0] for d in deps) + ": other players can join the scenario (Peers)")
+    errs = mock.Boot(addon_name.encode(), lua.table_from([d[0].encode() for d in deps]))
     scenario = os.path.join(addon_dir, "tests", "scenario.lua")
     if os.path.isfile(scenario):
         with open(scenario, "rb") as fh:
@@ -521,19 +639,48 @@ def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold
         rep.info(label, "tests/scenario.lua executed")
     for i in range(1, len(errs) + 1):
         rep.error(label, errs[i].decode("utf-8", "replace"))
+    if deps:
+        for player, _, other in list(net.clients.values()):
+            if other is not mock:
+                net.collect(player, other)
     notes = mock.notes
     for i in range(1, len(notes) + 1):
         rep.info(label, notes[i].decode("utf-8", "replace"))
 
 
+def load_dependency(path, rep):
+    """An addon to load before the one validated (--with <folder>), e.g. EbonAPI: read where it
+    is, never copied. Returns (name, dir, meta, files) or None."""
+    path = os.path.abspath(path)
+    name = os.path.basename(os.path.normpath(path))
+    toc = os.path.join(path, name + ".toc")
+    if not os.path.isfile(toc):
+        rep.error("WITH", f"{path}: no {name}.toc")
+        return None
+    meta, files = parse_toc(toc)
+    return name, path, meta, files
+
+
 # --------------------------------------------------------------------------- main
 def main(argv):
-    args = [a for a in argv if not a.startswith("--")]
+    with_dirs, args, i = [], [], 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--with" and i + 1 < len(argv):
+            with_dirs.append(argv[i + 1])
+            i += 2
+            continue
+        if a.startswith("--with="):
+            with_dirs.append(a.split("=", 1)[1])
+        elif not a.startswith("--"):
+            args.append(a)
+        i += 1
     if len(args) != 1:
         print(__doc__)
         return 2
     addon_dir = os.path.abspath(args[0])
     rep = Report()
+    deps = [d for d in (load_dependency(p, rep) for p in with_dirs) if d]
     whitelist = load_whitelist()
     lua = lua51.LuaRuntime(encoding=None, unpack_returned_tuples=True)
 
@@ -559,7 +706,7 @@ def main(argv):
         rep.info("SMOKE", "skipped: the addon has hard ## Dependencies that the mock cannot provide")
     elif "--no-smoke" not in argv and not getattr(rep, "syntax_failed", False)             and not any(e.startswith("TOC:") for e in rep.errors):
         own = set(all_sets)
-        smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold=True, own=own)
+        smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold=True, own=own, deps=deps)
         smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold=False, own=own)
 
     print(f"=== {addon_name} ===")

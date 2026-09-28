@@ -1,6 +1,6 @@
 # Architecture du code
 
-Addon Lua 5.1 pour le client WotLK 3.3.5a. Environ 7 500 lignes réparties en 24 modules, un
+Addon Lua 5.1 pour le client WotLK 3.3.5a. Environ 9 300 lignes réparties en 28 modules, un
 fichier par responsabilité. Chaque fichier reçoit `local addonName, ns = ...` : `ns` est la table
 partagée entre tous les fichiers de l'addon, exposée en global sous le nom `EbonTomeHunter`
 (macros, autres addons, tests).
@@ -28,15 +28,22 @@ plus tard (clics, évènements) peuvent viser n'importe quel module.
 | 14 | `Wowhead.lua` | liens Wowhead WotLK, ids de PNJ appris `ns.Wowhead` | UPDATE_MOUSEOVER_UNIT, PLAYER_TARGET_CHANGED | CATALOG_CHANGED |
 | 15 | `Travel.lua` | téléportation au checkpoint le plus proche `ns.Travel` | | |
 | 16 | `Sources.lua` | fenêtre Sources (monstres, TP, Wowhead) `ns.Sources` | | CATALOG_CHANGED |
-| 17 | `Net.lua` | réseau caché entre utilisateurs `ns.Net` | CHAT_MSG_CHANNEL | LOGIN, SETTINGS_CHANGED → SIGHTINGS_CHANGED |
-| 18 | `Comm.lua` | envoi direct de wishlist (chuchotement d'addon) `ns.Comm` | CHAT_MSG_ADDON (préfixe ETH) | |
-| 19 | `Loot.lua` | tomes obtenus : alertes + lieu de drop `ns.Loot` | LOOT_OPENED, LOOT_CLOSED, CHAT_MSG_LOOT, COMBAT_LOG_EVENT_UNFILTERED, BAG_UPDATE, PLAYER_ENTERING_WORLD | BAGS_CHANGED, READY → CORPSE_OPENED, CORPSE_CLOSED, TOME_DROPPED |
-| 20 | `Evidence.lua` | sources qui ne lâchent plus leur tome `ns.Evidence` | | CORPSE_*, TOME_DROPPED, NET_MESSAGE, NET_PEER_ARRIVED, CATALOG_CHANGED → SIGHTINGS_CHANGED |
-| 21 | `UI.lua` | fenêtre principale `ns.UI` | | CATALOG_CHANGED, WISHLIST_CHANGED, PRICES_CHANGED, KNOWN_CHANGED, SCAN_STATE, SETTINGS_CHANGED, READY |
-| 22 | `AuctionHouse.lua` | onglets Tomes / Wishlist de l'HV `ns.AH` | AUCTION_HOUSE_SHOW, AUCTION_HOUSE_CLOSED | AUCTION_UI_LOADED, DATABASE_READY, SEARCH_RESULTS, … |
-| 23 | `Minimap.lua` | bouton de minimap | | LOGIN, SETTINGS_CHANGED |
-| 24 | `Options.lua` | panneaux Interface > AddOns (principal + « Réseau et alertes ») | | → SETTINGS_CHANGED |
-| 25 | `Tutorial.lua` | tour guidé `ns.Tutorial` | | READY |
+| 17 | `History.lua` | historique des drops `ns.History` | | SIGHTINGS_CHANGED |
+| 18 | `Net.lua` | réseau entre joueurs par EbonAPI `ns.Net` | (EbonAPI : READY, SHARE_RECEIVED, CHANNEL_JOINED / LOST ; opérations KQ / KA) | READY, LOGIN, SETTINGS_CHANGED → SIGHTINGS_CHANGED, NET_SYNC_STATE, NET_STATS |
+| 19 | `Atlas.lua` | sources de l'atlas d'EbonBuilds (lecture) `ns.Atlas` | | READY → SIGHTINGS_CHANGED |
+| 20 | `Comm.lua` | envoi direct de wishlist (chuchotement d'addon) `ns.Comm` | CHAT_MSG_ADDON (préfixe ETH) | |
+| 21 | `Hints.lua` | quel monstre a lâché un tome du Greedy Scavenger `ns.Hints` | UPDATE_MOUSEOVER_UNIT, PLAYER_TARGET_CHANGED, NAME_PLATE_UNIT_ADDED | |
+| 22 | `Loot.lua` | tomes obtenus : alertes + lieu de drop `ns.Loot` | LOOT_OPENED, LOOT_CLOSED, CHAT_MSG_LOOT, COMBAT_LOG_EVENT_UNFILTERED, BAG_UPDATE, PLAYER_ENTERING_WORLD | BAGS_CHANGED, READY → CORPSE_OPENED, CORPSE_CLOSED, TOME_DROPPED, TOME_OBTAINED |
+| 23 | `Evidence.lua` | sources qui ne lâchent plus leur tome `ns.Evidence` | | CORPSE_*, TOME_DROPPED, CATALOG_CHANGED → SIGHTINGS_CHANGED |
+| 24 | `UI.lua` | fenêtre principale `ns.UI` | | CATALOG_CHANGED, WISHLIST_CHANGED, PRICES_CHANGED, KNOWN_CHANGED, SCAN_STATE, SETTINGS_CHANGED, NET_SYNC_STATE, READY |
+| 25 | `AuctionHouse.lua` | onglets Tomes / Wishlist de l'HV `ns.AH` | AUCTION_HOUSE_SHOW, AUCTION_HOUSE_CLOSED | AUCTION_UI_LOADED, DATABASE_READY, SEARCH_RESULTS, … |
+| 26 | `Minimap.lua` | bouton de minimap | | LOGIN, SETTINGS_CHANGED |
+| 27 | `Options.lua` | panneaux Interface > AddOns (principal + « Réseau et alertes ») | | → SETTINGS_CHANGED |
+| 28 | `Tutorial.lua` | tour guidé `ns.Tutorial` | | READY |
+
+`## OptionalDeps` : EbonAPI, ProjectEbonhold, EbonholdHub, EbonCompletionist, EbonBuilds, Auctionator
+(chargés avant nous quand ils sont là). EbonAPI n'est **jamais** copié dans le dépôt ni modifié : sa
+licence (PolyForm Strict) l'interdit ; chaque joueur l'installe à part.
 
 ## Socle (Core.lua)
 
@@ -69,7 +76,12 @@ plus tard (clics, évènements) peuvent viser n'importe quel module.
 | `AUCTION_UI_LOADED` | | Blizzard_AuctionUI chargé (à la demande) |
 | `BAGS_CHANGED` | | sacs relus (1,5 s après un BAG_UPDATE) |
 | `CATALOG_CHANGED` | | catalogue reconstruit, tome découvert, lieux changés |
-| `SIGHTINGS_CHANGED` | | lieux du réseau changés (Net) → le catalogue les rattache |
+| `SIGHTINGS_CHANGED` | | lieux du réseau, preuves ou atlas d'EbonBuilds changés → le catalogue les rattache |
+| `NET_SYNC_STATE` | (expéditeur) | EbonAPI prêt, canal rejoint ou perdu, jeu de données reçu, réseau allumé / coupé |
+| `NET_STATS` | résultats | réponses à une demande de statistiques (15 s après) |
+| `CORPSE_OPENED` / `CORPSE_CLOSED` | guid, nom, npcId | butin d'un cadavre ouvert / fermé (Evidence) |
+| `TOME_DROPPED` | itemId, nom, npcId | un tome est tombé de ce monstre (pris ou non) |
+| `TOME_OBTAINED` | itemId, mob, npcId, candidats, raison, kills | tome du Greedy Scavenger et son attribution (addon de dev) |
 | `WISHLIST_CHANGED` | | ajout, retrait ou quantité changée |
 | `PRICES_CHANGED` | | prix enregistrés changés |
 | `SCAN_STATE` | | progression / état du moteur HV |
@@ -88,9 +100,11 @@ plus tard (clics, évènements) peuvent viser n'importe quel module.
 | `prices[itemId]` | `{ min, listings, at, seen, prevMin, hist = { {at, min, listings} ×20 max } }` : `min` = prix unitaire le plus bas vu (gardé quand le tome n'est plus en vente), `listings` = annonces au dernier passage (0 = pas en vente) |
 | `lastScan` | `time()` du dernier scan complet |
 | `tomes[nomNormalisé]` | tomes vus à l'HV / dans les sacs : `{ name, echo, itemId, firstSeen, lastSeen, seen, key }` |
-| `sightings[itemId]` | lieux de drop du réseau (12 max par tome) : `{ itemId, mapFile, x, y, npcId, mob, zone, at, by, finders = { [nom] = true } }` |
+| `sightings[itemId]` | lieux de drop du réseau (12 max par tome) : `{ itemId, mapFile, x, y, npcId, mob, zone, at, by, finders = { [nom] = true }, n, cands, inferred }` : `n` = nombre de joueurs dit par un jeu de données, `cands` = monstres possibles `{ npcId, name }` (4 max) d'un lieu sans monstre, `inferred` = monstre déduit de plusieurs drops |
 | `npcIds[nom de monstre en minuscules]` | id de PNJ appris (liens Wowhead) |
-| `lastSync`, `syncFrom` | synchronisation réseau : dernière demande, point de reprise d'un gros rattrapage |
+| `corpses`, `evidence`, `reports` | sources périmées (Evidence.lua) : nos compteurs, ceux des autres, les signalements |
+| `killStats[npcId]` | `{ n, name, last }` : créatures tuées par le joueur ou le groupe (600 max) |
+| `apiHint` | version pour laquelle « installez EbonAPI » a déjà été dit |
 | `tutorialDone` | version du tutoriel déjà vue (0 = jamais) |
 | `options` | toutes les options (voir `DB_DEFAULTS.options` dans Core.lua) |
 
@@ -109,8 +123,9 @@ identité son nom normalisé (chaîne) ; `ns.Key` accepte les deux.
 - Sans `TomeData`, repli sur `ProjectEbonhold.PerkDatabase` (lecture seule) et les lieux du hub.
 - Index : `byItem`, `bySpell` (toutes les variantes d'Echo), `byName`, `byTomeName` (toutes les
   graphies), `byEchoKey`.
-- `AttachSightings(row)` : `locations` = lieux statiques + lieux du réseau (`Net.Locations`), ceux
-  qui ont un point sur la carte d'abord ; `location` = le premier.
+- `AttachSightings(row)` : `locations` = lieux statiques (sinon boss de raid) + lieux du réseau
+  (`Net.Locations`) + sources de l'atlas d'EbonBuilds que les autres ne citent pas
+  (`Atlas.Locations`), ceux qui ont un point sur la carte d'abord ; `location` = le premier.
 - `LearnTome(name, itemId)` : tome vu à l'HV ou dans les sacs, gardé dans `DB.tomes` ;
   `AddLearnedRow` crée une ligne pour un tome inconnu.
 - `MigrateKeys()` convertit les clés des anciennes versions (id d'Echo, nom) en item id.
@@ -122,6 +137,11 @@ identité son nom normalisé (chaîne) ; `ns.Key` accepte les deux.
 - **Scan complet** : requête « Tome of Echo », 60 pages max. Les annonces sont reliées à leur tome
   par l'item id du lien, le nom ne sert qu'en repli. On garde le prix unitaire le plus bas et le
   nombre d'annonces. Après un scan **complet**, les tomes absents passent à « pas en vente ».
+- **Annonces sans nom** : `GetAuctionItemInfo` renvoie un nom `nil` tant que le client n'a pas les
+  données de l'objet (FrameXML les cache : « Bug 145328 ») ; `AUCTION_ITEM_LIST_UPDATE` revient
+  quand elles arrivent. La page est relue toutes les 0,5 s pendant 3 s au plus (`WaitForNames`) ;
+  après, le travail est `partial` : un scan ne passe pas les absents à « pas en vente »
+  (`L.ScanPartial` dans le chat), une recherche exacte n'enregistre pas de prix.
 - **Recherche exacte** d'un tome : 5 pages max. Elle ne garde que les annonces de ce tome (la
   recherche par nom est une sous-chaîne) et les trie par prix unitaire, les enchères sans achat
   immédiat en dernier. Résultats dans `Scan.results[itemId]`.
@@ -155,6 +175,8 @@ ProjectEbonhold), quand les sacs changent et à `READY`.
     `MapData.maps[file]`.
 - `MapPosition(info, map, wx, wy)` donne la position sur une carte du jeu.
 - `BestZone(loc)` choisit la carte de zone qui montre le mieux un lieu.
+- `TravelPosition(loc)` : `WorldPosition`, sinon le centre de la carte de zone `loc.mapFile` (source
+  de l'atlas sans point) avec un 4e retour `true` (approximatif).
 - **Marqueurs** : sur `WorldMapButton`, une étoile pulsante pour le tome localisé et un rond par lieu
   de chaque tome de la wishlist. Clic : la fenêtre ; Maj : Sources ; Ctrl : téléportation.
 - **Localiser** : ouvre la carte (`SetMapByID`, repli `SetMapZoom`) et passe au lieu suivant à
@@ -175,8 +197,11 @@ ProjectEbonhold), quand les sacs changent et à `READY`.
     est dédoublonnée.
 - **Travel, calcul** :
   - `Nearest(loc)` : checkpoint débloqué le plus proche sur le même continent (à vol d'oiseau), plus
-    un checkpoint encore plus proche mais verrouillé.
-  - `Sources(itemId)` : une entrée par monstre de chaque lieu, triée.
+    un checkpoint encore plus proche mais verrouillé ; `approx` quand la position est le centre de
+    la zone (`FormatDistance(m, approx)` ajoute « ~ »).
+  - `Sources(itemId)` : une entrée par monstre de chaque lieu, triée (rang 1 : checkpoint ; 1,5 :
+    checkpoint depuis le centre de la zone ; 2 : pas de checkpoint sur ce continent ; 3 : sans
+    position ; +3 lieu réseau vieux de 90 jours ; +6 source périmée).
   - `GoBest` vise la source au checkpoint le plus proche. Il refuse si le joueur est déjà plus près
     d'une source que tout checkpoint.
   - `GoTo` exécute `UseCheckpoint(id)` : jamais en combat, démontage au sol, une demande toutes les
@@ -186,7 +211,9 @@ ProjectEbonhold), quand les sacs changent et à `READY`.
 Un tome peut arriver de deux façons.
 1. **Fenêtre de butin** : la ligne « You receive loot » arrive. Le mob est l'unité morte survolée
    (cadavre cliqué), sinon la cible morte, capturée à LOOT_OPENED. La source n'est valable que si la
-   fenêtre est ouverte, ou fermée depuis 5 s au plus.
+   fenêtre est ouverte, ou fermée depuis 5 s au plus. Dès LOOT_OPENED, chaque tome présent dans les
+   emplacements (`GetLootSlotLink`) est envoyé comme lieu de drop et émet `TOME_DROPPED`, pris ou
+   non (sacs pleins, jet gagné par un autre) ; le ramasser ensuite ne renvoie rien (même lieu).
 2. **Greedy Scavenger**, le familier d'Ebonhold : il ramasse lui-même et dépose dans les sacs **sans
    aucune ligne de chat**.
    - **Détection** : en comparant le nombre de tomes des sacs 0 à 4 à chaque `BAGS_CHANGED`. Sont
@@ -196,94 +223,108 @@ Un tome peut arriver de deux façons.
        métier, quête, gossip, boutique, achat, extraction ;
      - les 10 s qui suivent un écran de chargement ;
      - les objets déjà annoncés par leur ligne de chat (pas de double alerte).
-   - **Mob** : le journal de combat retient les créatures touchées par soi ou le groupe puis mortes
-     (`UNIT_DIED`). Si toutes les morts de la dernière minute sont le même mob, c'est lui ; sinon le
-     lieu seul est envoyé. La position est celle du joueur.
+   - **Mob** : le journal de combat retient les créatures touchées par soi ou le groupe, ou qui nous
+     attaquent, puis mortes (`UNIT_DIED`), avec les sorts qu'on les a vues lancer (`SPELL_*`, 16 max
+     par créature). `Hints.Attribute` choisit parmi les morts de la dernière minute ; la position est
+     celle du joueur.
 
-`Loot.Obtained(itemId)` déclenche l'alerte wishlist, puis `Net.Report` avec la source.
+`Loot.Obtained(itemId)` déclenche l'alerte wishlist, puis `Net.Report` avec la source (ou les
+candidats), et émet `TOME_OBTAINED` pour l'addon de dev.
 
-### Net.lua (réseau caché)
-- **Canal** : le canal de discussion `ebontomehunter` est rejoint 10 s après la connexion et retiré
-  des fenêtres de chat. Des filtres masquent ses messages et ses notices. Son numéro est revérifié
-  avant chaque envoi.
-- **Format** : `ETHN1~<type>~<charge>`, 240 octets max, jamais de `|`, coupures sans casser un
-  caractère UTF-8, un envoi toutes les 0,3 s.
-  - `D` : un drop, `itemId^mapFile^x^y^npcId^mob^zone^heure^trouveur^appris` (x et y de 0 à 1000).
-  - `Q` : demande de synchronisation, `qid^depuis`.
-  - `S` : réponse, `qid~suite~enreg;enreg;…`. qid `0` : lieux envoyés sans demande.
-  - `appris` (10e champ, depuis 2.1.0, ignoré par 2.0.0) : quand l'expéditeur a enregistré le lieu,
-    sur son horloge. Chaque lieu stocké a son `rx` (notre heure d'enregistrement, remise à jour quand
-    le lieu gagne un trouveur ou son mob) ; sans `rx` (données 2.0.0), on prend `at`.
-- **Réception** : validation (tome connu, positions de 0 à 1000, date plausible, date future ramenée
-  à maintenant).
-- **Même endroit** : même carte, moins de 4 % d'écart, même mob. Le lieu gagne alors un trouveur
-  (10 max). Un lieu sans mob fusionne avec le même endroit et récupère le mob s'il arrive ensuite.
-- **Boîte d'envoi** (`netOutbox`) : une trouvaille à nous, faite sans autre utilisateur entendu
-  depuis 30 min, y est gardée (encodée ; 50 max, 30 jours). Au premier message d'un utilisateur
-  absent depuis 30 min, elle part en `S` qid `0`. Couper le réseau la vide.
-- **Synchronisation** : 15 s après la connexion, au plus toutes les 10 min. La longueur du qid
-  distingue deux sortes de demande :
-  - **4 chiffres hexa (2.0.0)** : lieux *trouvés* après `depuis` (`at`), du plus ancien au plus
-    récent ; celui qui a le plus à envoyer répond en premier, les autres voient la réponse et se
-    taisent. Inchangé pour ne pas perturber la reprise des clients 2.0.0.
-  - **5 chiffres hexa (2.1.0)** : lieux *appris* après `depuis` (`rx`). Chaque répondant note les
-    lieux entendus dans les réponses à ce qid et, à son tour, n'envoie que ce qui manque.
-  - Notre `depuis` : `syncFrom` (reprise) ; sinon `syncedAt` − 10 min (début de notre dernière
-    synchro complète) ; sinon 0 si on n'a jamais demandé ; sinon (données 2.0.0) le lieu le plus
-    récent − 10 min.
-  - Réponses par 30 (sans couper une même seconde), drapeau « suite ». On reprend au plus bas point
-    atteint par les répondants qui avaient une suite (5 lots par session), `syncFrom` sert de reprise.
-  - Fin de session (4 s sans nouvelle partie, ou 12 s sans aucune réponse une fois la demande
-    partie) : ligne `NetSynced` si des lieux sont arrivés ; puis, si quelqu'un a répondu ou est en
-    ligne, envoi en qid `0` de nos lieux appris depuis `depuis`, avant la session, que personne n'a
-    cités (60 max, les plus récents ; un lieu n'est renvoyé que s'il a changé).
-  - Synchro inachevée (`syncedAt` < `lastSync`) : nouvelle demande quand un utilisateur absent
-    depuis 30 min se manifeste (5 s après, au plus une par minute, 10 par session de jeu).
-- **État** : `Net.IsJoined()` et `/eth net` regardent si le canal est vraiment rejoint (le jeu le
-  refuse au-delà de 10 canaux).
-- **Vérification** (`/eth net check`, type `H`, 2.2.0) : `r^qid` demande ; chaque client répond une
-  fois `a^qid^version^lieux^tomes^empreinte^dernier^trouvailles` après 0,5 à 3 s (`dernier` = `at`
-  le plus récent, `trouvailles` = lieux dont on est trouveur). Empreinte (`Net.Digest`) : clés
-  `tome:carte:npcId|mob` dédoublonnées, triées, hachées (même hachage que la chaîne de partage) ;
-  indépendante des coordonnées exactes. Rapport au bout de 6 s ; les pairs entendus depuis 30 min sans
-  réponse sont listés. Les versions antérieures ignorent `H`.
-- **Synchro complète** (`/eth net sync`) : `RequestSync(true, true)`, depuis 0, 20 lots au plus.
-- **Synchro automatique** : `Net.StartAutoSync()` (au premier LOGIN) relance `RequestSync(true)`
-  toutes les 900 s + 0 à 60 s, si le réseau est actif, le canal rejoint et aucune synchro en cours.
-- **État** (`Net.SyncState()`) : `off`, `nochannel`, `synced` (`syncedAt` il y a moins de 20 min),
-  `alone` (notre dernière synchro sans réponse, il y a moins de 20 min), sinon `stale`. `EndSession`
-  émet `NET_SYNC_STATE` ; `UI.RefreshSync` met à jour le bouton.
-- **Comparaison** (`/eth net compare <nom>`) : `H d^qid^nom` ; le joueur nommé (seul) répond
-  `H k^qid^partie^parties^trouvailles^dernier^clé,clé,…`, 20 clés par message, au plus toutes les
-  30 s. Clé courte d'un lieu : `<id du tome − 300000>.<hachage hexa de carte:mob>` (mod 65521).
-  Rapport quand toutes les parties sont là, ou au bout de 12 s.
-- **Statistiques** (type `H`, 2.2.0) : `t^qid` demande ; chaque client répond (au plus toutes les
-  30 s, après 1 à 5 s) `u^qid^partie^parties^total^npcId:n;…`, 60 créatures au plus, 20 par message.
-  `Net.RequestStats()` rassemble les réponses 15 s et émet `NET_STATS` { [nom] = { total, kills } }
-  (écouté par l'addon de dev). Compteurs : `Loot.CountKill` à chaque `UNIT_DIED` d'une créature
-  combattue par le joueur ou le groupe, `DB.killStats[npcId] = { n, name, last }`, 600 au plus.
-- **Version** (type `I`, 2.2.0) : `I~<version>` envoyé 6 s après l'entrée dans le canal. Une version
-  plus récente que la nôtre (au plus une majeure d'avance) → `NewVersion`, une fois par version. Une
-  version plus ancienne → on répond avec la nôtre après 1 à 5 s, sauf si quelqu'un d'autre a déjà
-  répondu une version ≥ la nôtre.
+### Hints.lua (Greedy Scavenger)
+- **Indice** : `H.Parse(texte)` transforme la phrase « Can be found on … » de ProjectEbonhold en test :
+  noms de créatures, sorts (anglais : listes par classe, soins, « stun », « caster dots »…), type
+  de créature, classes, mots du nom (éléments). `H.Matcher(itemId)` le met en cache par texte.
+- **Ce qu'on voit des monstres** : classe et type de créature (clé anglaise, noms localisés en
+  anglais, français, allemand, espagnol) par id de PNJ, appris au survol, au ciblage, et sur les
+  plaques de nom (`nameplateN`, unités du client Ebonhold ; `NAME_PLATE_UNIT_ADDED` et relecture des
+  40 premières toutes les 2 s en combat). 2000 PNJ au plus, pour la session.
+- **Score** (`H.Score`) : fort (3) nom de l'indice, sort de l'indice vu, bon type (−3 si autre
+  type) ; moyen (2) bonne classe (−1 si autre), source connue du tome (`H.KnownSources` : lieux et
+  noms de l'indice) ; faible (1) un mot de l'indice dans le nom.
+- **Attribution** (`H.Attribute`) : un seul monstre → lui ; sinon le meilleur s'il vaut au moins 2 et
+  dépasse strictement le suivant ; sinon jusqu'à 4 candidats, les mieux notés puis les plus récents
+  (un indice faible n'écarte personne).
+
+### Atlas.lua (atlas d'EbonBuilds)
+- Lit `EbonBuildsDB.tomeAtlas[itemId] = { name, sources = { ["Mob\031Zone"] = nombre } }` (sources
+  mises en commun entre utilisateurs d'EbonBuilds) et `EbonBuildsDB.tomeAtlasPinCoords[zone][nom du
+  tome] = { x, y, n }` (points de ses loots à lui). Jamais écrit.
+- `Atlas.Locations(itemId, connus)` : les 8 sources les plus vues dont le monstre n'est pas dans
+  `connus` ; une source « Unknown » seulement si aucune autre ne donne sa zone. Lieu : `source =
+  "atlas"`, `placeName` = zone, `mapFile` si le nom anglais de la zone est dans `MapData`, `x`, `y`
+  du point s'il existe, `count`, `notes`. Noms nettoyés de `|` et des contrôles, 60 octets.
+- Relu toutes les 60 s : une signature (nombre de sources, somme des nombres) qui change émet
+  `SIGHTINGS_CHANGED`.
+
+### Net.lua (réseau par EbonAPI)
+- **EbonAPI** (Siphelis) : addon à part, jamais copié ni modifié ici (licence). `Net.Connect()` au
+  chargement : `EbonAPI:NewAddon("EbonTomeHunter", 1, 0)` sous `pcall` (nil : absent ou trop ancien,
+  EbonAPI le dit), `Version(ns.version, URL)`, `ShareRule(Accept)`, écouteurs `SHARE_RECEIVED`,
+  `CHANNEL_JOINED`, `CHANNEL_LOST`, opérations de canal `KQ` / `KA`, et `READY` (collant). EbonAPI
+  rejoint un canal caché commun à ses addons (`ebonapi`) et ne le fait que si un addon s'en sert.
+- **Jeu de données par tome** `T<itemId>` : `lieu;lieu;…` (12 max, `Better` : plus de joueurs, puis
+  plus récent, puis texte), lieu = `itemId^mapFile^x^y^npcId^mob^zone^trouvé^trouveur^joueurs^candidats`
+  (x, y de 0 à 1000 ; `candidats` = `npcId:Nom,…` seulement sans mob, triés par id puis nom, 200
+  octets par lieu au plus). Noms nettoyés de `~^;|` et des caractères de contrôle, coupés sans casser
+  un caractère UTF-8.
+- **Publication** (`Publish` → `Flush` 3 s après, changements groupés) : si notre texte diffère de
+  celui qu'EbonAPI garde, `api:Share(nom, état, texte)` sous `pcall`. **État** = `max(time() × 1000,
+  état gardé + 1)` + somme de contrôle du texte (0 à 999) : deux textes différents publiés dans la
+  même seconde n'ont pas le même état (sinon aucun des deux clients ne prendrait l'autre).
+- **Règle** (`Accept`, appelée par EbonAPI chez le receveur) : seulement nos noms (`T` / `E` + id),
+  un état plus grand que le nôtre et pas plus d'un jour dans le futur (× 1000).
+- **Réception** (`SHARE_RECEIVED`, et à `Start` tout ce qu'EbonAPI garde) : `ImportPlaces` décode
+  chaque lieu (`Net.Decode` : pas de `|` ni de contrôle, au moins 9 champs, tome du catalogue, x et
+  y de 0 à 1000, date plausible ramenée à maintenant), `Net.Add` le fusionne, puis republie si notre
+  texte diffère du reçu (on sait plus). Alerte wishlist pour un lieu nouveau trouvé depuis moins d'1 h.
+- **Fusion** (`Net.Add`, `SameSpot`) : même carte, moins de 4 % d'écart, même monstre (ou candidats
+  compatibles). Le lieu gagne le trouveur (10 max) ou le nombre dit (`n`), la date la plus récente, le
+  monstre s'il manquait ; deux listes de candidats se réduisent à leur intersection (`Narrow`), un
+  seul restant devient le monstre (`inferred`). `Converge` rend les champs identiques sur tous les
+  clients : plus petit nom de trouveur, plus petit point (millièmes), texte de zone le plus long puis
+  le plus grand.
+- **Démarrage** (`Start`, quand EbonAPI et le catalogue sont prêts) : tout ce qu'EbonAPI garde est
+  fusionné (`NetReceived` s'il y a du nouveau), puis nos tomes et nos preuves sont publiés là où notre
+  texte diffère. Même chose quand le réseau est rallumé (`SETTINGS_CHANGED`).
+- **Sans EbonAPI** : les lieux restent locaux ; `NetNeedApi` une fois par version, 20 s après
+  `LOGIN` (`DB.apiHint`).
+- **État** (`Net.SyncState()`) : `off`, `noapi`, `joining` (canal pas encore rejoint), `online` ;
+  `Net.DatasetCount()` = nos jeux `T` gardés par EbonAPI. `Net.ForceSync()` (`/eth net sync`,
+  bouton) : `api:SyncShares()`, 30 s entre deux annonces. `Net.NewerVersion()` :
+  `api:AvailableUpdate()`.
+- **Statistiques** (`/ethdev stats`) : `api:Say("KQ", qid)` ; chaque client répond après 1 à 5 s, au
+  plus toutes les 30 s, `KA` `qid^total^npcId:n;…` (60 créatures ; EbonAPI découpe les longs messages
+  en plusieurs lignes). `Net.RequestStats()` rassemble les réponses 15 s et émet `NET_STATS`
+  { [nom] = { total, kills } }. Compteurs : `Loot.CountKill` à chaque `UNIT_DIED` d'une créature
+  combattue, `DB.killStats[npcId] = { n, name, last }`, 600 au plus.
 
 ### Evidence.lua (sources périmées)
 - **Source** = un monstre listé pour un tome (EbonholdHub, ou lieu du réseau). Clé du monstre :
   `#npcId` (même clé dans toutes les langues du client), sinon le nom en minuscules ; une source
   est cherchée sous ses deux clés.
-- **Nos cadavres** (`corpses[itemId@mob] = { n, since, drop }`) : à l'ouverture du butin d'un
-  cadavre (`CORPSE_OPENED`, GUID compté une seule fois) d'un monstre listé pour des tomes, chaque
-  tome non looté sur ce cadavre compte +1 à la fermeture (+5 s de grâce). Un tome looté remet son
-  compteur à 0 (`TOME_DROPPED`, même pour un monstre non listé). Le Greedy Scavenger n'est pas
-  compté (on ne sait pas quels cadavres il ramasse).
-- **Partage** (types inconnus de 2.0.0, ignorés) : `K` `itemId^mob^n^depuis^dernierDrop;…` tous les
-  25 cadavres, et `V` `itemId^mob^heure;…` (heure 0 = retrait) au clic. Tous nos compteurs (≥ 10) et
-  signalements repartent quand un utilisateur se manifeste (`NET_PEER_ARRIVED`, au plus toutes les
-  10 min). Reçus : `evidence` / `reports[clé][joueur]`, 50 joueurs max par source.
+- **Nos cadavres** (`corpses[itemId@mob] = { n, since, drop, total, drops, stamp }`) : à
+  l'ouverture du butin d'un cadavre (`CORPSE_OPENED`, GUID compté une seule fois) d'un monstre listé
+  pour des tomes, chaque tome absent de ce cadavre compte +1 (`n` et `total`) à la fermeture (+5 s de
+  grâce). Un tome looté, ou seulement présent dans la fenêtre de butin, remet `n` à 0 et compte un
+  drop (`drops`, `total` gardé : le taux de la source), même pour un monstre non listé
+  (`TOME_DROPPED`). Le Greedy Scavenger n'est pas compté (on ne sait pas quels cadavres il ramasse).
+- **Partage** : jeu de données EbonAPI `E<itemId>`, une ligne par source et par joueur,
+  `mob^joueur^n^depuis^dernierDrop^total^drops^signalement^tampon` (triées par mob puis joueur).
+  Notre ligne part tous les 25 cadavres, à chaque drop et à chaque signalement (`stamp` = maintenant,
+  `Net.PublishEvidence`). Reçu (`ImportShared`) : pour chaque (source, joueur), la ligne au tampon le
+  plus récent (la nôtre aussi : un nouvel ordinateur retrouve ses compteurs) ; refusées : `|` ou
+  contrôle, drops > total, valeurs ou dates impossibles. 50 joueurs max par source. Au-delà de
+  30 000 octets (EbonAPI prend 32 Ko par jeu), seules les lignes les plus récentes partent (tampon,
+  puis texte : le même choix sur chaque client).
 - **Verdict** : dernier drop connu = max(nos drops, ceux des autres, lieux du réseau de ce tome avec
   ce monstre). Ne comptent que les compteurs commencés après ce drop et les signalements postérieurs.
-  Périmée si cadavres ≥ 500 (un autre joueur pèse 250 au plus : il en faut deux, ou soi-même seul),
-  ou ≥ 3 signalements, ou notre propre signalement (pour nous seulement).
+  - **Seuil** (`E.Threshold`) : taux = (drops + 1) ÷ (cadavres + 200) sur l'historique de chaque
+    compteur (`total − n` : sans la série en cours, qu'on juge) ; seuil = ⌈ln 0,01 ÷ ln (1 − taux)⌉
+    borné à [500, 5000] (1 % laissé à la malchance).
+  - Périmée si cadavres ≥ seuil (un autre joueur pèse la moitié du seuil au plus : il en faut deux,
+    ou soi-même seul), ou ≥ 3 signalements, ou notre propre signalement (pour nous seulement).
+  - `E.Verdict` renvoie aussi `oneIn` (1 ÷ taux, affiché « d'habitude 1 sur N ») et le seuil.
 - **Effets** : `Travel.Sources` classe bonnes sources, puis lieux réseau vieux de plus de 90 jours,
   puis sources périmées (la TP vise la meilleure) ; `Catalog.AttachSightings` préfère un lieu dont
   tous les monstres ne sont pas périmés ; la fenêtre Sources grise la ligne avec la raison, et son
@@ -333,7 +374,8 @@ dont 157 avec un tome, tous dans `TomeData.lua`).
 
 - Tout accès à ProjectEbonhold passe par `ns.PE` et reste en lecture seule. L'addon est testé
   **avec et sans** ProjectEbonhold.
-- Les lieux d'EbonholdHub sont lus en jeu, jamais copiés.
+- Les lieux d'EbonholdHub et l'atlas d'EbonBuilds sont lus en jeu, jamais copiés ni modifiés.
+- EbonAPI est une dépendance facultative installée à part : jamais copiée, jamais modifiée (licence).
 - Le réseau et les chuchotements valident tout ce qu'ils reçoivent. Aucune donnée reçue n'est
   exécutée.
 - Les listes sont virtuelles (quelques lignes recyclées, jamais une frame par tome). Les frames ne
