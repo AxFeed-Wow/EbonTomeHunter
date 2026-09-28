@@ -1,10 +1,8 @@
 # Historique des versions
 
-## Prochaine version (non publiée)
+## 3.0.0 — 2026-09-28
 
-À publier en **3.0.0** : le réseau change complètement et n'est plus compatible avec les 2.x. Au
-moment de publier : renommer ce titre en `## 3.0.0 — AAAA-MM-JJ` et monter la version (Core.lua et
-.toc).
+Le réseau change complètement : il passe par EbonAPI et n'est plus compatible avec les 2.x.
 
 - **Réseau : passage par EbonAPI** ([Siphelis/EbonAPI](https://github.com/Siphelis/EbonAPI)), un
   addon à part que chaque joueur installe (Ebonhold Addon Manager ou GitHub). Sans lui, tout le reste
