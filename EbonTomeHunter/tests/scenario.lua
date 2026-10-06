@@ -727,8 +727,8 @@ do
     local best = hazardRow.location
     Check(best and best.mobs[1] == "Wastewander Bandit" and best.drops == 5 and math.abs(best.x - 0.2) < 0.001,
         "the mob seen dropping it the most (3 + 2) first, at its best spot, under the name most saw")
-    Check(hazardRow.locations[2].mobs[1] == "Wastewander Bandit" and hazardRow.locations[3].mobs[1] == "Dune Smuggler",
-        "its other spot next, under the same name, then the other mob")
+    Check(#hazardRow.locations == 2 and best.spots == 2 and hazardRow.locations[2].mobs[1] == "Dune Smuggler",
+        "one source per mob (its 2 spots in one), then the other mob")
     ns.DB.sightings = kept
     ns.SetOption("netEnabled", true)
     ns.Fire("SIGHTINGS_CHANGED")
@@ -1484,7 +1484,7 @@ if ProjectEbonhold then
     -- several sources (Hearthglen, Crystalsong...): the one seen dropping it (our loot in
     -- Crystalsong Forest) comes first, via its nearest checkpoint
     local best, sources = T.Best(300569)
-    Check(#sources >= 3 and best and best.near.checkpoint.id == 310 and (best.drops or 0) >= 1,
+    Check(#sources >= 2 and best and best.near.checkpoint.id == 310 and (best.drops or 0) >= 1,
         "Beast Bane: the source seen dropping it, via Dalaran, got " .. tostring(best and best.near.checkpoint.id))
     local unplaced, placedAfter = false, false
     for _, source in ipairs(sources) do
@@ -1526,7 +1526,7 @@ if ProjectEbonhold then
     shownMap = "CrystalsongForest"
     GetPlayerMapPosition = function(unit) return 0.49, 0.54 end
     Check(not T.GoBest(300569) and #usedCheckpoints == 2, "already closer than any checkpoint: no teleport")
-    Check(ns.Sources.Show(300569) >= 3 and EbonTomeHunterSourcesFrame:IsShown(), "Sources window")
+    Check(ns.Sources.Show(300569) >= 2 and EbonTomeHunterSourcesFrame:IsShown(), "Sources window")
     local first = EbonTomeHunterSourcesListRow1
     Check(first.item and first.item.near.checkpoint.id == 310 and first.tp:IsEnabled() and first.item.you
         and first.item.you < 150, "first source: Dalaran, with the player's own distance")
@@ -1657,7 +1657,7 @@ else
     Check(not T.Available() and not T.GoBest(300569) and ChatContains(ns.L.TravelNoPE), "without ProjectEbonhold: no teleport")
     local baneRow = RowOf(300569)
     Check(baneRow and not baneRow.travel:IsEnabled(), "without ProjectEbonhold: teleport button disabled")
-    Check(ns.Sources.Show(300569) >= 3 and not EbonTomeHunterSourcesListRow1.tp:IsEnabled(), "Sources: no TP either")
+    Check(ns.Sources.Show(300569) >= 2 and not EbonTomeHunterSourcesListRow1.tp:IsEnabled(), "Sources: no TP either")
     EbonTomeHunterSourcesFrame:Hide()
 end
 

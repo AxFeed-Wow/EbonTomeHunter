@@ -30,6 +30,10 @@
   plusieurs endroits d'une zone, ou nommé dans plusieurs langues (« Revenant lié à la terre » =
   Earthbound Revenant), additionne ses drops et s'affiche sous un seul nom ; son meilleur endroit
   passe en premier. Exemple, Elemental Slayer : Earthbound Revenant (11 joueurs) à Wintergrasp.
+- **Une source par monstre.** Un boss trouvé à tous les coins de sa salle (Sindragosa pour
+  Permeating Chill), ou listé à la fois par EbonholdHub, le réseau et l'atlas, n'apparaît plus
+  qu'une fois : tous ses drops, à son meilleur lieu (avec un point sur la carte, là où il a été vu le
+  plus). Le « vous êtes déjà à côté » de la téléportation compte toujours tous ses endroits.
 - Un lieu sans monstre ni point sur la carte (« Unknown location » d'EbonholdHub) n'est plus listé
   quand le tome a un autre lieu.
 - **Moins de calculs à la réception.** Un lieu ou un compteur reçu ne recalcule plus que les

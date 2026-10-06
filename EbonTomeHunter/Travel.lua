@@ -249,11 +249,20 @@ function T.PlayerPosition()
     return ns.WorldMap.WorldPosition({ mapFile = place.mapFile, x = place.x, y = place.y })
 end
 
--- Distance from the player to a source (nil: other continent, unknown position).
+-- Distance from the player to a source (nil: other continent, unknown position): to its place,
+-- or to another spot of the same mob (Catalog.lua lists a mob once, its other spots aside).
 function T.PlayerDistance(source, map, worldX, worldY)
     local near = source and source.near
-    if not (near and map and map == near.map) then return nil end
-    return Distance(worldX, worldY, near.worldX, near.worldY)
+    if not map then return nil end
+    local best = (near and map == near.map) and Distance(worldX, worldY, near.worldX, near.worldY) or nil
+    for _, spot in ipairs(source and source.loc and source.loc.otherSpots or {}) do
+        local spotMap, x, y = ns.WorldMap.WorldPosition(spot)
+        if spotMap == map then
+            local d = Distance(worldX, worldY, x, y)
+            if not best or d < best then best = d end
+        end
+    end
+    return best
 end
 
 -- "Plaguehound Runt (Eastern Plaguelands)"

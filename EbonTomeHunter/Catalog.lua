@@ -265,6 +265,54 @@ function Cat.AttachSightings(row)
         end
         loc.drops = drops
     end
+    -- one source per mob: a mob found at many spots (a raid boss: every corner of its room,
+    -- plus the raid's entrance), by several sources, is listed once, with all its drops, at its
+    -- best place: still dropping it, with a map point, where it was seen the most
+    local groups, keep = {}, {}
+    for i, loc in ipairs(list) do
+        local names = {}
+        for _, text in ipairs(type(loc.mobs) == "table" and loc.mobs or {}) do
+            for _, name in ipairs(ns.Wowhead.SplitMobs(text)) do names[#names + 1] = name end
+        end
+        local key = #names == 1 and ns.Evidence
+            and ns.Evidence.MobKey(names[1], type(loc.npcIds) == "table" and loc.npcIds[names[1]] or nil)
+        if key then
+            local group = groups[key]
+            if not group then
+                group = {}
+                groups[key] = group
+                keep[i] = group
+            end
+            group[#group + 1] = loc
+        else
+            keep[i] = true
+        end
+    end
+    local merged = {}
+    for i, loc in ipairs(list) do
+        local group = keep[i]
+        if group == true then
+            merged[#merged + 1] = loc
+        elseif group then
+            local best, drops, old = group[1], 0, true
+            for _, g in ipairs(group) do
+                drops, old = math.max(drops, g.drops), old and g.old
+                local better = (best.stale and not g.stale)
+                    or ((best.stale and true or false) == (g.stale and true or false)
+                        and (((g.onMap and 1 or 0) > (best.onMap and 1 or 0))
+                            or ((g.onMap and true or false) == (best.onMap and true or false)
+                                and (tonumber(g.seen) or 0) > (tonumber(best.seen) or 0))))
+                if better then best = g end
+            end
+            local others = {}
+            for _, g in ipairs(group) do
+                if g ~= best then others[#others + 1] = g end
+            end
+            best.drops, best.old, best.spots, best.otherSpots = drops, old or nil, #group, others
+            merged[#merged + 1] = best
+        end
+    end
+    list = merged
     -- the places that still drop the tome, the most farmed first, then those on the map
     table.sort(list, function(a, b)
         if a.stale ~= b.stale then return not a.stale end
