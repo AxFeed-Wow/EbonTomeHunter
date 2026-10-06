@@ -890,6 +890,7 @@ else
     Check(ns.DB.updateTold == "9.0.0" and ChatContains("9.0.0"), "the player is told in the chat")
     UI.RefreshSync()
     Check(button:GetText() == ns.L.SyncUpdate, "the network button says 'Update!'")
+    Check(EbonTomeHunterMinimapButton and EbonTomeHunterMinimapButton.badge:IsShown(), "a red dot on the minimap icon")
     Peers.Stop("Alice")
     Peers.Stop("Bob")
     Peers.Stop("Carol")

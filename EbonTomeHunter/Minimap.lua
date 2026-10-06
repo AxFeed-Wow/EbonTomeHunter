@@ -72,6 +72,13 @@ local function Build()
     icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
     icon:SetPoint("TOPLEFT", 7, -6)
 
+    -- a newer version is out (Net.lua): a small red dot on the icon, the tooltip says which
+    button.badge = button:CreateTexture(nil, "OVERLAY", nil, 7)
+    button.badge:SetSize(12, 12)
+    button.badge:SetTexture("Interface\\FriendsFrame\\StatusIcon-DnD")
+    button.badge:SetPoint("TOPRIGHT", -3, -3)
+    button.badge:Hide()
+
     button:SetScript("OnClick", function(self, mouseButton)
         if mouseButton == "RightButton" then
             if ns.OpenOptions then ns.OpenOptions() end
@@ -93,6 +100,7 @@ local function Refresh()
     if not button then Build() end
     UpdatePosition()
     if ns.Opt().minimap.hide then button:Hide() else button:Show() end
+    if ns.Net.NewerVersion() then button.badge:Show() else button.badge:Hide() end
 end
 ns.MinimapButtonRefresh = Refresh
 
@@ -104,4 +112,7 @@ end
 ns.On("LOGIN", Refresh)
 ns.On("SETTINGS_CHANGED", function(key)
     if key == "minimap" and button then Refresh() end
+end)
+ns.On("NET_SYNC_STATE", function()
+    if button then Refresh() end
 end)
