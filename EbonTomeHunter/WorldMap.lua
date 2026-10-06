@@ -52,13 +52,6 @@ local ZONE_ALIASES = {
     { "render", "Redridge Mountains" },
 }
 
-local SLUG_CONTINENT = {
-    ["eastern-kingdoms"] = "Eastern Kingdoms",
-    ["kalimdor"] = "Kalimdor",
-    ["outland"] = "Outland",
-    ["northrend"] = "Northrend",
-}
-
 -- Place texts of the source data that mean "no precise spot" (their coordinates are
 -- placeholders, e.g. every "Unknown location" of Kalimdor sits at the top of the map).
 local UNLOCATABLE = {
@@ -69,12 +62,6 @@ local UNLOCATABLE = {
     "to be placed",
     "bottom right corner",
 }
-
-local function TitleCase(s)
-    return (s:gsub("(%a)([%w_']*)", function(first, rest)
-        return first:upper() .. rest:lower()
-    end))
-end
 
 local function NormalizePlace(place)
     if type(place) ~= "string" then return "" end
@@ -182,14 +169,6 @@ function WM.FindZoneForPlace(place, preferContName)
 
     zoneMemo[memoKey] = bestName or false
     return bestName
-end
-
-function WM.SlugToContinentName(slug)
-    if type(slug) ~= "string" then return nil end
-    if SLUG_CONTINENT[slug] then
-        return SLUG_CONTINENT[slug]
-    end
-    return TitleCase(slug:gsub("%-", " "))
 end
 
 ------------------------------------------------------------------------
@@ -329,14 +308,12 @@ local ICON_CIRCLE = { 0.25, 0.5, 0, 0.25 }    -- wishlist tomes
 WM.focus = nil   -- { itemId, index } : the tome (and which of its places) being located
 
 local pinPool = {}
-local activeCount = 0
 local pinsBuiltFor = nil
 
 local function HidePins()
     for _, pin in ipairs(pinPool) do
         pin:Hide()
     end
-    activeCount = 0
 end
 
 local function PinTooltip(self)
@@ -492,11 +469,6 @@ function WM.BuildPins()
             end
         end
     end
-    activeCount = placed
-end
-
-function WM.ActivePinCount()
-    return activeCount
 end
 
 function WM.OnWorldMapUpdate()

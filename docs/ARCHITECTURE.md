@@ -120,7 +120,6 @@ identité son nom normalisé (chaîne) ; `ns.Key` accepte les deux.
 - `Build()` part de `ns.TomeData` : une ligne par tome, avec `itemId`, `spellId`, `echoes`, `name`
   (nom de l'Echo), `tomeName` (« Tome of Echo: X »), `quality` et `desc`. Il y ajoute
   `staticLocations` (lieux d'EbonholdHub / EbonCompletionist, lus en jeu).
-- Sans `TomeData`, repli sur `ProjectEbonhold.PerkDatabase` (lecture seule) et les lieux du hub.
 - Index : `byItem`, `bySpell` (toutes les variantes d'Echo), `byName`, `byTomeName` (toutes les
   graphies), `byEchoKey`.
 - `AttachSightings(row)` : `locations` = lieux statiques (sinon boss de raid) + lieux du réseau

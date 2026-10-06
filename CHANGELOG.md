@@ -7,6 +7,11 @@
   chaque drop et chaque série de 25 cadavres partait sur le réseau : sur les données relevées le
   2026-10-05, environ 150 Ko de compteurs, dont 98 % ne pouvaient rien marquer. Les drops arrivent
   toujours aux autres par les lieux de drop. Compatible avec la 3.x.
+- **Moins de calculs à la réception.** Un lieu ou un compteur reçu ne recalcule plus que les
+  sources de son tome, au lieu des 148 (notamment au login, quand des centaines de jeux de données
+  arrivent).
+- Nettoyage : le repli du catalogue « sans TomeData.lua » (toujours livré) et des fonctions jamais
+  appelées sont retirés.
 
 ## 3.1.0 — 2026-09-29
 

@@ -137,26 +137,6 @@ function WH.LinkFor(name, loc)
     return npcId and WH.NpcURL(npcId, name) or WH.SearchURL(name), npcId, false
 end
 
-function WH.Links(itemId)
-    local row = ns.Catalog.Get(itemId)
-    local out, seen = {}, {}
-    for _, loc in ipairs(ns.WorldMap.Locations(row)) do
-        if type(loc.mobs) == "table" then
-            for _, mob in ipairs(loc.mobs) do
-                for _, name in ipairs(WH.SplitMobs(mob)) do
-                    local url, npcId = WH.LinkFor(name, loc)
-                    if url and not seen[url] then
-                        seen[url] = true
-                        out[#out + 1] = { name = name, npcId = npcId, url = url,
-                            place = tostring(loc.placeName or L.LocationUnknown) }
-                    end
-                end
-            end
-        end
-    end
-    return out
-end
-
 function WH.Open(url)
     if type(EbonholdOpenURL) == "function" and pcall(EbonholdOpenURL, url) then
         return true
@@ -164,7 +144,3 @@ function WH.Open(url)
     return false
 end
 
--- The links are shown in the Sources window (Sources.lua), with the teleports.
-function WH.Show(itemId)
-    return ns.Sources.Show(itemId)
-end

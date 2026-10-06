@@ -72,15 +72,7 @@ end
 ------------------------------------------------------------------------
 -- Live refresh
 ------------------------------------------------------------------------
-local pending = false
-local function Changed()
-    if pending then return end
-    pending = true
-    ns.Timer.After(0.5, function()
-        pending = false
-        ns.Fire("KNOWN_CHANGED")
-    end)
-end
+local function Changed() ns.FireSoon("KNOWN_CHANGED", 0.5) end
 K.Changed = Changed
 
 -- The discovery list arrives or changes with server message 530: only listened to

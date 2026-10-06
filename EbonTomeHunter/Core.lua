@@ -66,7 +66,6 @@ function ns.InitDatabase()
     if type(EbonTomeHunterCharDB) ~= "table" then EbonTomeHunterCharDB = {} end
     ApplyDefaults(EbonTomeHunterDB, DB_DEFAULTS)
     ApplyDefaults(EbonTomeHunterCharDB, CHAR_DEFAULTS)
-    EbonTomeHunterCharDB.autoImported = nil   -- flag of the locked-echoes import (removed in 1.5.1)
     -- the own hidden channel of 2.x (replaced by EbonAPI in 3.0.0): its sync state and outbox
     local db = EbonTomeHunterDB
     db.lastSync, db.syncedAt, db.syncFrom, db.netOutbox = nil, nil, nil, nil
@@ -191,12 +190,9 @@ local function TimerUpdate()
     local now = GetTime()
     for i = #timers, 1, -1 do
         local t = timers[i]
-        -- nil when a callback emptied the list (ns.Timer.CancelAll) during this loop
-        if t and now >= t.at then
+        if now >= t.at then
             tremove(timers, i)
-            local fn = t.fn
-            t.fn = nil
-            if fn then Dispatch(fn) end
+            Dispatch(t.fn)
         end
     end
     if #timers == 0 then
@@ -215,9 +211,26 @@ function ns.Timer.After(delay, fn)
     timerFrame:Show()
 end
 
-function ns.Timer.CancelAll()
-    wipe(timers)
-    if timerFrame then timerFrame:Hide() end
+-- Fires a message once, `delay` seconds after the first call: the calls made meanwhile join it.
+-- With a key, the listeners get the set of the keys ({ [key] = true }); a call without a key
+-- means "everything" (nil).
+local soon = {}   -- [message] = { [key] = true }, or true (everything)
+function ns.FireSoon(message, delay, key)
+    local pending = soon[message]
+    if pending == nil then
+        ns.Timer.After(delay, function()
+            local keys = soon[message]
+            soon[message] = nil
+            ns.Fire(message, keys ~= true and keys or nil)
+        end)
+    end
+    if key == nil or pending == true then
+        soon[message] = true
+    else
+        pending = pending or {}
+        pending[key] = true
+        soon[message] = pending
+    end
 end
 
 ------------------------------------------------------------------------
@@ -272,7 +285,7 @@ end
 local function Bootstrap()
     if PEUp() or DataUp() or bootAttempts >= 60 then
         if ns.Catalog and ns.Catalog.Build then
-            ns.Catalog.Build()   -- re-arms itself if the echo database is not up yet
+            ns.Catalog.Build()
         end
         if ns.Scan and ns.Scan.ScanBags then
             ns.Scan.ScanBags(false)

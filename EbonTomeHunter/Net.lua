@@ -197,12 +197,22 @@ local function Narrow(old, new)
     return kept
 end
 
--- The best places first: confirmed by the most players, then the most recent.
+-- The best places first: confirmed by the most players, then the most recent, then by their
+-- text (a total order: every client writes the same text). Sorts { record, wire } pairs.
 local function Better(a, b)
-    local ca, cb = CountFinders(a), CountFinders(b)
+    local ca, cb = CountFinders(a.record), CountFinders(b.record)
     if ca ~= cb then return ca > cb end
-    if (a.at or 0) ~= (b.at or 0) then return (a.at or 0) > (b.at or 0) end
-    return Net.Encode(a) < Net.Encode(b)   -- a total order: every client writes the same text
+    local ta, tb = a.record.at or 0, b.record.at or 0
+    if ta ~= tb then return ta > tb end
+    return a.wire < b.wire
+end
+
+-- The places of a list, the best first: { { record, wire } }.
+local function Ranked(list)
+    local out = {}
+    for i, r in ipairs(list) do out[i] = { record = r, wire = Net.Encode(r) } end
+    table.sort(out, Better)
+    return out
 end
 
 local function Milli(v) return v and floor(v * 1000 + 0.5) or nil end
@@ -264,21 +274,15 @@ function Net.Add(record)
     record.finders = record.by and { [record.by] = true } or {}
     list[#list + 1] = record
     if #list > MAX_PER_TOME then
-        table.sort(list, Better)
-        for i = #list, MAX_PER_TOME + 1, -1 do tremove(list, i) end
+        local ranked = Ranked(list)
+        for i = #list, 1, -1 do list[i] = nil end
+        for i = 1, MAX_PER_TOME do list[i] = ranked[i].record end
     end
     return true, true
 end
 
-local changePending = false
-local function Changed()
-    if changePending then return end
-    changePending = true
-    ns.Timer.After(1, function()
-        changePending = false
-        ns.Fire("SIGHTINGS_CHANGED")
-    end)
-end
+-- The places of a tome changed: its catalogue row is built again (Catalog.lua).
+local function Changed(itemId) ns.FireSoon("SIGHTINGS_CHANGED", 1, itemId) end
 
 -- Drop places of a tome, as catalogue locations (zone map coordinates), the most
 -- recently found first.
@@ -328,11 +332,8 @@ end
 ------------------------------------------------------------------------
 -- The text of a tome's dataset: its places, the best first (the same order on every client).
 local function PlacesText(itemId)
-    local list = {}
-    for i, r in ipairs(Store()[itemId] or {}) do list[i] = r end
-    table.sort(list, Better)
-    local parts = {}
-    for i = 1, math.min(#list, MAX_PER_TOME) do parts[i] = Net.Encode(list[i]) end
+    local ranked, parts = Ranked(Store()[itemId] or {}), {}
+    for i = 1, math.min(#ranked, MAX_PER_TOME) do parts[i] = ranked[i].wire end
     return table.concat(parts, ";")
 end
 Net.PlacesText = PlacesText
@@ -363,7 +364,7 @@ local function Flush()
         end
         local held, state = api:GetShared(name)
         local news = text ~= held
-        if kind == "E" then news = ns.Evidence.HasNews(itemId, held) end
+        if kind == "E" then news = ns.Evidence.HasNews(itemId, held, text) end
         if text and text ~= "" and news then
             pcall(api.Share, api, name, NextState(state, text), text)
         end
@@ -385,7 +386,7 @@ end
 -- A place learned from the network: stored, and told for a wishlist tome found lately.
 local function Receive(record, alert)
     local isNew, changed = Net.Add(record)
-    if changed then Changed() end
+    if changed then Changed(record.itemId) end
     if isNew and alert and ns.Opt().alertNetwork and ns.Wishlist.Has(record.itemId)
         and time() - (record.at or 0) < LIVE then
         local row = ns.Catalog.Get(record.itemId)
@@ -469,7 +470,7 @@ end
 function Net.Report(record)
     local _, changed = Net.Add(record)
     if not changed then return false end
-    Changed()
+    Changed(record.itemId)
     if api and Opt().netEnabled then Publish("T" .. record.itemId) end
     return true
 end
@@ -479,10 +480,6 @@ end
 ------------------------------------------------------------------------
 function Net.Available()
     return api ~= nil
-end
-
-function Net.IsJoined()
-    return api ~= nil and Opt().netEnabled and api:IsChannelJoined() and true or false
 end
 
 -- "off" (network option off), "noapi" (EbonAPI missing or too old), "joining" (EbonAPI not

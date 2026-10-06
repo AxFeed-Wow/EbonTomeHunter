@@ -16,7 +16,6 @@ Check(type(EbonTomeHunterCharDB.wishlist) == "table", "per-character wishlist re
 
 -- --- Complete static catalogue -----------------------------------------------
 ns.Catalog.Build()
-Check(ns.Catalog.fromTomeData == true, "catalogue built from TomeData.lua")
 Check(ns.Catalog.Count() >= 148, "all 148 tomes listed, got " .. ns.Catalog.Count())
 
 local beast = ns.Catalog.Get(300569)
@@ -545,7 +544,20 @@ local split = WH.SplitMobs("Bloodsail Mage/Raider")
 Check(split[1] == "Bloodsail Mage" and split[2] == "Bloodsail Raider", "grouped mob names are split")
 Check(WH.SplitMobs("Blackrock Stronghold mobs")[1] == "Blackrock Stronghold", "'mobs' suffix dropped")
 
-local links = WH.Links(300569)
+-- the Wowhead links of a tome's sources (those of the Sources window)
+local function Links(itemId)
+    local out = {}
+    for _, loc in ipairs(ns.WorldMap.Locations(ns.Catalog.Get(itemId))) do
+        for _, text in ipairs(type(loc.mobs) == "table" and loc.mobs or {}) do
+            for _, name in ipairs(WH.SplitMobs(text)) do
+                local url = WH.LinkFor(name, loc)
+                if url then out[#out + 1] = { url = url } end
+            end
+        end
+    end
+    return out
+end
+local links = Links(300569)
 Check(#links >= 2 and links[1].url:find("^https://www%.wowhead%.com/wotlk/search%?q=") ~= nil,
     "unknown NPC id: WotLK search link")
 -- the mob is moused over: its id is learned (only for mobs of the drop places)
@@ -565,7 +577,7 @@ unitState.mouseover = { name = "Random Critter", guid = "0xF1300000AA000001" }
 Fire("UPDATE_MOUSEOVER_UNIT")
 Check(WH.NpcId("Random Critter") == nil, "mobs unrelated to tomes are not stored")
 unitState.mouseover = nil
-links = WH.Links(300569)
+links = Links(300569)
 local exact = false
 for _, link in ipairs(links) do
     if link.url == "https://www.wowhead.com/wotlk/npc=4698/scarlet-paladins" then exact = true end
@@ -573,7 +585,7 @@ end
 Check(exact, "the learned id gives an exact NPC link")
 local opened
 EbonholdOpenURL = function(url) opened = url end
-Check(WH.Show(300569) >= 2 and EbonTomeHunterSourcesFrame:IsShown(), "Sources window opened (Wowhead links, teleports)")
+Check(ns.Sources.Show(300569) >= 2 and EbonTomeHunterSourcesFrame:IsShown(), "Sources window opened (Wowhead links, teleports)")
 local sourceRow = EbonTomeHunterSourcesListRow1
 Check(sourceRow and sourceRow:IsShown() and sourceRow.wowhead:IsShown(), "a source row with its Wowhead button")
 sourceRow.wowhead:GetScript("OnClick")(sourceRow.wowhead)
@@ -581,7 +593,7 @@ Check(opened and opened:find("^https://www%.wowhead%.com/wotlk/") ~= nil, "Wowhe
 EbonTomeHunterSourcesFrame:Hide()
 local customUrl, customId, isCustom = WH.LinkFor("Echo Wraith", { npcIds = { ["Echo Wraith"] = 190001 } })
 Check(customUrl == nil and customId == 190001 and isCustom, "a creature made for Ebonhold (id 190001) gets no Wowhead link")
-for _, link in ipairs(WH.Links(300569)) do
+for _, link in ipairs(Links(300569)) do
     Check(not link.url:find("item=", 1, true), "never an item page (Ebonhold tomes are not on Wowhead)")
 end
 
@@ -961,7 +973,7 @@ Check(EV.Report(300569, "Scarlet Paladins", 4698, true), "the player reports a s
 local mineStale, _, _, mine = EV.Verdict(300569, "Scarlet Paladins", 4698)
 Check(mineStale and mine and EV.SharedText(300569):find("#4698%^Tester%^0%^%d+%^0%^0%^0%^[1-9]%d*%^%d+") ~= nil,
     "own report: stale for the player, in the dataset shared with the others")
-Check(WH.Show(300569) > 0, "Sources window opened")
+Check(ns.Sources.Show(300569) > 0, "Sources window opened")
 local reportRow
 for i = 1, 6 do
     local r = _G["EbonTomeHunterSourcesListRow" .. i]
@@ -1090,7 +1102,7 @@ if type(ProjectEbonhold) == "table" then
     if lonely then ProjectEbonhold.PerkDropSources[lonely.itemId - 100000] = "Can be found on Test-type enemies" end
     Check(ns.Catalog.DropHint(ns.Catalog.Get(300569)) == "Can be found on Beast-type enemies",
         "the Echo journal hint of a tome is read (echo = tome id - 100000)")
-    Check(WH.Show(300569) > 0 and (ns.Sources.hintText:GetText() or ""):find("Beast-type", 1, true) ~= nil,
+    Check(ns.Sources.Show(300569) > 0 and (ns.Sources.hintText:GetText() or ""):find("Beast-type", 1, true) ~= nil,
         "the Sources window shows the hint")
     EbonTomeHunterSourcesFrame:Hide()
     if lonely then
@@ -1326,8 +1338,6 @@ do
     Fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
     Fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
     unitState.nameplate1, unitState.nameplate2 = nil, nil
-    Check(HT.UnitInfo(0x77AC) and HT.UnitInfo(0x77AC).ctype == "beast" and HT.UnitInfo(0x77AD).ctype == "elemental",
-        "the nameplates tell the creature types")
     Kill("0xF1300077AD0000D3", "Ice Revenant")
     Kill("0xF1300077AC0000D4", "Crystal Spider")
     bagSlots[10] = { link = Link(300508, "Tome of Echo: Ember Ward"), count = 1 }

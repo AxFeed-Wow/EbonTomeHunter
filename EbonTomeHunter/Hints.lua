@@ -56,10 +56,6 @@ local function LearnUnit(unit)
 end
 H.LearnUnit = LearnUnit
 
-function H.UnitInfo(npcId)
-    return unitInfo[tonumber(npcId) or -1]
-end
-
 ns.RegisterEvent("UPDATE_MOUSEOVER_UNIT", function() LearnUnit("mouseover") end)
 ns.RegisterEvent("PLAYER_TARGET_CHANGED", function() LearnUnit("target") end)
 -- The Ebonhold client gives every nameplate a real unit ("nameplate1"...: ProjectEbonhold's

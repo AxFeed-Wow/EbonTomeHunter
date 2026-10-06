@@ -129,9 +129,7 @@ local SPELL_EVENTS = {
 }
 
 local function IsCreature(guid)
-    if type(guid) ~= "string" then return false end
-    local high = strupper(guid:sub(3, 6))
-    return high == "F130" or high == "F150"
+    return ns.Wowhead.NpcIdFromGUID(guid) ~= nil
 end
 
 -- Kills per creature (NPC id): the ones the player or the group fought, then died. One

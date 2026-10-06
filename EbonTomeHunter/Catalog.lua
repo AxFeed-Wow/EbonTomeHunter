@@ -33,64 +33,6 @@ Cat.byTomeName = {}
 Cat.byEchoKey = {}
 Cat.mapReady = false
 
--- FALLBACK identity, only used when TomeData.lua is missing: the echo's spellId.
--- With TomeData the key is the tome's real item id (== its spell id), and
--- auction listings match on that exact id (names are only a fallback).
-local function ItemIdFromPerk(perk, spellId)
-    if spellId then return spellId end
-    if type(perk) == "table" and tonumber(perk.requiredSpell) then
-        local id = tonumber(perk.requiredSpell)
-        if id ~= 0 then return id end
-    end
-    return nil
-end
-
-local RARITIES = { "Common", "Uncommon", "Rare", "Epic", "Legendary" }
-
--- ProjectEbonhold's PerkDatabase rows have NO `name` field: the display name
--- lives in `comment` ("Spiritual Fortitude - Common", "Death Knight - Foo"),
--- with GetSpellInfo(spellId) as the fallback.
-function Cat.PerkName(perk, spellId)
-    local name
-    if type(perk) == "table" and type(perk.comment) == "string" and perk.comment ~= "" then
-        name = perk.comment
-        for _, rarity in ipairs(RARITIES) do
-            name = name:gsub(" %- " .. rarity .. "$", "")
-        end
-        name = name:gsub("^%a+ %- ", ""):gsub("^Death Knight %- ", "")
-    end
-    if (not name or name == "") and spellId then
-        name = ns.SafeCall(GetSpellInfo, spellId)
-    end
-    return name
-end
-
--- Auction items are named "Tome of Echo: <echo name>" (verified against real
--- scan data). perk.requiredSpell, when set, is the tome SPELL and gives a second
--- accepted spelling; both are registered as aliases.
-local TOME_PREFIX = "Tome of Echo: "
-
-function Cat.TomeName(perk, echoName)
-    if echoName then return TOME_PREFIX .. echoName end
-    if type(perk) == "table" then
-        local gate = tonumber(perk.requiredSpell)
-        if gate and gate ~= 0 then
-            local gateName = ns.SafeCall(GetSpellInfo, gate)
-            if type(gateName) == "string" and gateName ~= "" then return gateName end
-        end
-    end
-    return nil
-end
-
-function Cat.TomeAlias(perk)
-    if type(perk) ~= "table" then return nil end
-    local gate = tonumber(perk.requiredSpell)
-    if not gate or gate == 0 then return nil end
-    local gateName = ns.SafeCall(GetSpellInfo, gate)
-    if type(gateName) == "string" and gateName ~= "" then return gateName end
-    return nil
-end
-
 -- Lowercase, straighten the typographic apostrophes the game uses
 -- ("Broodmother's Fury"), and collapse spaces.
 function Cat.NormalizeName(name)
@@ -122,8 +64,7 @@ function Cat.Build()
     wipe(Cat.byEchoKey)
 
     local seen = {}
-    local AddRow   -- forward declaration (used by the static-data path below)
-    AddRow = function(row)
+    local function AddRow(row)
         if not row or not row.name then return end
         local key = strlower(row.name)
         local prev = seen[key]
@@ -148,109 +89,14 @@ function Cat.Build()
         if echoKey then Cat.byEchoKey[echoKey] = row end
     end
 
-    -- Preferred path: the complete, static tome list extracted from the client
-    -- (TomeData.lua: one row per real tome item, item id == tome spell id).
-    -- Nothing to wait for at login, and auction listings match by exact item id.
-    if type(ns.TomeData) == "table" and next(ns.TomeData) then
-        Cat.BuildFromTomeData(AddRow)
-        Cat.builtFromPerks = true
-        Cat.fromTomeData = true
-        Cat.MergeLearned()
-        table.sort(Cat.rows, function(a, b) return (a.name or "") < (b.name or "") end)
-        Cat.AttachAllSightings()
-        Cat.mapReady = #Cat.rows > 0
-        Cat.MigrateKeys()
-        ns.Fire("CATALOG_CHANGED")
-        return Cat
-    end
-    Cat.fromTomeData = false
-
-    -- Fallback without TomeData.lua: ProjectEbonhold's echo database (read only).
-    local perks = nil
-    if ProjectEbonhold and type(ProjectEbonhold.PerkDatabase) == "table" then
-        perks = ProjectEbonhold.PerkDatabase
-    end
-    -- The echo database may not be loaded yet at login: remember whether this
-    -- build saw it, so the boot code can rebuild once it arrives (otherwise the
-    -- catalogue stays limited to the handful of echoes with a known farm spot).
-    Cat.builtFromPerks = perks ~= nil
-
-    local perkByName = {}
-    if perks then
-        for spellId, perk in pairs(perks) do
-            local sid = tonumber(spellId)
-            local perkName = type(perk) == "table" and Cat.PerkName(perk, sid) or nil
-            if sid and perkName then
-                perkByName[strlower(Cat.StripQualitySuffix(perkName))] = { perk = perk, spellId = sid, name = perkName }
-            end
-        end
-    end
-
-    local locs = Cat.GetEchoLocations()
-    if locs then
-        for zoneSlug, entries in pairs(locs) do
-            if type(entries) == "table" then
-                for _, loc in ipairs(entries) do
-                    if type(loc) == "table" and loc.name then
-                        local stripped = Cat.StripQualitySuffix(loc.name)
-                        local matched = perkByName[strlower(stripped)]
-                        local perk = matched and matched.perk or nil
-                        local spellId = tonumber(loc.spellId) or (matched and matched.spellId) or nil
-                        local itemId = ItemIdFromPerk(perk, spellId)
-                        AddRow({
-                            itemId = itemId,
-                            spellId = spellId,
-                            name = stripped,
-                            tomeName = Cat.TomeName(perk, stripped),
-                            tomeAlias = Cat.TomeAlias(perk),
-                            quality = loc.quality or (perk and perk.quality) or nil,
-                            location = {
-                                zone = zoneSlug,
-                                placeName = loc.placeName,
-                                mobs = loc.mobs,
-                                notes = loc.notes,
-                                description = loc.description,
-                                x = loc.x,
-                                y = loc.y,
-                            },
-                        })
-                    end
-                end
-            end
-        end
-    end
-
-    if perks then
-        for spellId, perk in pairs(perks) do
-            local sid = tonumber(spellId)
-            local perkName = type(perk) == "table" and Cat.PerkName(perk, sid) or nil
-            if sid and perkName then
-                local name = Cat.StripQualitySuffix(perkName)
-                if not seen[strlower(name)] then
-                    AddRow({
-                        itemId = ItemIdFromPerk(perk, sid),
-                        spellId = sid,
-                        name = name,
-                        tomeName = Cat.TomeName(perk, name),
-                        tomeAlias = Cat.TomeAlias(perk),
-                        quality = perk.quality or nil,
-                        location = nil,
-                    })
-                end
-            end
-        end
-    end
-
+    -- the complete, static tome list extracted from the client (TomeData.lua: one row per
+    -- real tome item, item id == tome spell id): auction listings match by exact item id
+    Cat.BuildFromTomeData(AddRow)
     Cat.MergeLearned()
-
-    table.sort(Cat.rows, function(a, b)
-        return (a.name or "") < (b.name or "")
-    end)
-
+    table.sort(Cat.rows, function(a, b) return (a.name or "") < (b.name or "") end)
+    Cat.AttachAllSightings()
     Cat.mapReady = #Cat.rows > 0
-    -- Built without the echo database (it loads after us at login): try again
-    -- shortly, otherwise the catalogue would stay limited to a few echoes.
-    if not Cat.builtFromPerks then Cat.ScheduleRebuild() end
+    Cat.MigrateKeys()
     ns.Fire("CATALOG_CHANGED")
     return Cat
 end
@@ -426,8 +272,16 @@ function Cat.AttachAllSightings()
     for _, row in ipairs(Cat.rows) do Cat.AttachSightings(row) end
 end
 
-ns.On("SIGHTINGS_CHANGED", function()
-    Cat.AttachAllSightings()
+-- itemIds: the tomes whose places or verdicts changed (nil: all of them).
+ns.On("SIGHTINGS_CHANGED", function(itemIds)
+    if not itemIds then
+        Cat.AttachAllSightings()
+    else
+        for itemId in pairs(itemIds) do
+            local row = Cat.byItem[itemId]
+            if row then Cat.AttachSightings(row) end
+        end
+    end
     ns.Fire("CATALOG_CHANGED")
 end)
 
@@ -499,21 +353,6 @@ function Cat.MigrateKeys()
             prices[move.from] = nil
         end
     end
-end
-
-local rebuildTries, rebuildPending = 0, false
-local MAX_REBUILDS = 12   -- ~1 minute of retries
-
-function Cat.ScheduleRebuild()
-    if rebuildPending or Cat.builtFromPerks or rebuildTries >= MAX_REBUILDS then return false end
-    rebuildPending = true
-    rebuildTries = rebuildTries + 1
-    ns.Timer.After(5, function()
-        rebuildPending = false
-        if Cat.builtFromPerks then return end
-        Cat.Build()   -- fires CATALOG_CHANGED
-    end)
-    return true
 end
 
 function Cat.Get(itemId)

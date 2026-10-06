@@ -32,13 +32,6 @@ Cette source appartient au serveur : lecture locale uniquement, **jamais commit�
   de ProjectEbonhold (`modules/echoTome/echo_tome_tooltip.lua`).
 - `IsTomeEchoDisabled(echoId)` : appris mais retiré du tirage (journal des Echoes).
 
-### PerkDatabase (repli du catalogue) — `Catalog.lua`
-`ProjectEbonhold.PerkDatabase[spellId] = { quality, requiredSpell, comment, classMask, … }`.
-- **Pas de champ `name`** : le nom est dans `comment` (« Spiritual Fortitude - Common », « Warrior -
-  X »), sinon `GetSpellInfo(spellId)`.
-- `requiredSpell` = sort (et item) du tome qui débloque l'Echo.
-- Utilisé seulement si `TomeData.lua` manque.
-
 ### PerkDropSources (indices de source) — `Catalog.DropHint`
 `ProjectEbonhold.PerkDropSources[echoSpellId] = "Can be found on Mage-type enemies"` : l'indice que
 montre le journal des Echos de ProjectEbonhold (`modules/perks/perks_data.lua`, lu par

@@ -215,15 +215,8 @@ end
 ------------------------------------------------------------------------
 -- Sharing
 ------------------------------------------------------------------------
-local changePending = false
-local function Changed()
-    if changePending then return end
-    changePending = true
-    ns.Timer.After(1, function()
-        changePending = false
-        ns.Fire("SIGHTINGS_CHANGED")
-    end)
-end
+-- The verdicts of a tome may have turned: its catalogue row is built again (Catalog.lua).
+local function Changed(itemId) ns.FireSoon("SIGHTINGS_CHANGED", 1, itemId) end
 
 local function Plausible(stamp)
     local now = time()
@@ -259,13 +252,15 @@ end
 -- Every entry held for a tome: { mob, player, counter, report }, ours included.
 local function Entries(itemId)
     local corpses, evidence, reports = Data()
-    local prefix, me, out = itemId .. "@", Me(), {}
+    local prefix, me, out, byKey = itemId .. "@", Me(), {}, {}
     local function Entry(mob, player)
-        for _, e in ipairs(out) do
-            if e.mob == mob and e.player == player then return e end
+        local key = mob .. "^" .. player
+        local e = byKey[key]
+        if not e then
+            e = { mob = mob, player = player }
+            byKey[key] = e
+            out[#out + 1] = e
         end
-        local e = { mob = mob, player = player }
-        out[#out + 1] = e
         return e
     end
     for k, c in pairs(corpses) do
@@ -336,12 +331,13 @@ function E.SharedText(itemId)
     return table.concat(out, ";")
 end
 
--- Does our text hold a line the dataset lacks? Only then is it published again: a dataset with
--- more lines than ours (3.x clients share every counter) is not answered with a shorter one.
-function E.HasNews(itemId, held)
+-- Does our text (E.SharedText, given when already computed) hold a line the dataset lacks? Only
+-- then is it published again: a dataset with more lines than ours (3.x clients share every
+-- counter) is not answered with a shorter one.
+function E.HasNews(itemId, held, text)
     local known = {}
     for line in tostring(held or ""):gmatch("[^;]+") do known[line] = true end
-    for line in E.SharedText(itemId):gmatch("[^;]+") do
+    for line in (text or E.SharedText(itemId)):gmatch("[^;]+") do
         if not known[line] then return true end
     end
     return false
@@ -386,7 +382,7 @@ function E.ImportShared(itemId, text)
             end
         end
     end
-    if changed then Changed() end
+    if changed then Changed(itemId) end
     return E.HasNews(itemId, text)
 end
 
@@ -399,7 +395,7 @@ function E.Report(itemId, name, npcId, on)
     Keep(reports, k, Me(), on and time() or nil)
     Own(k).stamp = time()
     ns.Net.PublishEvidence(itemId)
-    Changed()
+    Changed(itemId)
     return true
 end
 
@@ -442,7 +438,7 @@ local function Finish()
             if c.n % SEND_EVERY == 0 then
                 c.stamp = time()
                 ns.Net.PublishEvidence(itemId)
-                Changed()   -- the verdict may have turned (its threshold follows the drop rate)
+                Changed(itemId)   -- the verdict may have turned (its threshold follows the drop rate)
             end
         end
     end
@@ -478,5 +474,5 @@ ns.On("TOME_DROPPED", function(itemId, name, npcId)
     if not key then return end
     if corpse and corpse.name == name then corpse.dropped[itemId] = true end
     Dropped(itemId, key)
-    Changed()
+    Changed(itemId)
 end)

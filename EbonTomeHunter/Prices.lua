@@ -76,12 +76,6 @@ function Prices.Set(itemId, minBuyout, listings)
     end
 end
 
-function Prices.Clear(itemId)
-    itemId = ns.Key(itemId)
-    if not itemId then return end
-    ns.DB.prices[itemId] = nil
-end
-
 function Prices.ClearAll()
     wipe(ns.DB.prices)
     ns.DB.lastScan = 0
