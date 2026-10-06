@@ -21,6 +21,9 @@ local L = ns.L
 -- report known for the tome, each player's own the newest one (stamp):
 --   mob^player^corpses^since^lastDrop^totalCorpses^drops^report^stamp;...
 --   mob = "#npcId", else its name; report = time of the player's "Gone?" (0: none)
+-- Only the lines that can mark a source travel: SEND_EVERY corpses without the tome or more,
+-- a report, or our own line once it went out (so that a reset or a withdrawn report follows).
+-- The drops themselves reach the others through the drop places (dataset T<itemId>).
 ns.Evidence = {}
 local E = ns.Evidence
 
@@ -29,7 +32,7 @@ E.STALE_MAX = 5000      -- ... and at most, whatever the rate
 E.STALE_VOTES = 3
 local PRIOR_DROPS, PRIOR_CORPSES = 1, 200   -- what is assumed before any drop is seen: 1 in 200
 local BAD_LUCK = 0.01   -- chance left to bad luck when a source is called stale
-local SEND_EVERY = 25       -- a counter is published every 25 corpses
+local SEND_EVERY = 100      -- a counter is shared from 100 corpses without the tome, then every 100
 local CLOSE_GRACE = 5       -- loot lines can come just after the window closed
 local MAX_PLAYERS = 50      -- per source
 
@@ -298,14 +301,19 @@ local TEXT_MAX = 30000
 function E.SharedText(itemId)
     itemId = tonumber(itemId)
     if not itemId then return "" end
-    local lines, size = {}, 0
-    for i, e in ipairs(Entries(itemId)) do
+    local lines, size, me = {}, 0, Me()
+    for _, e in ipairs(Entries(itemId)) do
         local c = e.counter or {}
-        local text = table.concat({ e.mob, e.player, floor(tonumber(c.n) or 0), floor(tonumber(c.since) or 0),
-            floor(tonumber(c.drop) or 0), floor(math.max(tonumber(c.total) or 0, tonumber(c.n) or 0)),
-            floor(tonumber(c.drops) or 0), floor(tonumber(e.report) or 0), floor(tonumber(c.stamp) or 0) }, "^")
-        lines[i] = { text = text, stamp = floor(tonumber(c.stamp) or 0), index = i }
-        size = size + #text + 1
+        local told = (tonumber(c.n) or 0) >= SEND_EVERY or (tonumber(e.report) or 0) > 0
+        if told and e.player == me then c.told = true end
+        if told or (e.player == me and c.told) then
+            local i = #lines + 1
+            local text = table.concat({ e.mob, e.player, floor(tonumber(c.n) or 0), floor(tonumber(c.since) or 0),
+                floor(tonumber(c.drop) or 0), floor(math.max(tonumber(c.total) or 0, tonumber(c.n) or 0)),
+                floor(tonumber(c.drops) or 0), floor(tonumber(e.report) or 0), floor(tonumber(c.stamp) or 0) }, "^")
+            lines[i] = { text = text, stamp = floor(tonumber(c.stamp) or 0), index = i }
+            size = size + #text + 1
+        end
     end
     if size > TEXT_MAX then
         local newest = {}
@@ -326,6 +334,17 @@ function E.SharedText(itemId)
     local out = {}
     for i, line in ipairs(lines) do out[i] = line.text end
     return table.concat(out, ";")
+end
+
+-- Does our text hold a line the dataset lacks? Only then is it published again: a dataset with
+-- more lines than ours (3.x clients share every counter) is not answered with a shorter one.
+function E.HasNews(itemId, held)
+    local known = {}
+    for line in tostring(held or ""):gmatch("[^;]+") do known[line] = true end
+    for line in E.SharedText(itemId):gmatch("[^;]+") do
+        if not known[line] then return true end
+    end
+    return false
 end
 
 -- The tomes that have evidence to share (Net.lua publishes them at start).
@@ -368,7 +387,7 @@ function E.ImportShared(itemId, text)
         end
     end
     if changed then Changed() end
-    return E.SharedText(itemId) ~= text
+    return E.HasNews(itemId, text)
 end
 
 -- The player's report ("Gone?" button): on, or withdrawn. Shared right away.
@@ -401,8 +420,8 @@ local function Dropped(itemId, key)
     local k = Key(itemId, key)
     local old = corpses[k] or {}
     corpses[k] = { n = 0, since = time(), drop = time(), stamp = time(),
-        total = math.max(tonumber(old.total) or 0, tonumber(old.n) or 0) + 1, drops = (tonumber(old.drops) or 0) + 1 }
-    ns.Net.PublishEvidence(itemId)
+        total = math.max(tonumber(old.total) or 0, tonumber(old.n) or 0) + 1, drops = (tonumber(old.drops) or 0) + 1,
+        told = old.told }
 end
 
 local function Finish()

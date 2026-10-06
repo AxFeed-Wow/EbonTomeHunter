@@ -1,5 +1,13 @@
 # Historique des versions
 
+## Prochaine version
+
+- **Réseau plus léger.** Les compteurs de cadavres (sources périmées) n'envoient plus que ce qui peut
+  marquer une source : 100 cadavres sans le tome ou plus, ou un signalement « Disparu ? ». Avant,
+  chaque drop et chaque série de 25 cadavres partait sur le réseau : sur les données relevées le
+  2026-10-05, environ 150 Ko de compteurs, dont 98 % ne pouvaient rien marquer. Les drops arrivent
+  toujours aux autres par les lieux de drop. Compatible avec la 3.x.
+
 ## 3.1.0 — 2026-09-29
 
 Les sources où le tome tombe vraiment passent en premier. Compatible avec la 3.0.0 (même réseau),

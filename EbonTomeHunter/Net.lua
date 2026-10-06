@@ -362,7 +362,9 @@ local function Flush()
             text = ns.Evidence.SharedText(itemId)
         end
         local held, state = api:GetShared(name)
-        if text and text ~= "" and text ~= held then
+        local news = text ~= held
+        if kind == "E" then news = ns.Evidence.HasNews(itemId, held) end
+        if text and text ~= "" and news then
             pcall(api.Share, api, name, NextState(state, text), text)
         end
     end

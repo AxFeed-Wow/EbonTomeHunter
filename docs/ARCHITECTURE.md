@@ -319,8 +319,11 @@ candidats), et émet `TOME_OBTAINED` pour l'addon de dev.
   (`TOME_DROPPED`). Le Greedy Scavenger n'est pas compté (on ne sait pas quels cadavres il ramasse).
 - **Partage** : jeu de données EbonAPI `E<itemId>`, une ligne par source et par joueur,
   `mob^joueur^n^depuis^dernierDrop^total^drops^signalement^tampon` (triées par mob puis joueur).
-  Notre ligne part tous les 25 cadavres, à chaque drop et à chaque signalement (`stamp` = maintenant,
-  `Net.PublishEvidence`). Reçu (`ImportShared`) : pour chaque (source, joueur), la ligne au tampon le
+  Seules les lignes utiles circulent : ≥ 100 cadavres sans le tome, un signalement, ou notre propre
+  ligne une fois partie (`told` : sa remise à 0 et un signalement retiré suivent). Les drops passent
+  par les lieux (`T<itemId>`). Notre ligne part tous les 100 cadavres et à chaque signalement
+  (`stamp` = maintenant, `Net.PublishEvidence`) ; un jeu n'est republié que si nous avons une ligne
+  qu'il n'a pas (`E.HasNews` : un jeu plus gros d'un client 3.x n'est pas remplacé). Reçu (`ImportShared`) : pour chaque (source, joueur), la ligne au tampon le
   plus récent (la nôtre aussi : un nouvel ordinateur retrouve ses compteurs) ; refusées : `|` ou
   contrôle, drops > total, valeurs ou dates impossibles. 50 joueurs max par source. Au-delà de
   30 000 octets (EbonAPI prend 32 Ko par jeu), seules les lignes les plus récentes partent (tampon,

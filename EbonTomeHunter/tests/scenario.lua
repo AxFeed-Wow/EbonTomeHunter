@@ -849,17 +849,19 @@ LootCorpse("1001")
 LootCorpse("1001")
 Check(ns.DB.corpses[wolfKey] and ns.DB.corpses[wolfKey].n == 1,
     "a looted corpse of a listed source without the tome counts, once")
-ns.DB.corpses[wolfKey].n = 24
+ns.DB.corpses[wolfKey].n = 98
 LootCorpse("1002")
+Check(EV.SharedText(300569) == "", "99 corpses without the tome: nothing worth sharing yet")
+LootCorpse("1005")
 do
     local text = EV.SharedText(300569)
-    Check(text:find("#28434^Tester^25^", 1, true), "the counter is shared every 25 corpses: " .. text)
+    Check(text:find("#28434^Tester^100^", 1, true), "the counter is shared from 100 corpses: " .. text)
     if EbonAPI then
         Advance(3)
         Check(EbonAPI:NewAddon("EbonTomeHunter", 1, 0):GetShared("E300569") == text, "published as the dataset E300569")
     end
 end
-Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "25 corpses: still a good source")
+Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "100 corpses: still a good source")
 do
     -- bad luck: the threshold follows the drop rate of the source (1 % left to bad luck)
     local _, _, _, _, oneIn, needed = EV.Verdict(300569, "Sinewy Wolf", 28434)
@@ -920,13 +922,15 @@ EV.ImportShared(300569, Line("#28434", "Kim", 3, nowEv + 30, nowEv + 30, 3, 1, 0
 Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "a drop reported after their counts: good source again")
 EV.ImportShared(300569, Line("#28434", "Joe", 5, nowEv, 0, 5, 9, 0, nowEv))
 Check(not ns.DB.evidence[wolfKey].Joe, "a counter with more drops than corpses is refused")
+Check(ns.DB.evidence[wolfKey].Kim and not EV.SharedText(300569):find("^Kim^", 1, true),
+    "a counter of few corpses is kept, but not passed on (its drop travels with the drop places)")
 Check(EV.ImportShared(300569, "") and not EV.ImportShared(300569, EV.SharedText(300569)),
     "a dataset that knows less than we do is published again, one that says all we know is not")
 do   -- EbonAPI takes 32 KB per dataset: past 30 000 bytes, the newest lines are kept
     local many = {}
     for source = 1, 40 do
         for player = 1, 20 do
-            many[#many + 1] = Line("#" .. (70000 + source), "Player" .. player, 5, nowEv, 0, 5, 0, 0,
+            many[#many + 1] = Line("#" .. (70000 + source), "Player" .. player, 150, nowEv, 0, 150, 0, 0,
                 nowEv - source * 100 - player)
         end
     end
@@ -937,6 +941,8 @@ do   -- EbonAPI takes 32 KB per dataset: past 30 000 bytes, the newest lines are
         and not text:find("#70040^Player20^", 1, true), "a big dataset: under 30 000 bytes, the newest lines kept ("
         .. #sent .. " -> " .. #text .. " bytes)")
     Check(not EV.ImportShared(300570, text), "that text is the same on every client: not published again")
+    Check(not EV.ImportShared(300570, text .. ";" .. Line("#70001", "Old", 3, nowEv, 0, 3, 0, 0, nowEv)),
+        "a 3.x dataset with more lines than ours is not answered with a shorter one")
 end
 
 -- reports: 3 players, or the player alone for themselves; withdrawn from the Sources window
