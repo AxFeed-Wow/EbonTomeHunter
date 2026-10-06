@@ -55,8 +55,13 @@ function Loot.CapturePlace()
     if not (WorldMapFrame and WorldMapFrame:IsShown()) then
         SetMapToCurrentZone()
         place.mapFile = GetMapInfo()
-        local x, y = GetPlayerMapPosition("player")
-        if x and y and (x > 0 or y > 0) then place.x, place.y = x, y end
+        local info = ns.WorldMap.MapInfo(place.mapFile)
+        if info and info.continent then
+            place.mapFile = nil   -- an instance the client has no map for: a continent point is no place
+        else
+            local x, y = GetPlayerMapPosition("player")
+            if x and y and (x > 0 or y > 0) then place.x, place.y = x, y end
+        end
     end
     return place
 end

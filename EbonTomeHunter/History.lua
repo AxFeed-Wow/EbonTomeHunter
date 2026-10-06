@@ -24,7 +24,6 @@ function H.Entries(mineOnly)
         for _, r in ipairs(places) do
             local mine = r.by == me or (type(r.finders) == "table" and r.finders[me])
             if not mineOnly or mine then
-                local zone, sub = tostring(r.zone or ""):match("^([^:]*):?(.*)$")
                 local candidates
                 if not r.mob and type(r.cands) == "table" then
                     candidates = {}
@@ -33,7 +32,7 @@ function H.Entries(mineOnly)
                 out[#out + 1] = {
                     itemId = itemId, at = tonumber(r.at) or 0, by = r.by, mob = r.mob, candidates = candidates,
                     others = math.max(0, ns.Net.FinderCount(r) - 1),
-                    place = (sub and sub ~= "") and (zone .. " - " .. sub) or (zone ~= "" and zone or L.LocationUnknown),
+                    place = ns.Net.PlaceName(r),
                 }
             end
         end

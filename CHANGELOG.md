@@ -14,6 +14,12 @@
   EbonholdHub, atlas, indice du serveur) devient le monstre, s'il est le seul dans ce cas. Si
   plusieurs candidats sont des sources connues, le doute reste (un tome peut tomber de plusieurs
   monstres).
+- **Noms de zones cohérents.** Un lieu trouvé par un joueur d'une autre langue s'affichait sous son
+  nom à lui (« Forêt du Chant de cristal », et même en cyrillique). Il s'affiche maintenant sous le
+  nom anglais de sa carte, comme les autres sources, et une instance nommée dans un autre alphabet
+  sous le nom de sa carte. Le texte envoyé sur le réseau ne change pas (compatible 3.x).
+- Un drop dans une instance dont le client n'a pas la carte n'est plus pointé sur le continent
+  (point faux) : le lieu garde son nom, la téléportation cherche sa pierre de rencontre.
 - **Moins de calculs à la réception.** Un lieu ou un compteur reçu ne recalcule plus que les
   sources de son tome, au lieu des 148 (notamment au login, quand des centaines de jeux de données
   arrivent).

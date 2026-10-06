@@ -630,6 +630,18 @@ do
     Check(ZoneField(string.rep("a", 58) .. eAcute) == string.rep("a", 58) .. eAcute, "a character that fits is kept")
 end
 
+-- the zone texts come in the finders' client languages: shown under one name
+do
+    local PN = ns.Net.PlaceName
+    Check(PN({ zone = "Tanaris:Gadgetzan", mapFile = "Tanaris" }) == "Tanaris - Gadgetzan", "an English place as found")
+    Check(PN({ zone = "For" .. string.char(195, 170) .. "t du Chant de cristal:Bois", mapFile = "CrystalsongForest" }) == "Crystalsong Forest",
+        "a French zone: the English name of its map")
+    Check(PN({ zone = string.char(208, 160, 209, 131, 208, 177), mapFile = "TheRubySanctum" }) == "The Ruby Sanctum",
+        "an instance named in another alphabet: the name of its map")
+    Check(PN({ zone = "Naxxramas", mapFile = "Naxxramas" }) == "Naxxramas" and PN({ zone = "" }) == ns.L.LocationUnknown,
+        "an instance in English as found; no zone: unknown")
+end
+
 -- places of the network: validated, merged, the same text on every client
 do
     local hazardId = ns.Catalog.byName["arcane hazard"].itemId

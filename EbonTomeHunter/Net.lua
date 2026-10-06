@@ -328,6 +328,22 @@ local function Refine(itemId)
 end
 Net.Refine = Refine
 
+-- The place a record names, as shown: "Zone - Subzone". The zone text is in the finder's client
+-- language: a zone map known to MapData shows its English name instead (as the other sources of
+-- the addon), an instance named in another alphabet the name of its map ("TheRubySanctum" ->
+-- "The Ruby Sanctum"). The wire keeps the finder's text (3.x clients choose among them).
+function Net.PlaceName(r)
+    local zone, sub = tostring(r.zone or ""):match("^([^:]*):?(.*)$")
+    local info = r.mapFile and ns.WorldMap.MapInfo(r.mapFile)
+    if info and info.name and not info.continent and zone ~= info.name then
+        zone, sub = info.name, ""
+    elseif zone:find("[\128-\255]") and r.mapFile and not info then
+        zone, sub = r.mapFile:gsub("%d+$", ""):gsub("(%l)(%u)", "%1 %2"), ""
+    end
+    if sub ~= "" then return zone .. " - " .. sub end
+    return zone ~= "" and zone or L.LocationUnknown
+end
+
 -- Drop places of a tome, as catalogue locations (zone map coordinates), the most
 -- recently found first.
 function Net.Locations(itemId)
@@ -338,15 +354,19 @@ function Net.Locations(itemId)
     table.sort(list, function(a, b) return (tonumber(a.at) or 0) > (tonumber(b.at) or 0) end)
     local out, now = {}, time()
     for index, r in ipairs(list) do
-        local zone, sub = tostring(r.zone or ""):match("^([^:]*):?(.*)$")
-        local place = (sub and sub ~= "") and (zone .. " - " .. sub) or (zone ~= "" and zone or L.LocationUnknown)
+        local place = Net.PlaceName(r)
+        -- found inside an instance whose map the client did not know: its point is one of the
+        -- continent, not of the place (no map point; the teleport finds its meeting stone by name)
+        local info = r.mapFile and ns.WorldMap.MapInfo(r.mapFile)
+        local onMap = not (info and info.continent)
         local candidates
         if not r.mob and type(r.cands) == "table" then
             candidates = {}
             for i, c in ipairs(r.cands) do candidates[i] = c.name end
         end
         out[#out + 1] = {
-            source = "net", mapFile = r.mapFile, x = r.x, y = r.y, placeName = place,
+            source = "net", mapFile = onMap and r.mapFile or nil, x = onMap and r.x or nil, y = onMap and r.y or nil,
+            placeName = place,
             mobs = r.mob and { r.mob } or nil, npcIds = (r.mob and r.npcId) and { [r.mob] = r.npcId } or nil,
             candidates = candidates, inferred = r.inferred,
             notes = format(L.NetNotes, r.by or "?", ns.Ago(r.at) or "?", math.max(1, CountFinders(r))),
@@ -446,8 +466,7 @@ local function Receive(record, alert)
     if isNew and alert and ns.Opt().alertNetwork and ns.Wishlist.Has(record.itemId)
         and time() - (record.at or 0) < LIVE then
         local row = ns.Catalog.Get(record.itemId)
-        local zone = tostring(record.zone or ""):gsub(":", " - ")
-        ns.Print(L.AlertNetwork, record.by or "?", row and row.name or "?", zone,
+        ns.Print(L.AlertNetwork, record.by or "?", row and row.name or "?", Net.PlaceName(record),
             record.mob and (" (" .. record.mob .. ")") or "")
     end
     return isNew
