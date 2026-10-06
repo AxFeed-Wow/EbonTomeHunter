@@ -87,20 +87,55 @@ local function Normalized(text)
     return (strlower(tostring(text or "")):gsub("[^%w]", ""))
 end
 
+-- Instances whose meeting stone has another name (ProjectEbonhold has one stone for a whole
+-- group: Auchindoun, Caverns of Time, Tempest Keep...), or that have none: the checkpoint at
+-- their entrance, or the entrance on its zone map (the nearest checkpoint is then chosen).
+-- Keyed by the instance's map file (GetMapInfo inside it, the same in every language).
+local HELLFIRE_CITADEL = { mapFile = "Hellfire", x = 0.476, y = 0.53 }
+local ENTRANCES = {
+    ManaTombs = "Auchindoun", AuchenaiCrypts = "Auchindoun", SethekkHalls = "Auchindoun",
+    ShadowLabyrinth = "Auchindoun",
+    CoTTheBlackMorass = "Caverns of Time", CoTHillsbradFoothills = "Caverns of Time",
+    CoTStratholme = "Caverns of Time", CoTMountHyjal = "Caverns of Time", Hyjal = "Caverns of Time",
+    TempestKeep = "Tempest Keep (Netherstorm)", TheBotanica = "Tempest Keep (Netherstorm)",
+    TheMechanar = "Tempest Keep (Netherstorm)", TheArcatraz = "Tempest Keep (Netherstorm)",
+    TheSlavePens = "Serpentshrine Cavern", TheUnderbog = "Serpentshrine Cavern",
+    TheSteamvault = "Serpentshrine Cavern", CoilfangReservoir = "Serpentshrine Cavern",
+    BlackrockDepths = "Blackrock Spire", MoltenCore = "Blackrock Spire", BlackwingLair = "Blackrock Spire",
+    HallsofLightning = "Ulduar", Ulduar77 = "Ulduar",
+    Nexus80 = "The Nexus", TheEyeofEternity = "The Nexus",
+    TheRubySanctum = "The Obsidian Sanctum",
+    TheForgeofSouls = "Icecrown Citadel", PitofSaron = "Icecrown Citadel", HallsofReflection = "Icecrown Citadel",
+    VaultofArchavon = "Wintergrasp",
+    Ahnkahet = "Azjol-Nerub",
+    RuinsofAhnQiraj = "Ahn'Qiraj", AhnQiraj = "Ahn'Qiraj",
+    GruulsLair = "Blade's Edge Mountains",
+    TheArgentColiseum = "Argent Tournament Grounds, Icecrown",
+    VioletHold = "Dalaran", Dalaran = "Dalaran",
+    HellfireRamparts = HELLFIRE_CITADEL, TheBloodFurnace = HELLFIRE_CITADEL,
+    TheShatteredHalls = HELLFIRE_CITADEL, MagtheridonsLair = HELLFIRE_CITADEL,
+}
+T.ENTRANCES = ENTRANCES
+
 -- The meeting stone at the entrance of the instance where a place is: a place inside a
 -- raid or a dungeon has no point on the world maps (its map file is the instance's), but
--- ProjectEbonhold has a meeting stone of that name at its entrance ("Black Temple").
--- Matched by the map file (the same in every client language) or by the place name.
+-- ProjectEbonhold has a meeting stone of that name at its entrance ("Black Temple"), or the
+-- checkpoint ENTRANCES names. Matched by the map file (the same in every client language) or
+-- by the place name.
 function T.Entrance(loc, checkpoints)
     if type(loc) ~= "table" then return nil end
     local wanted = {}
+    local alias = loc.mapFile and ENTRANCES[loc.mapFile]
+    alias = type(alias) == "string" and Normalized(alias) or nil
+    if alias then wanted[alias] = true end
     if loc.mapFile then wanted[Normalized(loc.mapFile)] = true end
     local place = tostring(loc.placeName or "")
     place = place:match("^(.-) %- ") or place   -- "Black Temple - Temple Summit"
     if place ~= "" then wanted[Normalized(place)] = true end
     wanted[""] = nil
     for _, c in ipairs(checkpoints or T.Checkpoints()) do
-        if tostring(c.kind or ""):find("MEETINGSTONE", 1, true) and wanted[Normalized(c.name)] then return c end
+        local name = Normalized(c.name)
+        if wanted[name] and (name == alias or tostring(c.kind or ""):find("MEETINGSTONE", 1, true)) then return c end
     end
     return nil
 end
@@ -115,6 +150,8 @@ function T.Nearest(loc, checkpoints)
         entrance = T.Entrance(loc, checkpoints)
         if entrance then map, worldX, worldY = entrance.map, entrance.worldX, entrance.worldY end
     end
+    local door = not map and type(loc) == "table" and loc.mapFile and ENTRANCES[loc.mapFile]
+    if type(door) == "table" then map, worldX, worldY = ns.WorldMap.WorldPosition(door) end   -- no checkpoint there
     if not map then return nil end
     local near = { map = map, worldX = worldX, worldY = worldY, approx = approx, entrance = entrance }
     for _, c in ipairs(checkpoints or T.Checkpoints()) do

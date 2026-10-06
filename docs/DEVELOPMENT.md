@@ -22,31 +22,12 @@
 | `python tools/migrate_savedvariables.py [--dry-run]` | migration unique des sauvegardes de l'ancien nom (EbonTomePrices), jeu fermé |
 | `tools/build_whitelist.py` | a produit `api_globals_335.txt` à partir du FrameXML 3.3.5a (rarement utile) |
 
-## Relever des données en jeu (addon de dev)
+## Relever des données en jeu
 
-`tools/dev/EbonTomeHunterDev/` : petit addon **pour l'utilisateur seul**, jamais publié (hors du
-dossier de l'addon, donc ni dans le zip ni dans l'archive installée par Ebonhold Addon Manager).
-- Installation : `python tools/install_dev.py --wow <dossier du jeu>`, puis **redémarrage complet**.
-- `/ethdev dump` : photo en lecture seule (Echos de ProjectEbonhold + infobulles des Echos et des
-  tomes, Echos appris, checkpoints, services de ProjectEbonhold et leurs fonctions).
-- `/ethdev stats` : demande aux utilisateurs connectés (EbonTomeHunter 3.0.0 et plus, par EbonAPI)
-  leurs kills par créature ; au bout de 15 s les réponses sont rangées dans
-  `EbonTomeHunterDevDB.stats[joueur] = { at, total, kills = { [npcId] = n } }` (au plus une demande
-  toutes les 30 s). Le dump contient aussi nos propres compteurs (`dump.killStats`, avec les noms).
-- `/ethdev log on|off` : journal (cadavres ouverts avec id du monstre et position, tomes obtenus,
-  codes des messages serveur `AAM0x9`).
-- `/ethdev scav on|off` : **enquête Greedy Scavenger** (`EbonTomeHunterDevDB.scav`, 4000 entrées) :
-  tout ce qui entoure un ramassage du familier, avec l'heure (`GetTime`) : lignes du journal de combat
-  qui le nomment (ou son GUID, appris par son menu de dialogue) et morts de créatures, paroles et
-  emotes de créatures (et celles des joueurs qui le nomment), lignes système, de butin et d'argent,
-  objets gagnés ou perdus dans les sacs, argent, fenêtres de butin, messages d'addon, et le verdict
-  d'EbonTomeHunter (`TOME_OBTAINED` : monstre ou candidats, kills de la dernière minute avec leurs
-  sorts). Reste actif après un `/reload` jusqu'à `off`. But : trouver un signal qui dise quel
-  cadavre il a pris.
-- `/ethdev clear` vide tout.
-- Le jeu n'écrit le fichier qu'au `/reload` ou à la déconnexion. À lire ensuite :
-  `WTF/Account/<compte>/SavedVariables/EbonTomeHunterDev.lua` (données personnelles : ne jamais
-  les copier dans le dépôt).
+L'utilisateur a un addon de dev personnel (`tools/dev/`, avec `tools/install_dev.py`) : **hors du
+dépôt** (`.gitignore`), à ne jamais commiter ni publier. Sa notice est dans `tools/dev/README.md`.
+Ce qu'il relève se lit dans `WTF/Account/<compte>/SavedVariables/EbonTomeHunterDev.lua` (données
+personnelles : ne jamais les copier dans le dépôt).
 - La sauvegarde de l'addon lui-même (`SavedVariables/EbonTomeHunter.lua`) se lit de la même façon
   (lieux du réseau, compteurs de cadavres, ids de monstres), par exemple avec `lupa`.
 

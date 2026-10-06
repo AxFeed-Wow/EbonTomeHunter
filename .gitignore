@@ -23,3 +23,7 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# developer helper addon: the user's own, never in the repository
+tools/dev/
+tools/install_dev.py

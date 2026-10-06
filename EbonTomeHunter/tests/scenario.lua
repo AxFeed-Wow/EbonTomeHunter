@@ -1603,6 +1603,17 @@ if ProjectEbonhold then
         Check(farmed and farmed.mob == "Illidan Stormrage" and farmed.near.entrance and farmed.near.checkpoint.id == 10028,
             "teleport: to it, at the meeting stone of Black Temple (its entrance)")
         Check(T.Sources(300569)[1].mob == "Illidan Stormrage", "first in the Sources window too")
+        -- instances whose stone has another name (one stone for Auchindoun), or with none
+        CHECKPOINTS[#CHECKPOINTS + 1] = { id = 10050, name = "Auchindoun", mapId = 479, serverMapId = 530,
+            x = 0.3967, y = 0.6493, factionAllowed = true, unlocked = true, kind = "MEETINGSTONE" }
+        local sethekk = T.Nearest({ mapFile = "SethekkHalls", placeName = "Sethekk Halls" })
+        Check(sethekk and sethekk.entrance and sethekk.checkpoint.id == 10050, "Sethekk Halls: the stone of Auchindoun")
+        local violet = T.Nearest({ mapFile = "VioletHold", placeName = "The Violet Hold" })
+        Check(violet and violet.checkpoint and violet.checkpoint.id == 310, "The Violet Hold: no stone, the Dalaran checkpoint")
+        local ramparts = T.Nearest({ mapFile = "HellfireRamparts", placeName = "Hellfire Ramparts" })
+        Check(ramparts and ramparts.map == 530 and not ramparts.entrance and ramparts.checkpoint,
+            "Hellfire Ramparts: no checkpoint there, the nearest one to its entrance")
+        CHECKPOINTS[#CHECKPOINTS] = nil
         Check(ns.Sources.Show(300569) > 0 and (EbonTomeHunterSourcesListRow1.title:GetText() or ""):find(
             format(ns.L.SourceDrops, 2), 1, true), "with the drops seen there")
         EbonTomeHunterSourcesFrame:Hide()

@@ -20,6 +20,12 @@
   sous le nom de sa carte. Le texte envoyé sur le réseau ne change pas (compatible 3.x).
 - Un drop dans une instance dont le client n'a pas la carte n'est plus pointé sur le continent
   (point faux) : le lieu garde son nom, la téléportation cherche sa pierre de rencontre.
+- **Téléportation vers toutes les instances.** ProjectEbonhold n'a qu'une pierre de rencontre pour
+  plusieurs instances (Auchindoun, Grottes du temps, Tempest Keep, Coilfang, Blackrock...), et
+  aucune pour certaines : 245 des 640 lieux d'instance du réseau ne trouvaient pas leur pierre. Une
+  table relie chaque instance à sa pierre, au point de téléportation de son entrée (Trial of the
+  Crusader : Argent Tournament Grounds ; Violet Hold : Dalaran), ou à son entrée sur la carte
+  (Citadelle des Flammes infernales : le point débloqué le plus proche). Les 640 sont couverts.
 - **Moins de calculs à la réception.** Un lieu ou un compteur reçu ne recalcule plus que les
   sources de son tome, au lieu des 148 (notamment au login, quand des centaines de jeux de données
   arrivent).
