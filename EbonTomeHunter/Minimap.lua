@@ -72,12 +72,28 @@ local function Build()
     icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
     icon:SetPoint("TOPLEFT", 7, -6)
 
-    -- a newer version is out (Net.lua): a small red dot on the icon, the tooltip says which
-    button.badge = button:CreateTexture(nil, "OVERLAY", nil, 7)
-    button.badge:SetSize(12, 12)
-    button.badge:SetTexture("Interface\\FriendsFrame\\StatusIcon-DnD")
-    button.badge:SetPoint("TOPRIGHT", -3, -3)
-    button.badge:Hide()
+    -- a newer version is out (Net.lua): a red dot over the ring, that pulses; the tooltip says
+    -- which version. Its own frame, above the button, so that the ring never covers it.
+    local badge = CreateFrame("Frame", nil, button)
+    badge:SetSize(18, 18)
+    badge:SetPoint("CENTER", button, "TOPRIGHT", -6, -6)
+    badge:SetFrameLevel(button:GetFrameLevel() + 5)
+    local dot = badge:CreateTexture(nil, "OVERLAY")
+    dot:SetAllPoints()
+    dot:SetTexture("Interface\\FriendsFrame\\StatusIcon-DnD")
+    local glow = badge:CreateTexture(nil, "ARTWORK")
+    glow:SetSize(30, 30)
+    glow:SetPoint("CENTER")
+    glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+    glow:SetBlendMode("ADD")
+    glow:SetVertexColor(1, 0.2, 0.1)
+    local pulse = 0
+    badge:SetScript("OnUpdate", function(_, elapsed)   -- (runs only while it is shown)
+        pulse = pulse + (elapsed or 0)
+        glow:SetAlpha(0.45 + 0.45 * math.sin(pulse * 4))
+    end)
+    badge:Hide()
+    button.badge = badge
 
     button:SetScript("OnClick", function(self, mouseButton)
         if mouseButton == "RightButton" then
