@@ -120,6 +120,9 @@ local function DecodeCandidates(text)
     return #list > 0 and list or nil
 end
 
+-- ponytail: no instance difficulty (normal / heroic) in a place yet: a 12th field would make 3.x
+-- clients (which write 11) and newer ones republish each other's text forever. Add it once the
+-- 3.x clients are gone, with the difficulty from GetInstanceInfo() in Loot.CapturePlace.
 function Net.Encode(r)
     local wire = table.concat({
         r.itemId, Clean(r.mapFile, 30),
