@@ -569,6 +569,7 @@ end
 local SYNC_LABELS = {
     online = { L.SyncOnline, 0.35, 1, 0.35 }, joining = { L.SyncJoining, 1, 0.82, 0 },
     noapi = { L.SyncNoApi, 1, 0.35, 0.35 }, off = { L.SyncOff, 0.6, 0.6, 0.6 },
+    update = { L.SyncUpdate, 1, 0.55, 0.1 },   -- a newer EbonTomeHunter is out (the tooltip tells the rest)
 }
 
 function UI.SyncTip()
@@ -588,7 +589,7 @@ end
 function UI.RefreshSync()
     if not syncButton then return end
     local state, tip = UI.SyncTip()
-    local label = SYNC_LABELS[state] or SYNC_LABELS.off
+    local label = (ns.Net.NewerVersion() and SYNC_LABELS.update) or SYNC_LABELS[state] or SYNC_LABELS.off
     syncButton:SetText(label[1])
     local text = syncButton:GetFontString()
     if text then text:SetTextColor(label[2], label[3], label[4]) end

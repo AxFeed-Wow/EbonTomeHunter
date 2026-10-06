@@ -547,11 +547,14 @@ local function SyncAll()
     if fresh > 0 then ns.Print(L.NetReceived, fresh) end
 end
 
+local TellUpdate   -- (below: a newer version)
+
 -- Once EbonAPI and the catalogue are both ready.
 local function Start()
     if started or not (api and apiReady and catalogReady) then return end
     started = true
     if Opt().netEnabled then SyncAll() end
+    TellUpdate()   -- (already known from an earlier exchange)
     ns.Fire("NET_SYNC_STATE")
 end
 
@@ -626,6 +629,17 @@ function Net.NewerVersion()
     return latest
 end
 
+-- A newer version: told once in the chat (EbonAPI's own line may go unnoticed among its others),
+-- the network button turns into "Update!".
+TellUpdate = function()
+    local latest = Net.NewerVersion()
+    if latest and ns.DB.updateTold ~= latest then
+        ns.DB.updateTold = latest
+        ns.Print(L.UpdateChat, latest, ns.version, URL)
+    end
+    ns.Fire("NET_SYNC_STATE")
+end
+
 ------------------------------------------------------------------------
 -- Kill statistics (asked by the developer helper, /ethdev stats)
 ------------------------------------------------------------------------
@@ -689,6 +703,9 @@ function Net.Connect()
     api:On("SHARE_RECEIVED", OnShareReceived)
     api:On("CHANNEL_JOINED", function() ns.Fire("NET_SYNC_STATE") end)
     api:On("CHANNEL_LOST", function() ns.Fire("NET_SYNC_STATE") end)
+    api:On("UPDATE_AVAILABLE", function(_, name)
+        if name == API_NAME then TellUpdate() end
+    end)
     api:OnChannel("KQ", OnStatsAsked)
     api:OnChannel("KA", OnStatsAnswer)
     api:On("READY", function()   -- sticky: runs right away when EbonAPI is already ready

@@ -881,6 +881,15 @@ else
     Check(button:GetText() == ns.L.SyncOff, "network off: 'Network off'")
     ns.SetOption("netEnabled", true)
     EbonTomeHunterFrame:Hide()
+    -- a player runs a newer EbonTomeHunter: told once in the chat, the button says so
+    -- (EbonAPI says the versions when a session starts: Bob's says it again now, as it would)
+    Peers.Run("Bob", "EbonAPI:NewAddon('EbonTomeHunter', 1, 0):Version('9.0.0', 'https://example.invalid') "
+        .. "EbonAPI.Channel.say('EbonAPI', 'V', 'EbonTomeHunter=9.0.0')")
+    Check(Until(300, function() return ns.Net.NewerVersion() == "9.0.0" end), "a newer version seen on the network")
+    Advance(1)
+    Check(ns.DB.updateTold == "9.0.0" and ChatContains("9.0.0"), "the player is told in the chat")
+    UI.RefreshSync()
+    Check(button:GetText() == ns.L.SyncUpdate, "the network button says 'Update!'")
     Peers.Stop("Alice")
     Peers.Stop("Bob")
     Peers.Stop("Carol")

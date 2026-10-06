@@ -36,6 +36,9 @@
   plus). Le « vous êtes déjà à côté » de la téléportation compte toujours tous ses endroits.
 - Un lieu sans monstre ni point sur la carte (« Unknown location » d'EbonholdHub) n'est plus listé
   quand le tome a un autre lieu.
+- **Nouvelle version signalée.** Quand un joueur croisé sur le réseau a une version plus récente,
+  une ligne d'EbonTomeHunter le dit dans le chat (une fois par version) et le bouton « Réseau »
+  devient « Mise à jour ! » en orange.
 - **Moins de calculs à la réception.** Un lieu ou un compteur reçu ne recalcule plus que les
   sources de son tome, au lieu des 148 (notamment au login, quand des centaines de jeux de données
   arrivent).
