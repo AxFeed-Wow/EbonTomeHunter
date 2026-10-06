@@ -195,7 +195,8 @@ function T.Sources(itemId)
                 itemId = itemId, loc = loc, index = index, mob = name or nil, near = near,
                 place = tostring(loc.placeName or L.LocationUnknown), order = #out, old = loc.old,
             }
-            source.drops = tonumber(loc.seen) or 0
+            source.drops = tonumber(loc.mobSeen) or tonumber(loc.seen) or 0
+            source.seen = tonumber(loc.seen) or 0
             if name then
                 local npcId = type(loc.npcIds) == "table" and loc.npcIds[name] or nil
                 source.stale, source.kills, source.voters, source.reported, source.oneIn, source.needed =
@@ -217,6 +218,7 @@ function T.Sources(itemId)
         local pa, pb = Penalty(a), Penalty(b)
         if pa ~= pb then return pa < pb end
         if a.drops ~= b.drops then return a.drops > b.drops end
+        if a.seen ~= b.seen then return a.seen > b.seen end   -- the same mob: its best spot first
         local ra, rb = Reach(a), Reach(b)
         if ra ~= rb then return ra < rb end
         if (ra == 1 or ra == 1.5) and a.near.distance ~= b.near.distance then return a.near.distance < b.near.distance end

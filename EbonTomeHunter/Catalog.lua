@@ -240,11 +240,20 @@ function Cat.AttachSightings(row)
             list[#list + 1] = loc
         end
     end
+    -- a place that names no mob and has no point ("Unknown location") tells nothing once the
+    -- tome has another place
+    for i = #list, 1, -1 do
+        local loc = list[i]
+        if #list > 1 and not loc.onMap and not ns.WorldMap.WorldPosition(loc) and not loc.candidates
+            and not (type(loc.mobs) == "table" and #loc.mobs > 0) then
+            tremove(list, i)
+        end
+    end
     for _, loc in ipairs(list) do
         loc.stale = ns.Evidence and ns.Evidence.LocationStale(row.itemId, loc) or false
         -- drops seen there: by players of the network or of EbonBuilds (seen), or counted by
         -- Evidence.lua for its mobs (ours and the other players')
-        local drops = tonumber(loc.seen) or 0
+        local drops = tonumber(loc.mobSeen) or tonumber(loc.seen) or 0
         if ns.Evidence and type(loc.mobs) == "table" then
             local counted = 0
             for _, text in ipairs(loc.mobs) do
@@ -261,6 +270,9 @@ function Cat.AttachSightings(row)
         if a.stale ~= b.stale then return not a.stale end
         if (a.old and true or false) ~= (b.old and true or false) then return not a.old end
         if a.drops ~= b.drops then return a.drops > b.drops end
+        -- the same mob at several spots: where it was seen dropping the tome the most
+        local sa, sb = tonumber(a.seen) or 0, tonumber(b.seen) or 0
+        if sa ~= sb then return sa > sb end
         if (a.onMap and true or false) ~= (b.onMap and true or false) then return a.onMap and true or false end
         return (a.order or 99999) < (b.order or 99999)
     end)

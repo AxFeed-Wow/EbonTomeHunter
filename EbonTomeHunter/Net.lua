@@ -345,13 +345,33 @@ function Net.PlaceName(r)
 end
 
 -- Drop places of a tome, as catalogue locations (zone map coordinates), the most
--- recently found first.
+-- recently found first. A mob found at several spots (it roams a whole zone) or by players of
+-- several languages ("Revenant lié à la terre" is Earthbound Revenant: one NPC id) shows one
+-- name, the one most of its finders saw, and `mobSeen`: the drops seen from it at every spot.
 function Net.Locations(itemId)
     local stored = Store()[tonumber(itemId)]
     if not stored or #stored == 0 then return nil end
     local list = {}
     for i, r in ipairs(stored) do list[i] = r end
     table.sort(list, function(a, b) return (tonumber(a.at) or 0) > (tonumber(b.at) or 0) end)
+    local votes, total = {}, {}   -- [mob key] = { [name] = finders }, [mob key] = finders
+    local function MobKey(r) return r.npcId and ("#" .. r.npcId) or (r.mob and strlower(r.mob)) end
+    for _, r in ipairs(list) do
+        local key = r.mob and MobKey(r)
+        if key then
+            local n = math.max(1, CountFinders(r))
+            votes[key] = votes[key] or {}
+            votes[key][r.mob] = (votes[key][r.mob] or 0) + n
+            total[key] = (total[key] or 0) + n
+        end
+    end
+    local function Name(r)
+        local best, most = r.mob, -1
+        for name, n in pairs(votes[MobKey(r)] or {}) do
+            if n > most or (n == most and name < best) then best, most = name, n end
+        end
+        return best
+    end
     local out, now = {}, time()
     for index, r in ipairs(list) do
         local place = Net.PlaceName(r)
@@ -367,7 +387,8 @@ function Net.Locations(itemId)
         out[#out + 1] = {
             source = "net", mapFile = onMap and r.mapFile or nil, x = onMap and r.x or nil, y = onMap and r.y or nil,
             placeName = place,
-            mobs = r.mob and { r.mob } or nil, npcIds = (r.mob and r.npcId) and { [r.mob] = r.npcId } or nil,
+            mobs = r.mob and { Name(r) } or nil, npcIds = (r.mob and r.npcId) and { [Name(r)] = r.npcId } or nil,
+            mobSeen = r.mob and total[MobKey(r)] or nil,   -- drops seen from that mob, every spot
             candidates = candidates, inferred = r.inferred,
             notes = format(L.NetNotes, r.by or "?", ns.Ago(r.at) or "?", math.max(1, CountFinders(r))),
             seen = math.max(1, CountFinders(r)),   -- drops seen there: one per player who found it

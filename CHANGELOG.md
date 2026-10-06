@@ -26,6 +26,12 @@
   table relie chaque instance à sa pierre, au point de téléportation de son entrée (Trial of the
   Crusader : Argent Tournament Grounds ; Violet Hold : Dalaran), ou à son entrée sur la carte
   (Citadelle des Flammes infernales : le point débloqué le plus proche). Les 640 sont couverts.
+- **Le lieu principal est celui du monstre qui lâche le plus le tome.** Un même monstre trouvé à
+  plusieurs endroits d'une zone, ou nommé dans plusieurs langues (« Revenant lié à la terre » =
+  Earthbound Revenant), additionne ses drops et s'affiche sous un seul nom ; son meilleur endroit
+  passe en premier. Exemple, Elemental Slayer : Earthbound Revenant (11 joueurs) à Wintergrasp.
+- Un lieu sans monstre ni point sur la carte (« Unknown location » d'EbonholdHub) n'est plus listé
+  quand le tome a un autre lieu.
 - **Moins de calculs à la réception.** Un lieu ou un compteur reçu ne recalcule plus que les
   sources de son tome, au lieu des 148 (notamment au login, quand des centaines de jeux de données
   arrivent).

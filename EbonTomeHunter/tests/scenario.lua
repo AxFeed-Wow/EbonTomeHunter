@@ -434,9 +434,9 @@ EbonholdHub = { EchoMapData = { Locations = {
 for _, item in ipairs(ns.Wishlist.List()) do ns.Wishlist.Remove(item.itemId) end
 ns.Catalog.Build()
 local bane = ns.Catalog.Get(300569)
-Check(bane and bane.locations and #bane.locations == 3, "every drop place kept (3 for Beast Bane)")
+Check(bane and bane.locations and #bane.locations == 2, "the drop places kept: 2 for Beast Bane, not the "
+    .. "'Unknown location' without mob (it tells nothing next to them)")
 Check(bane and bane.location and bane.location.placeName == "Hearthglen", "main place = first one with a map point")
-Check(bane and bane.locations and bane.locations[3].placeName == "Unknown location", "places without a map point come last")
 
 local zoneFile, _, zx, zy = ns.WorldMap.BestZone(bane.locations[1])
 Check(zoneFile == "WesternPlaguelands", "Hearthglen drawn on Western Plaguelands, got " .. tostring(zoneFile))
@@ -714,6 +714,21 @@ do
         { npcId = 5615, name = "Dune Smuggler" } }):gsub("%^512%^498%^", "^400^400^"), false)
     local doubt = ns.DB.sightings[hazardId][4]
     Check(doubt and not doubt.mob and #doubt.cands == 2, "two confirmed sources among the candidates: still a doubt")
+    -- one mob at several spots, named in two languages: its drops add up, its best spot first
+    ns.DB.sightings = {}
+    local function At(x, mob, npcId, n)
+        ns.Net.Add({ itemId = hazardId, mapFile = "Tanaris", x = x, y = x, npcId = npcId, mob = mob,
+            zone = "Tanaris", at = time(), by = "P" .. n .. mob:sub(1, 3), n = n })
+    end
+    At(0.2, "Wastewander Bandit", 5420, 3)
+    At(0.8, "Pillard des Terres", 5420, 2)   -- the same NPC, seen by a French client
+    At(0.5, "Dune Smuggler", 5615, 4)
+    ns.Catalog.AttachSightings(hazardRow)
+    local best = hazardRow.location
+    Check(best and best.mobs[1] == "Wastewander Bandit" and best.drops == 5 and math.abs(best.x - 0.2) < 0.001,
+        "the mob seen dropping it the most (3 + 2) first, at its best spot, under the name most saw")
+    Check(hazardRow.locations[2].mobs[1] == "Wastewander Bandit" and hazardRow.locations[3].mobs[1] == "Dune Smuggler",
+        "its other spot next, under the same name, then the other mob")
     ns.DB.sightings = kept
     ns.SetOption("netEnabled", true)
     ns.Fire("SIGHTINGS_CHANGED")
@@ -1471,7 +1486,11 @@ if ProjectEbonhold then
     local best, sources = T.Best(300569)
     Check(#sources >= 3 and best and best.near.checkpoint.id == 310 and (best.drops or 0) >= 1,
         "Beast Bane: the source seen dropping it, via Dalaran, got " .. tostring(best and best.near.checkpoint.id))
-    Check(sources[#sources].near == nil, "sources without a position come last")
+    local unplaced, placedAfter = false, false
+    for _, source in ipairs(sources) do
+        if not source.near then unplaced = true elseif unplaced then placedAfter = true end
+    end
+    Check(not placedAfter, "sources without a position come last")
 
     -- a drop found in Ghostlands (zone drawn on the Eastern Kingdoms map, on map 530)
     ns.Net.Add({ itemId = 300570, mapFile = "Ghostlands", x = 0.47, y = 0.33, mob = "Mummified Headhunter",
