@@ -18,6 +18,11 @@ local L = ns.L
 --       "npcId:Name,..." the mobs one of which dropped it (Greedy Scavenger, Hints.lua)
 --   dataset E<itemId>  the evidence of stale sources (Evidence.lua)
 --   channel ops KQ / KA: kill statistics asked by the developer helper (/ethdev stats)
+-- A place must say which mob dropped the tome, or which ones it may be (candidates): a place
+-- without either (older versions) is neither kept nor shared. The candidates are narrowed by
+-- every drop: at the same spot, only the mobs killed each time remain; anywhere, a candidate
+-- that is a known source of the tome (a confirmed place, EbonholdHub, the server's hint) is
+-- the mob when it is the only one; several known sources among them stay candidates.
 -- A dataset state is time() * 1000 plus a checksum of its text: two players who publish
 -- different texts in the same second (a group farming together) still get different states,
 -- or neither would take the other's. A state more than a day in the future is refused
@@ -148,12 +153,14 @@ function Net.Decode(text)
     local at, now = tonumber(f[8]) or 0, time()
     if not Plausible(at, now) then return nil end
     local mob = f[6] ~= "" and f[6] or nil
+    local cands = not mob and DecodeCandidates(f[11]) or nil
+    if not (mob or cands) then return nil end   -- a place of an older version: which mob is unknown
     local finders = tonumber(f[10])
     return {
         itemId = itemId, mapFile = f[2] ~= "" and f[2] or nil, x = x and x / 1000, y = y and y / 1000,
         npcId = tonumber(f[5]), mob = mob, zone = f[7], at = math.min(at, now),
         by = f[9] ~= "" and f[9] or nil, n = finders and math.max(0, math.min(99, floor(finders))) or nil,
-        cands = not mob and DecodeCandidates(f[11]) or nil,
+        cands = cands,
     }
 end
 
@@ -235,6 +242,7 @@ end
 
 -- Stores a drop place. Returns true when it is a new place, and whether anything changed.
 function Net.Add(record)
+    if not (record.mob or (record.cands and #record.cands > 0)) then return false, false end
     local store = Store()
     local list = store[record.itemId]
     if not list then
@@ -284,6 +292,42 @@ end
 -- The places of a tome changed: its catalogue row is built again (Catalog.lua).
 local function Changed(itemId) ns.FireSoon("SIGHTINGS_CHANGED", 1, itemId) end
 
+-- A Scavenger place whose candidates hold exactly one known source of the tome gets that mob
+-- (merged with a place of that mob at the same spot). Returns true when something changed.
+local function Refine(itemId)
+    local list = Store()[itemId]
+    if not list then return false end
+    local known = ns.Hints and ns.Hints.KnownSources(itemId) or {}
+    for _, r in ipairs(list) do
+        if r.mob then
+            known[strlower(r.mob)] = true
+            if r.npcId then known["#" .. r.npcId] = true end
+        end
+    end
+    local changed = false
+    for i = #list, 1, -1 do
+        local r = list[i]
+        if not r.mob and r.cands then
+            local match
+            for _, c in ipairs(r.cands) do
+                if (c.npcId and known["#" .. c.npcId]) or known[strlower(c.name)] then
+                    if match then match = false break end   -- several known sources: still a doubt
+                    match = c
+                end
+            end
+            if match then
+                tremove(list, i)
+                r.mob, r.npcId, r.cands, r.inferred = match.name, match.npcId, nil, true
+                r.n = CountFinders(r)
+                Net.Add(r)   -- (merged with a place of that mob at the same spot)
+                changed = true
+            end
+        end
+    end
+    return changed
+end
+Net.Refine = Refine
+
 -- Drop places of a tome, as catalogue locations (zone map coordinates), the most
 -- recently found first.
 function Net.Locations(itemId)
@@ -330,6 +374,18 @@ end
 ------------------------------------------------------------------------
 -- Datasets (EbonAPI)
 ------------------------------------------------------------------------
+-- Does our text hold a place the dataset lacks? Only then is it published again: a dataset
+-- with more places than ours (3.x clients share the places without a mob) is not answered with
+-- a shorter one, which they would answer in turn.
+function Net.HasNews(mine, held)
+    local known = {}
+    for line in tostring(held or ""):gmatch("[^;]+") do known[line] = true end
+    for line in tostring(mine or ""):gmatch("[^;]+") do
+        if not known[line] then return true end
+    end
+    return false
+end
+
 -- The text of a tome's dataset: its places, the best first (the same order on every client).
 local function PlacesText(itemId)
     local ranked, parts = Ranked(Store()[itemId] or {}), {}
@@ -363,7 +419,7 @@ local function Flush()
             text = ns.Evidence.SharedText(itemId)
         end
         local held, state = api:GetShared(name)
-        local news = text ~= held
+        local news = Net.HasNews(text, held)
         if kind == "E" then news = ns.Evidence.HasNews(itemId, held, text) end
         if text and text ~= "" and news then
             pcall(api.Share, api, name, NextState(state, text), text)
@@ -405,7 +461,8 @@ local function ImportPlaces(itemId, text, alert)
         local record = Net.Decode(part)
         if record and record.itemId == itemId and Receive(record, alert) then fresh = fresh + 1 end
     end
-    if PlacesText(itemId) ~= text then Publish("T" .. itemId) end
+    if Refine(itemId) then Changed(itemId) end
+    if Net.HasNews(PlacesText(itemId), text) then Publish("T" .. itemId) end
     return fresh
 end
 Net.ImportPlaces = ImportPlaces
@@ -470,6 +527,7 @@ end
 function Net.Report(record)
     local _, changed = Net.Add(record)
     if not changed then return false end
+    Refine(record.itemId)
     Changed(record.itemId)
     if api and Opt().netEnabled then Publish("T" .. record.itemId) end
     return true
@@ -597,8 +655,24 @@ function Net.Connect()
     return true
 end
 
+-- The saved places of older versions without a mob go, the candidates are narrowed again.
+local function Tidy()
+    for itemId, list in pairs(Store()) do
+        local changed = false
+        for i = #list, 1, -1 do
+            if not (list[i].mob or (list[i].cands and #list[i].cands > 0)) then
+                tremove(list, i)
+                changed = true
+            end
+        end
+        if Refine(itemId) or changed then Changed(itemId) end
+        if #list == 0 then Store()[itemId] = nil end
+    end
+end
+
 ns.On("READY", function()
     catalogReady = true
+    Tidy()
     Start()
 end)
 

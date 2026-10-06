@@ -7,6 +7,13 @@
   chaque drop et chaque série de 25 cadavres partait sur le réseau : sur les données relevées le
   2026-10-05, environ 150 Ko de compteurs, dont 98 % ne pouvaient rien marquer. Les drops arrivent
   toujours aux autres par les lieux de drop. Compatible avec la 3.x.
+- **Plus de lieux « monstre inconnu ».** Un lieu sans son monstre ni candidats (laissé par les
+  anciennes versions, environ 230 sur le réseau) n'est plus gardé ni partagé.
+- **Le bon monstre au fil des drops.** Quand le Greedy Scavenger laisse un doute entre plusieurs
+  monstres, un candidat qui est déjà une source connue du tome (lieu confirmé par un joueur,
+  EbonholdHub, atlas, indice du serveur) devient le monstre, s'il est le seul dans ce cas. Si
+  plusieurs candidats sont des sources connues, le doute reste (un tome peut tomber de plusieurs
+  monstres).
 - **Moins de calculs à la réception.** Un lieu ou un compteur reçu ne recalcule plus que les
   sources de son tome, au lieu des 148 (notamment au login, quand des centaines de jeux de données
   arrivent).

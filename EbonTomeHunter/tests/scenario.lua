@@ -682,6 +682,26 @@ do
     Check(place.mob == "Razormane Quilboar" and place.npcId == 3111 and place.inferred,
         "a third: one mob left, the place has its mob")
     Check(ns.WorldMap.MobsText(ns.Net.Locations(hazardId)[1]) == "Razormane Quilboar", "shown with its mob")
+    -- a place without its mob nor candidates (older versions): neither kept nor shared
+    local unknown = Place({ mob = false, npcId = false, by = "Ole", finders = { Ole = true }, x = 0.7, y = 0.7 })
+    Check(ns.Net.ImportPlaces(hazardId, unknown, false) == 0 and #ns.DB.sightings[hazardId] == 1,
+        "a place whose mob is unknown is refused")
+    Check(not ns.Net.HasNews(ns.Net.PlacesText(hazardId), ns.Net.PlacesText(hazardId) .. ";" .. unknown),
+        "a 3.x dataset that still has it is not answered (no endless republishing)")
+    -- anywhere: a candidate that is a confirmed source of the tome is the mob, unless several are
+    ns.DB.sightings = {}
+    ns.Net.ImportPlaces(hazardId, Place(), false)   -- Wastewander Bandit confirmed
+    ns.Net.ImportPlaces(hazardId, Scav("Pia", { { npcId = 5420, name = "Wastewander Bandit" },
+        { npcId = 5617, name = "Wastewander Shadow Mage" } }):gsub("%^512%^498%^", "^200^200^"), false)
+    local refined = ns.DB.sightings[hazardId][2]
+    Check(#ns.DB.sightings[hazardId] == 2 and refined and refined.mob == "Wastewander Bandit" and refined.inferred
+        and refined.x == 0.2, "a Scavenger drop elsewhere: its only confirmed candidate is the mob")
+    ns.Net.ImportPlaces(hazardId, Place({ npcId = 5615, mob = "Dune Smuggler", x = 0.8, y = 0.8, by = "Rob",
+        finders = { Rob = true } }), false)
+    ns.Net.ImportPlaces(hazardId, Scav("Sid", { { npcId = 5420, name = "Wastewander Bandit" },
+        { npcId = 5615, name = "Dune Smuggler" } }):gsub("%^512%^498%^", "^400^400^"), false)
+    local doubt = ns.DB.sightings[hazardId][4]
+    Check(doubt and not doubt.mob and #doubt.cands == 2, "two confirmed sources among the candidates: still a doubt")
     ns.DB.sightings = kept
     ns.SetOption("netEnabled", true)
     ns.Fire("SIGHTINGS_CHANGED")

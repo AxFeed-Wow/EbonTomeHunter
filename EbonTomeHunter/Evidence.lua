@@ -335,12 +335,7 @@ end
 -- then is it published again: a dataset with more lines than ours (3.x clients share every
 -- counter) is not answered with a shorter one.
 function E.HasNews(itemId, held, text)
-    local known = {}
-    for line in tostring(held or ""):gmatch("[^;]+") do known[line] = true end
-    for line in (text or E.SharedText(itemId)):gmatch("[^;]+") do
-        if not known[line] then return true end
-    end
-    return false
+    return ns.Net.HasNews(text or E.SharedText(itemId), held)
 end
 
 -- The tomes that have evidence to share (Net.lua publishes them at start).

@@ -283,12 +283,19 @@ candidats), et émet `TOME_OBTAINED` pour l'addon de dev.
   un état plus grand que le nôtre et pas plus d'un jour dans le futur (× 1000).
 - **Réception** (`SHARE_RECEIVED`, et à `Start` tout ce qu'EbonAPI garde) : `ImportPlaces` décode
   chaque lieu (`Net.Decode` : pas de `|` ni de contrôle, au moins 9 champs, tome du catalogue, x et
-  y de 0 à 1000, date plausible ramenée à maintenant), `Net.Add` le fusionne, puis republie si notre
-  texte diffère du reçu (on sait plus). Alerte wishlist pour un lieu nouveau trouvé depuis moins d'1 h.
+  y de 0 à 1000, date plausible ramenée à maintenant, un monstre ou des candidats), `Net.Add` le
+  fusionne, puis republie si notre texte a un lieu que le reçu n'a pas (`Net.HasNews` : un texte
+  plus long d'un client 3.x, avec des lieux sans monstre, ne reçoit pas de réponse plus courte).
+- **Sans monstre ni candidats** (versions anciennes) : refusé à la réception, jamais publié, retiré
+  de la sauvegarde au démarrage (`Tidy`). Alerte wishlist pour un lieu nouveau trouvé depuis moins d'1 h.
 - **Fusion** (`Net.Add`, `SameSpot`) : même carte, moins de 4 % d'écart, même monstre (ou candidats
   compatibles). Le lieu gagne le trouveur (10 max) ou le nombre dit (`n`), la date la plus récente, le
   monstre s'il manquait ; deux listes de candidats se réduisent à leur intersection (`Narrow`), un
-  seul restant devient le monstre (`inferred`). `Converge` rend les champs identiques sur tous les
+  seul restant devient le monstre (`inferred`). **Affinage** (`Refine`, après chaque réception ou
+  drop, et au démarrage) : un lieu à candidats dont un seul est une source connue du tome (lieu
+  confirmé n'importe où, `Hints.KnownSources` : EbonholdHub, atlas, indice du serveur) prend ce
+  monstre (`inferred`) et fusionne avec un lieu de ce monstre au même endroit ; plusieurs sources
+  connues parmi les candidats : le doute reste. `Converge` rend les champs identiques sur tous les
   clients : plus petit nom de trouveur, plus petit point (millièmes), texte de zone le plus long puis
   le plus grand.
 - **Démarrage** (`Start`, quand EbonAPI et le catalogue sont prêts) : tout ce qu'EbonAPI garde est
