@@ -940,11 +940,27 @@ function M.Restore(src)
     if ok and type(tbl) == "table" then M.restored = tbl end
 end
 
+-- One addon's files have run: like the client, its SavedVariables are loaded now (replacing
+-- whatever its files stored there), then its ADDON_LOADED fires, before the next addon's
+-- files run. Another player's client (M.restored, set by Restore) gets its last session's
+-- data, or nothing. The scenario's client simulates a saved file from an older version
+-- (empty tables) with ProjectEbonhold, a first launch (no file) without.
+function M.AddonLoaded(name)
+    local meta = M.metaOf[name] or {}
+    for _, key in ipairs({ "SavedVariables", "SavedVariablesPerCharacter" }) do
+        for saved in tostring(meta[key] or ""):gmatch("[^,%s]+") do
+            if M.restored then
+                rawset(env, saved, M.restored[saved])
+            elseif M.withEbonhold then
+                rawset(env, saved, {})
+            end
+        end
+    end
+    fire("ADDON_LOADED", name)
+end
+
 -- A second player's client: its addons loaded, then logged in (no slash tour, no logout).
-function M.Login(names)
-    for name in pairs(M.saved) do rawset(env, name, nil) end
-    for k, v in pairs(M.restored or {}) do rawset(env, k, v) end
-    for i = 1, #names do fire("ADDON_LOADED", names[i]) end
+function M.Login()
     fire("VARIABLES_LOADED")
     fire("PLAYER_LOGIN")
     fire("PLAYER_ENTERING_WORLD")
@@ -1012,17 +1028,9 @@ function M.RunScenario(src)
     return M.errors
 end
 
-function M.Boot(addonName, deps)
+-- (the addons are loaded by validate_addon.py, each followed by M.AddonLoaded)
+function M.Boot(addonName)
     M.addonName = addonName
-    -- The client loads SavedVariables AFTER the addon's files have run, just before
-    -- ADDON_LOADED: whatever the files stored in those globals is REPLACED. The run with
-    -- ProjectEbonhold simulates a saved file from an older version (empty tables), the run
-    -- without it a first launch (no file). Initialise the DB on ADDON_LOADED, not at load.
-    if M.withEbonhold then
-        for name in pairs(M.saved) do rawset(env, name, {}) end
-    end
-    for i = 1, (deps and #deps or 0) do fire("ADDON_LOADED", deps[i]) end   -- loaded before the addon
-    fire("ADDON_LOADED", addonName)
     fire("VARIABLES_LOADED")
     fire("PLAYER_LOGIN")
     fire("PLAYER_ENTERING_WORLD")

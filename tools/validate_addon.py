@@ -481,7 +481,7 @@ def saved_names(meta):
     return out
 
 
-def new_client(player, addons, whitelist, with_ebonhold, own, rep, label):
+def new_client(player, addons, whitelist, with_ebonhold, own, rep, label, restored=None):
     """A mocked client with its own Lua state. addons = [(name, dir, meta, files)] in load
     order: the dependencies (--with) first, the addon last. Returns lua, mock."""
     lua = lua51.LuaRuntime(encoding=None, unpack_returned_tuples=True)
@@ -516,6 +516,8 @@ def new_client(player, addons, whitelist, with_ebonhold, own, rep, label):
         mock.InstallEbonhold()
     else:
         mock.RemoveEbonhold()
+    if restored is not None:
+        mock.Restore(restored)   # another player's client: its last session's saved data
     for name, addon_dir, _, files in addons:
         ns_holder = mock.NewNamespace()
         for rel in files:
@@ -528,6 +530,7 @@ def new_client(player, addons, whitelist, with_ebonhold, own, rep, label):
             err = mock.LoadFile(raw, rel.encode(), name.encode(), ns_holder)
             if err:
                 rep.error(f"{label} {name}/{rel}", "error while loading: " + err.decode("utf-8", "replace"))
+        mock.AddonLoaded(name.encode())   # its saved data, then ADDON_LOADED, before the next addon
     return lua, mock
 
 
@@ -585,11 +588,10 @@ class Network:
         if player.lower() in self.clients:
             return False
         addons = list(self.deps) + ([self.main_addon] if bytes(kind or b"full") == b"full" else [])
-        lua, mock = new_client(player, addons, self.whitelist, True, self.own, self.rep, f"{self.label} player {player}")
-        if player in self.saved:
-            mock.Restore(self.saved[player])
+        lua, mock = new_client(player, addons, self.whitelist, True, self.own, self.rep, f"{self.label} player {player}",
+                               self.saved.get(player, b"return {}"))
         self.add(player, lua, mock)
-        mock.Login(lua.table_from([a[0].encode() for a in addons]))
+        mock.Login()
         return True
 
     def stop(self, player):
@@ -631,7 +633,7 @@ def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold
         net.add("Tester", lua, mock, driver=True)
         mock.peers = lua.table_from({b"Start": net.start, b"Stop": net.stop, b"Run": net.run, b"Online": net.online})
         rep.info(label, "with " + ", ".join(d[0] for d in deps) + ": other players can join the scenario (Peers)")
-    errs = mock.Boot(addon_name.encode(), lua.table_from([d[0].encode() for d in deps]))
+    errs = mock.Boot(addon_name.encode())
     scenario = os.path.join(addon_dir, "tests", "scenario.lua")
     if os.path.isfile(scenario):
         with open(scenario, "rb") as fh:

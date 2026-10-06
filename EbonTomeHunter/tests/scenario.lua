@@ -697,6 +697,15 @@ else
     local api = EbonAPI:NewAddon("EbonTomeHunter", 1, 0)
     local ownTomes = {}   -- (the tests below start again from these)
     for itemId in pairs(ns.DB.sightings) do ownTomes[itemId] = true end
+    -- EbonAPI holds an announcement while it is still fetching (60 s), then compares again every
+    -- 2 minutes: an exchange can take a few minutes. Waits up to `seconds` for cond().
+    local function Until(seconds, cond)
+        for _ = 1, seconds / 5 do
+            if cond() then return true end
+            Advance(5)
+        end
+        return cond() and true or false
+    end
     local function Places(name, itemId)   -- places another player holds for a tome
         return tonumber(Peers.Run(name, "local s = EbonTomeHunterDB.sightings[" .. itemId .. "] return s and #s or 0"))
     end
@@ -764,8 +773,9 @@ else
     Advance(40)
     local quilboar = ns.DB.sightings[300447] and ns.DB.sightings[300447][1]
     Check(quilboar and quilboar.mob == "Razormane Quilboar", "our Scavenger drop and Bob's: the only mob killed both times")
-    Check(Peers.Run("Bob", "local s = EbonTomeHunterDB.sightings[300447] return s and s[1] and s[1].mob") == "Razormane Quilboar",
-        "Bob deduced the same mob")
+    Check(Until(180, function()
+        return Peers.Run("Bob", "local s = EbonTomeHunterDB.sightings[300447] return s and s[1] and s[1].mob") == "Razormane Quilboar"
+    end), "Bob deduced the same mob")
 
     -- two players publish different places of one tome in the same second (a group farming
     -- together): their states still differ, the one who takes the other's publishes the union
@@ -782,9 +792,8 @@ else
     -- evidence of stale sources travels the same way (dataset E<itemId>)
     Share("Bob", "E300569", "#4698^Lea^0^0^0^0^0^" .. time() .. "^" .. time() .. ";#4698^Max^0^0^0^0^0^" .. time()
         .. "^" .. time() .. ";#4698^Ned^0^0^0^0^0^" .. time() .. "^" .. time())
-    Advance(40)
-    local _, _, voters = ns.Evidence.Verdict(300569, "Scarlet Paladins", 4698)
-    Check(voters == 3, "3 players' reports reached us: the source is stale for everybody")
+    Check(Until(180, function() return select(3, ns.Evidence.Verdict(300569, "Scarlet Paladins", 4698)) == 3 end),
+        "3 players' reports reached us: the source is stale for everybody")
 
     -- a forged dataset (dated in the future) is not taken
     Peers.Run("Bob", "EbonTomeHunter.Net.Report({ itemId = 300448, mapFile = 'Mulgore', x = 0.5, y = 0.5, "
