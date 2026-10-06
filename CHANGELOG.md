@@ -1,6 +1,10 @@
 # Historique des versions
 
-## Prochaine version
+## 3.2.0 — 2026-10-06
+
+Un réseau bien plus léger, des sources plus propres (une par monstre, sans « inconnu »), la
+téléportation vers toutes les instances, et l'annonce des nouvelles versions. Compatible avec la
+3.x (même réseau), aucun nouveau fichier : un `/reload` suffit après la mise à jour.
 
 - **Réseau plus léger.** Les compteurs de cadavres (sources périmées) n'envoient plus que ce qui peut
   marquer une source : 100 cadavres sans le tome ou plus, ou un signalement « Disparu ? ». Avant,
@@ -44,6 +48,8 @@
   arrivent).
 - Nettoyage : le repli du catalogue « sans TomeData.lua » (toujours livré) et des fonctions jamais
   appelées sont retirés.
+- Outils : le banc de test charge les addons dans l'ordre du client (EbonAPI 2.1.2) et attend la fin
+  des échanges réseau ; l'addon de développement ne fait plus partie du dépôt.
 
 ## 3.1.0 — 2026-09-29
 
