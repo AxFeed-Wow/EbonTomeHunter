@@ -179,7 +179,7 @@ EbonTomeHunter ne s'y fie pas et garde ses propres timers.
   `locations` au même format) étaient identiques à celles d'EbonholdHub 2.0.4 le 2026-09-26 : 128
   tomes, 173 lieux, 98 tomes avec un vrai lieu. Licence non indiquée : ne rien copier non plus.
 
-## Atlas d'EbonBuilds (sources de drop, depuis 3.0.0)
+## Atlas d'EbonBuilds (lu de 3.0.0 à 3.3.0, RETIRÉ en 3.3.1 : EbonBuilds 3.x ne l'a plus)
 
 - **EbonBuilds** (5.5.4) tient un atlas communautaire des tomes, partagé entre ses utilisateurs
   (guilde, groupe, canal `ebonbuildssync`) : `EbonBuildsDB.tomeAtlas[itemId] = { name, sources =

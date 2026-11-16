@@ -30,7 +30,6 @@ plus tard (clics, évènements) peuvent viser n'importe quel module.
 | 16 | `Sources.lua` | fenêtre Sources (monstres, TP, Wowhead) `ns.Sources` | | CATALOG_CHANGED |
 | 17 | `History.lua` | historique des drops `ns.History` | | SIGHTINGS_CHANGED |
 | 18 | `Net.lua` | réseau entre joueurs par EbonAPI `ns.Net` | (EbonAPI : READY, SHARE_RECEIVED, CHANNEL_JOINED / LOST ; opérations KQ / KA) | READY, LOGIN, SETTINGS_CHANGED → SIGHTINGS_CHANGED, NET_SYNC_STATE, NET_STATS |
-| 19 | `Atlas.lua` | sources de l'atlas d'EbonBuilds (lecture) `ns.Atlas` | | READY → SIGHTINGS_CHANGED |
 | 20 | `Comm.lua` | envoi direct de wishlist (chuchotement d'addon) `ns.Comm` | CHAT_MSG_ADDON (préfixe ETH) | |
 | 21 | `Hints.lua` | quel monstre a lâché un tome du Greedy Scavenger `ns.Hints` | UPDATE_MOUSEOVER_UNIT, PLAYER_TARGET_CHANGED, NAME_PLATE_UNIT_ADDED | |
 | 22 | `Loot.lua` | tomes obtenus : alertes + lieu de drop `ns.Loot` | LOOT_OPENED, LOOT_CLOSED, CHAT_MSG_LOOT, COMBAT_LOG_EVENT_UNFILTERED, BAG_UPDATE, PLAYER_ENTERING_WORLD | BAGS_CHANGED, READY → CORPSE_OPENED, CORPSE_CLOSED, TOME_DROPPED, TOME_OBTAINED |
@@ -255,16 +254,6 @@ candidats), et émet `TOME_OBTAINED` pour l'addon de dev.
   dépasse strictement le suivant ; sinon jusqu'à 4 candidats, les mieux notés puis les plus récents
   (un indice faible n'écarte personne).
 
-### Atlas.lua (atlas d'EbonBuilds)
-- Lit `EbonBuildsDB.tomeAtlas[itemId] = { name, sources = { ["Mob\031Zone"] = nombre } }` (sources
-  mises en commun entre utilisateurs d'EbonBuilds) et `EbonBuildsDB.tomeAtlasPinCoords[zone][nom du
-  tome] = { x, y, n }` (points de ses loots à lui). Jamais écrit.
-- `Atlas.Locations(itemId, connus)` : les 8 sources les plus vues dont le monstre n'est pas dans
-  `connus` ; une source « Unknown » seulement si aucune autre ne donne sa zone. Lieu : `source =
-  "atlas"`, `placeName` = zone, `mapFile` si le nom anglais de la zone est dans `MapData`, `x`, `y`
-  du point s'il existe, `count`, `notes`. Noms nettoyés de `|` et des contrôles, 60 octets.
-- Relu toutes les 60 s : une signature (nombre de sources, somme des nombres) qui change émet
-  `SIGHTINGS_CHANGED`.
 
 ### Net.lua (réseau par EbonAPI)
 - **EbonAPI** (Siphelis) : addon à part, jamais copié ni modifié ici (licence). `Net.Connect()` au

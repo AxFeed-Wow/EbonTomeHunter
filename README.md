@@ -32,7 +32,6 @@ Find, buy and farm the **Echo tomes** of Project Ebonhold: Auction House prices 
 * **Network between players** (with the EbonAPI addon): when a user loots a tome, the place is
   shared with the others, even with players who are never online at the same time. A tome listed
   as "Unknown location" ends up with a real place.
-* **EbonBuilds atlas**: the drop sources seen by the EbonBuilds users are added, read in game.
 * **Alerts** when you, your group or another player find a tome of your wishlist. It also works
   with the *Greedy Scavenger* pet, which loots without any chat message: the server's hint of the
   tome tells which of the mobs you killed dropped it.
@@ -48,8 +47,7 @@ Every feature in detail (in French): [docs/FEATURES.md](docs/FEATURES.md).
 * The Project Ebonhold client (World of Warcraft 3.3.5a).
 * Recommended: **ProjectEbonhold** (shipped with the client: tomes learned, teleport),
   **EbonholdHub** (drop places) and **[EbonAPI](https://github.com/Siphelis/EbonAPI)** (by
-  Siphelis, also in Ebonhold Addon Manager: sharing drop places with the other players). Optional:
-  **EbonBuilds** (its tome atlas adds drop sources). Without them, the related features simply
+  Siphelis, also in Ebonhold Addon Manager: sharing drop places with the other players). Without them, the related features simply
   turn off.
 
 ### With Ebonhold Addon Manager
@@ -172,8 +170,6 @@ Trouver, acheter et farmer les **tomes d'Echo** de Project Ebonhold : prix et ac
 * **Réseau entre joueurs** (avec l'addon EbonAPI) : quand un utilisateur loote un tome, le lieu est
   partagé avec les autres, même avec ceux qui ne sont jamais connectés en même temps. Un tome
   « Unknown location » finit ainsi par avoir un vrai lieu.
-* **Atlas d'EbonBuilds** : les sources de drop vues par les utilisateurs d'EbonBuilds s'ajoutent, lues
-  en jeu.
 * **Alertes** quand toi, ton groupe ou un autre joueur trouvez un tome de ta wishlist. Ça marche
   aussi avec le familier *Greedy Scavenger*, qui ramasse sans laisser de message : l'indice du
   serveur sur le tome dit lequel des monstres tués l'a lâché.
@@ -189,8 +185,7 @@ Le détail exact de chaque fonction : [docs/FEATURES.md](docs/FEATURES.md).
 * Le client Project Ebonhold (World of Warcraft 3.3.5a).
 * Recommandés : **ProjectEbonhold** (livré avec le client : tomes appris, téléportation),
   **EbonholdHub** (lieux de drop) et **[EbonAPI](https://github.com/Siphelis/EbonAPI)** (de Siphelis,
-  aussi dans Ebonhold Addon Manager : partage des lieux de drop avec les autres joueurs). Facultatif :
-  **EbonBuilds** (son atlas des tomes ajoute des sources). Sans eux, les fonctions concernées se
+  aussi dans Ebonhold Addon Manager : partage des lieux de drop avec les autres joueurs). Sans eux, les fonctions concernées se
   désactivent simplement.
 
 ### Avec Ebonhold Addon Manager

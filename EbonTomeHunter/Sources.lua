@@ -88,11 +88,9 @@ local function UpdateRow(row, source)
     end
     if loc.source == "net" and loc.at then
         title = title .. Muted(format(L.SourceFound, ns.Ago(loc.at) or "?"))
-    elseif loc.source == "atlas" then
-        title = title .. Muted(format(L.SourceAtlas, loc.count or 1))
     end
     -- how often it was seen dropping the tome (the order of the window follows it)
-    if (source.drops or 0) > 0 and loc.source ~= "atlas" then
+    if (source.drops or 0) > 0 then
         title = title .. Muted(format(L.SourceDrops, source.drops))
     end
     local reason = source.stale and ns.Evidence.Reason(source.kills or 0, source.voters or 0, source.reported,

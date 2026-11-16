@@ -13,7 +13,7 @@ farmer les tomes d'Echo** de Project Ebonhold (serveur WotLK 3.3.5a « Rogue-Lit
 - lieux de drop sur la carte du monde et téléportation au checkpoint le plus proche des monstres ;
 - liens Wowhead (WotLK) des monstres ;
 - réseau entre joueurs qui partage les lieux de drop, par **EbonAPI** (addon de Siphelis, installé à
-  part) ; sources de l'atlas d'EbonBuilds lues en jeu ;
+  part) ;
 - alertes de loot (y compris le familier *Greedy Scavenger*) ;
 - partage de wishlist ;
 - tutoriel en jeu.
@@ -65,8 +65,8 @@ docs/                     documentation détaillée (index ci-dessous)
 2. **ProjectEbonhold en lecture seule** : passer par `ns.PE.Service/Call` (fail-closed), ne jamais
    écrire dans ses tables, ne jamais appeler `ProjectEbonhold.onEventReceived` (il écrase son handler).
    L'addon doit marcher (en mode dégradé) **sans** ProjectEbonhold : le validateur teste les deux cas.
-3. **Données d'EbonholdHub** (lieux de drop, « All rights reserved ») **et d'EbonBuilds** (atlas des
-   tomes, sans licence) : lues en jeu à l'exécution, **jamais copiées** dans ce dépôt ni modifiées.
+3. **Données d'EbonholdHub** (lieux de drop, « All rights reserved ») (l'atlas d'EbonBuilds, lu jusqu'en
+   3.3.0, n'existe plus depuis EbonBuilds 3.x) : lues en jeu à l'exécution, **jamais copiées** dans ce dépôt ni modifiées.
 3 bis. **EbonAPI** (réseau) : licence PolyForm Strict → **jamais copié dans ce dépôt, jamais
    modifié**, même pour un test ou un contournement ; les tests le chargent là où il est. C'est une
    dépendance facultative : l'addon doit marcher sans lui (les lieux restent locaux). Un défaut

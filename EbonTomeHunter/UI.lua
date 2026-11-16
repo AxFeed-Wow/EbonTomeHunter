@@ -151,7 +151,7 @@ local function RowTooltip(row)
         if mobs then
             GameTooltip:AddLine("   " .. L.MobsLabel .. L.Colon .. mobs, 0.7, 0.7, 0.7, true)
         end
-        if (loc.source == "net" or loc.source == "raid" or loc.source == "atlas") and loc.notes then
+        if (loc.source == "net" or loc.source == "raid") and loc.notes then
             GameTooltip:AddLine("   " .. loc.notes, 0.45, 0.75, 1, true)   -- found by players
         end
     end

@@ -1768,57 +1768,6 @@ else
     EbonTomeHunterSourcesFrame:Hide()
 end
 
--- --- EbonBuilds' Tome Atlas (its saved data, read where it is, never written) ------------------
-do
-    local SEP = string.char(31)   -- EbonBuilds' separator between the mob and the zone
-    EbonBuildsDB = {
-        tomeAtlas = {
-            [300450] = { name = "Tome of Echo: Insulated Soul", sources = {
-                ["Venture Co. Shredder" .. SEP .. "Stonetalon Mountains"] = 12,
-                ["Unknown" .. SEP .. "Stonetalon Mountains"] = 2,
-                ["Ignis the Furnace Master" .. SEP .. "Ulduar"] = 5,
-                ["Sandfury Hideskinner" .. SEP .. "Tanaris"] = 3,
-                ["Bad|cffff0000Mob" .. SEP .. "Durotar"] = 1,
-            } },
-            [300569] = { name = "Tome of Echo: Beast Bane", sources = { ["Sinewy Wolf" .. SEP .. "Crystalsong Forest"] = 4 } },
-        },
-        tomeAtlasPinCoords = { ["Stonetalon Mountains"] = { ["Tome of Echo: Insulated Soul"] = { x = 0.6, y = 0.4, n = 3 } } },
-    }
-    Advance(61)   -- (EbonBuilds records drops while we play: its atlas is read again when it changes)
-    local function AtlasPlaces(itemId)
-        local out = {}
-        for _, loc in ipairs(ns.WorldMap.Locations(ns.Catalog.Get(itemId))) do
-            if loc.source == "atlas" then out[loc.mobs and loc.mobs[1] or "?"] = loc end
-        end
-        return out
-    end
-    local atlas = AtlasPlaces(300450)
-    local shredder, ignis = atlas["Venture Co. Shredder"], atlas["Ignis the Furnace Master"]
-    Check(shredder and shredder.mapFile == "StonetalonMountains" and shredder.onMap and shredder.count == 12
-        and math.abs(shredder.x - 0.6) < 0.001, "EbonBuilds atlas: the zone map, and the point EbonBuilds noted")
-    Check(ignis and not ignis.onMap and ignis.placeName == "Ulduar", "a raid source: its place, no map point")
-    Check(not atlas["?"], "a source without mob, in a zone another source gives: left out")
-    Check(atlas["Badcffff0000Mob"] and not atlas["Bad|cffff0000Mob"], "no escape sequence taken from its data")
-    Check(next(AtlasPlaces(300569)) == nil, "a mob another source of the tome lists already: not repeated")
-    Check(ns.Hints.KnownSources(300450)["venture co. shredder"], "its mobs are known sources (Greedy Scavenger)")
-    Check(ns.Sources.Show(300450) > 0, "Sources window of the tome")
-    local told = false
-    for i = 1, 8 do
-        local r = _G["EbonTomeHunterSourcesListRow" .. i]
-        if r and r:IsShown() and (r.title:GetText() or ""):find(format(ns.L.SourceAtlas, 12), 1, true) then told = true end
-    end
-    Check(told, "the Sources window tells the atlas and how many drops it saw")
-    EbonTomeHunterSourcesFrame:Hide()
-    if T.Available() then
-        local near = atlas["Sandfury Hideskinner"] and T.Nearest(atlas["Sandfury Hideskinner"])
-        Check(near and near.approx and near.checkpoint and near.checkpoint.id == 39,
-            "only its zone known: the teleport aims at the middle of Tanaris (Gadgetzan)")
-        Check(T.FormatDistance(120, true) == "~" .. format(ns.L.TravelYards, 120), "an approximate distance shows '~'")
-    end
-    EbonBuildsDB = nil
-    Advance(61)
-    Check(next(AtlasPlaces(300450)) == nil, "EbonBuilds gone: its sources too")
-end
 
 -- --- Sending a wishlist to a player (addon whisper) ------------------------------------------
 local addonSent = {}

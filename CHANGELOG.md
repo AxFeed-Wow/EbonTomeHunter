@@ -1,5 +1,20 @@
 # Historique des versions
 
+## 3.3.1 — 2026-11-16
+
+Suite de la mise à jour v2 de Project Ebonhold. Compatible avec la 3.x ; un fichier retiré du `.toc`
+(Atlas.lua) : un `/reload` suffit.
+
+- **Vente automatique** : l'addon prévient si la vente automatique de Project Ebonhold (Scrap à
+  l'ouverture d'un marchand, ou marchand de la Toolbelt après chaque combat) vendrait vos tomes d'Echo
+  (un tome des sacs dans ce qu'elle vendrait, « tout vendre », ou Recette + Rare cochés).
+- **Waystones** : plus de tri par faction (les points sont découverts pour tout le compte) ; pas de
+  nouvelle demande de téléportation pendant l'incantation de voyage, et le message rappelle de ne pas
+  bouger.
+- **Lieux en double** : les lieux déjà enregistrés sont refusionnés à la connexion (anciennes versions),
+  et un lieu sans carte se fond dans celui du même monstre.
+- **Retiré : l'atlas d'EbonBuilds**, qu'EbonBuilds 3.x ne fournit plus (le module ne lisait plus rien).
+
 ## 3.3.0 — 2026-11-16
 
 Mise à jour pour la grosse mise à jour « v2 » de Project Ebonhold (16/11/2026) et pour EbonAPI 2.2.
