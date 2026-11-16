@@ -176,8 +176,17 @@ local function IsCandidate(list, npcId, name)
 end
 
 local function SameSpot(a, b)
-    if a.mapFile ~= b.mapFile then return false end
-    if a.x and b.x then
+    if not (a.mapFile and b.mapFile) then
+        -- a place without its map (an instance the client had no map for): one with the same mob
+        if a.mapFile ~= b.mapFile and not ((a.npcId and a.npcId == b.npcId) or (a.mob and a.mob == b.mob)) then
+            return false
+        end
+    elseif a.mapFile ~= b.mapFile then
+        return false
+    end
+    if a.mapFile ~= b.mapFile then
+        -- (same mob, one place without a map)
+    elseif a.x and b.x then
         if math.abs(a.x - b.x) > 0.04 or math.abs(a.y - b.y) > 0.04 then return false end
     elseif a.zone ~= b.zone then
         return false
@@ -231,6 +240,9 @@ local function Milli(v) return v and floor(v * 1000 + 0.5) or nil end
 -- in which they met: the smallest finder name, the smallest point, the most precise zone text.
 local function Converge(old, record)
     local changed = false
+    if record.mapFile and not old.mapFile then   -- the place now knows its map
+        old.mapFile, old.x, old.y, old.zone, changed = record.mapFile, record.x, record.y, record.zone, true
+    end
     if record.by and (not old.by or record.by < old.by) then old.by, changed = record.by, true end
     if record.x and old.x then
         local ox, oy, rx, ry = Milli(old.x), Milli(old.y), Milli(record.x), Milli(record.y)
@@ -718,7 +730,19 @@ end
 -- The saved places of older versions without a mob go, the candidates are narrowed again.
 local function Tidy()
     for itemId, list in pairs(Store()) do
-        local changed = false
+        -- the stored places merged again among themselves (older versions, or two places a later
+        -- Converge brought together), in one order for every client
+        local before = #list
+        local ranked = Ranked(list)
+        Store()[itemId] = {}
+        for _, entry in ipairs(ranked) do
+            local r = entry.record
+            local finders = r.finders
+            r.n = CountFinders(r)
+            if Net.Add(r) then r.finders = finders end   -- (Add keeps only its finder)
+        end
+        list = Store()[itemId]
+        local changed = #list ~= before
         for i = #list, 1, -1 do
             if not (list[i].mob or (list[i].cands and #list[i].cands > 0)) then
                 tremove(list, i)
@@ -729,6 +753,8 @@ local function Tidy()
         if #list == 0 then Store()[itemId] = nil end
     end
 end
+
+Net.Tidy = Tidy
 
 ns.On("READY", function()
     catalogReady = true

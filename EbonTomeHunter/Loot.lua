@@ -399,10 +399,38 @@ function Loot.ScavengerProblem()
     return nil
 end
 
+-- ProjectEbonhold's automatic sale (Scrap rules sold on a vendor's opening, or by the Toolbelt
+-- vendor after each fight): nil, or why the tomes may be sold ("tome": one of the bags would be
+-- sold now; "all": "sell everything"; "rare": rare recipes). Read only; its services are globals.
+local function PEGlobal(name)
+    local g = rawget(_G, name)
+    return type(g) == "table" and g or nil
+end
+
+function Loot.ScrapProblem()
+    local options = PEGlobal("ProjectEbonholdOptionsService")
+    if not (options and type(options.GetSetting) == "function") then return nil end
+    local function Setting(key) return ns.SafeCall(options.GetSetting, options, key) and true or false end
+    local state = ns.PE.Call("ToolbeltService", "GetState")
+    local remote = type(state) == "table" and type(state.owned) == "table" and state.owned.vendor
+    if not (Setting("autoSellJunk") or (Setting("vendorAutoSell") and remote)) then return nil end
+    local scrap = PEGlobal("ScrapService")
+    if scrap and type(scrap.GetSellableItems) == "function" then
+        for _, item in ipairs(ns.SafeCall(scrap.GetSellableItems) or {}) do
+            local itemId = type(item) == "table" and ns.Scan.ItemIdFromLink(item.link)
+            if itemId and ns.Catalog.Get(itemId) then return "tome" end
+        end
+    end
+    if Setting("sellEverything") then return "all" end
+    if Setting("sellTypeRecipe") and Setting("sellQualityRare") then return "rare" end
+    return nil
+end
+
 ns.On("READY", function()
     bagTomes = CountTomes()   -- what the bags hold at login is not "just looted"
     ns.Timer.After(30, function()   -- (the Toolbelt state comes from the server after the login)
         if Loot.ScavengerProblem() then ns.Print(L.ScavengerSkipsTomes) end
+        if Loot.ScrapProblem() then ns.Print(L.ScrapSellsTomes) end
     end)
 end)
 

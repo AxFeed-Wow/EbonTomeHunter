@@ -746,6 +746,28 @@ do
         "the mob seen dropping it the most (3 + 2) first, at its best spot, under the name most saw")
     Check(#hazardRow.locations == 2 and best.spots == 2 and hazardRow.locations[2].mobs[1] == "Dune Smuggler",
         "one source per mob (its 2 spots in one), then the other mob")
+    -- stored places of older versions never merged among themselves: merged again at login
+    local function P(by, extra)
+        local r = { itemId = hazardId, mapFile = "Tanaris", x = 0.5, y = 0.5, npcId = 5420, mob = "Wastewander Bandit",
+            zone = "Tanaris", at = time(), by = by, finders = { [by] = true } }
+        for k, v in pairs(extra or {}) do r[k] = v end
+        return r
+    end
+    ns.DB.sightings = { [hazardId] = {
+        P("Ann"), P("Ben", { x = 0.52 }), P("Cid", { mapFile = false, x = false, y = false }),
+        P("Dan", { mapFile = false, x = false, y = false, npcId = 5615, mob = "Dune Smuggler" }),
+    } }
+    for _, r in ipairs(ns.DB.sightings[hazardId]) do
+        if r.mapFile == false then r.mapFile, r.x, r.y = nil, nil, nil end
+    end
+    ns.Net.Tidy()
+    local merged = ns.DB.sightings[hazardId]
+    local bandit
+    for _, r in ipairs(merged) do if r.mob == "Wastewander Bandit" then bandit = r end end
+    Check(#merged == 2 and bandit and ns.Net.FinderCount(bandit) == 3 and bandit.mapFile == "Tanaris",
+        "duplicate places merged at login (also the one without a map, same mob); another mob stays apart")
+    ns.Net.Tidy()
+    Check(#ns.DB.sightings[hazardId] == 2 and ns.Net.FinderCount(bandit) == 3, "merging again changes nothing")
     ns.DB.sightings = kept
     ns.SetOption("netEnabled", true)
     ns.Fire("SIGHTINGS_CHANGED")
@@ -1397,6 +1419,25 @@ if type(ProjectEbonhold) == "table" then
     ProjectEbonhold.ToolbeltService = keptBelt
 end
 Check(ns.L.ScavengerSkipsTomes ~= "ScavengerSkipsTomes", "the Scavenger's Eye warning has a text")
+-- ProjectEbonhold's automatic sale (globals ProjectEbonholdOptionsService / ScrapService, read only)
+do
+    local keptOpt, keptScrap = rawget(_G, "ProjectEbonholdOptionsService"), rawget(_G, "ScrapService")
+    local settings, sellable = {}, {}
+    rawset(_G, "ProjectEbonholdOptionsService", { GetSetting = function(_, key) return settings[key] end })
+    rawset(_G, "ScrapService", { GetSellableItems = function() return sellable end })
+    Check(ns.Loot.ScrapProblem() == nil, "automatic sale off: nothing to tell")
+    settings.autoSellJunk = true
+    Check(ns.Loot.ScrapProblem() == nil, "junk sold at the vendor, no tome among what would be sold: nothing to tell")
+    sellable[1] = { bag = 0, slot = 1, link = Link(300569, "Tome of Echo: Beast Bane"), value = 1 }
+    Check(ns.Loot.ScrapProblem() == "tome", "a tome of the bags among what the automatic sale would sell")
+    sellable[1] = nil
+    rawset(_G, "ScrapService", nil)
+    settings.sellEverything = true
+    Check(ns.Loot.ScrapProblem() == "all", "without ScrapService: 'sell everything' is told")
+    rawset(_G, "ProjectEbonholdOptionsService", keptOpt)
+    rawset(_G, "ScrapService", keptScrap)
+end
+Check(ns.L.ScrapSellsTomes ~= "ScrapSellsTomes", "the automatic sale warning has a text")
 
 Advance(11)
 unitState.mouseover = { name = "Snowblind Wolf", guid = wolfGUID, dead = true }
@@ -1506,7 +1547,7 @@ local CHECKPOINTS = {
     { id = 66, name = "Chillwind Camp, Western Plaguelands", mapId = 23, serverMapId = 0, x = 0.42948, y = 0.84954, factionAllowed = true, unlocked = true },
     { id = 383, name = "Thondoril River, Western Plaguelands", mapId = 23, serverMapId = 0, x = 0.69206, y = 0.49679, factionAllowed = true, unlocked = false },
     { id = 67, name = "Light's Hope Chapel, Eastern Plaguelands", mapId = 24, serverMapId = 0, x = 0.7574078, y = 0.5332380, factionAllowed = true, unlocked = true },
-    { id = 68, name = "Light's Hope Chapel, Eastern Plaguelands", mapId = 24, serverMapId = 0, x = 0.7440347, y = 0.5122817, factionAllowed = false, unlocked = true },
+    { id = 68, name = "Light's Hope Chapel, Eastern Plaguelands", mapId = 24, serverMapId = 0, x = 0.7440347, y = 0.5122817, unlocked = true },   -- (v2: no faction any more)
     { id = 336, name = "Windrunner's Overlook, Crystalsong Forest", mapId = 511, serverMapId = 571, x = 0.7211788, y = 0.8081377, factionAllowed = true, unlocked = true },
     { id = 310, name = "Dalaran", mapId = 511, serverMapId = 571, x = 0.3652774, y = 0.3792568, factionAllowed = true, unlocked = true },
     { id = 39, name = "Gadgetzan, Tanaris", mapId = 162, serverMapId = 1, x = 0.5095420, y = 0.2932543, factionAllowed = true, unlocked = true },
@@ -1528,7 +1569,7 @@ if ProjectEbonhold then
     }
     local count = {}
     for _, c in ipairs(T.Checkpoints()) do count[c.id] = (count[c.id] or 0) + 1 end
-    Check(count[68] == nil, "checkpoints of the other faction left out")
+    Check(count[68] == 1, "v2 waystones: no faction, every point discovered by the account is kept")
     Check(count[10019] == 1, "a meeting stone listed on two zone maps counts once")
     Check(count[310] == 1 and count[39] == 1 and count[83] == 1, "checkpoints placed on their continent (Ghostlands too)")
 
@@ -1572,6 +1613,11 @@ if ProjectEbonhold then
     T.GoBest(300569)
     Check(#usedCheckpoints == 1 and ChatContains(ns.L.TravelWait), "a second request right after is ignored")
     Advance(4)
+    local keptCasting = rawget(_G, "UnitCastingInfo")
+    rawset(_G, "UnitCastingInfo", function() return "Traveling..." end)
+    T.GoBest(300569)
+    Check(#usedCheckpoints == 1, "the travel cast (v2 waystones) still running: no new request")
+    rawset(_G, "UnitCastingInfo", keptCasting)
 
     IsMounted = function() return true end
     T.GoBest(300569)

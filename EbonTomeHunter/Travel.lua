@@ -7,12 +7,14 @@ local L = ns.L
 -- mobs (or at several places): the source seen dropping it the most wins, then the one
 -- with the nearest checkpoint (T.Sources).
 -- PE checkpoint: { id, name, kind, mapId = GetCurrentMapAreaID() (WorldMapArea id + 1),
--- serverMapId, x, y (0..1 on that zone map), factionAllowed, unlocked }. "unlocked"
--- stays false until the server has sent the list (code 800, asked at login).
+-- serverMapId, x, y (0..1 on that zone map), unlocked, viaGroup }. "unlocked" stays false
+-- until the server has sent the list (code 800, asked at login). Since the v2 update
+-- (waystones) the points are discovered for the whole account and have no faction any more.
 ns.Travel = {}
 local T = ns.Travel
 
 local REQUEST_GAP = 3      -- seconds between two teleport requests (double clicks)
+local TRAVEL_CAST = 15     -- seconds: the travel cast (12.5 s) of the last request may still run
 local REFRESH_GAP = 30     -- seconds between two requests of the checkpoint list
 
 local lastRequest, lastRefresh = -REQUEST_GAP, -REFRESH_GAP
@@ -44,7 +46,7 @@ function T.Checkpoints()
         local info = id and AreaInfo(c.mapId)
         local x, y = id and tonumber(c.x), id and tonumber(c.y)
         -- a meeting stone is listed once per zone map around it: the same point
-        if info and x and y and not seen[id] and c.factionAllowed ~= false and info.map == tonumber(c.serverMapId) then
+        if info and x and y and not seen[id] and info.map == tonumber(c.serverMapId) then
             seen[id] = true
             out[#out + 1] = {
                 id = id, name = tostring(c.name or ("#" .. id)), kind = c.kind, unlocked = c.unlocked == true,
@@ -281,7 +283,9 @@ function T.Execute(source)
         ns.Print(L.TravelCombat)
         return false
     end
-    if GetTime() - lastRequest < REQUEST_GAP then
+    -- since the v2 update a waystone travel is a cast (12.5 s, cancelled by moving): no new
+    -- request while one is under way
+    if GetTime() - lastRequest < REQUEST_GAP or (GetTime() - lastRequest < TRAVEL_CAST and type(UnitCastingInfo) == "function" and UnitCastingInfo("player")) then
         ns.Print(L.TravelWait)
         return false
     end
