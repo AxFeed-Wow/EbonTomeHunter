@@ -14,7 +14,7 @@ plus tard (clics, évènements) peuvent viser n'importe quel module.
 |---|---|---|---|---|
 | 1 | `Locale.lua` | table `ns.L` : anglais + surcharge française si `GetLocale() == "frFR"` ; une clé absente renvoie son nom | | |
 | 2 | `Core.lua` | version, SavedVariables et valeurs par défaut, bus `ns.On/ns.Fire`, timers, évènements multi-écouteurs, adaptateur `ns.PE`, démarrage, commandes `/eth` | ADDON_LOADED, PLAYER_LOGIN, BAG_UPDATE | → DATABASE_READY, LOGIN, READY, AUCTION_UI_LOADED, BAGS_CHANGED, SETTINGS_CHANGED |
-| 3 | `TomeData.lua` | **généré** : les 148 tomes (`ns.TomeData[itemId]`) | | |
+| 3 | `TomeData.lua` | **généré** : les 160 tomes (`ns.TomeData[itemId]`) | | |
 | 4 | `MapData.lua` | **généré** : bornes monde de chaque carte (`ns.MapData.maps`) et calibrage des images d'EbonholdHub (`ns.MapData.hub`) | | |
 | 5 | `Widgets.lua` | kit d'UI sombre `ns.Widgets` (W) : fenêtre, boutons, onglets, liste virtuelle, en-têtes triables, zone de texte, pièces d'or, cases à cocher, curseurs | | |
 | 6 | `Catalog.lua` | catalogue `ns.Catalog` : lignes de tomes + index, lieux de drop, tomes découverts, migration des anciennes clés | | SIGHTINGS_CHANGED → CATALOG_CHANGED |
@@ -105,6 +105,8 @@ licence (PolyForm Strict) l'interdit ; chaque joueur l'installe à part.
 | `corpses`, `evidence`, `reports` | sources périmées (Evidence.lua) : nos compteurs, ceux des autres, les signalements |
 | `killStats[npcId]` | `{ n, name, last }` : créatures tuées par le joueur ou le groupe (600 max) |
 | `apiHint` | version pour laquelle « installez EbonAPI » a déjà été dit |
+| `updateTold` | version plus récente déjà annoncée dans le chat |
+| `evidenceName`, `ownNames` | nom unique sous lequel partent nos compteurs (Evidence.lua), et les personnages du compte (leurs lignes ne comptent pas comme celles d'un autre joueur) |
 | `tutorialDone` | version du tutoriel déjà vue (0 = jamais) |
 | `options` | toutes les options (voir `DB_DEFAULTS.options` dans Core.lua) |
 

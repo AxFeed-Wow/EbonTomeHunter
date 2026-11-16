@@ -72,6 +72,13 @@ CanSendAuctionQuery = function() return true end
 local queried
 QueryAuctionItems = function(name) queried = name end
 
+-- a translated client (v2 update): the searches use the item names the client knows
+local realItemInfo = GetItemInfo
+GetItemInfo = function(id) if id == 300569 then return "Tome d'\195\137cho : Fl\195\169au des b\195\170tes" end end
+Check(ns.Scan.FullQuery() == "Tome d'\195\137cho" and ns.Scan.QueryName(ns.Catalog.Get(300569)) == GetItemInfo(300569)
+    and ns.Scan.QueryName(ns.Catalog.Get(300570)) == ns.Catalog.Get(300570).tomeName,
+    "translated client: full scan and exact search use the client's item names, English when not cached")
+GetItemInfo = realItemInfo
 ns.Scan.Start()
 Check(queried == "Tome of Echo", "AH query searches tomes, got " .. tostring(queried))
 Fire("AUCTION_ITEM_LIST_UPDATE")
@@ -372,6 +379,16 @@ Check(stacked and #stacked.items == 2 and #stacked.basic == 1 and stacked.class 
     "picks (.3), locked echoes (!, %21 when encoded) and the class name are read")
 local onlyBasic = ns.Share.Decode("https://project-ebonhold.com/tools/echo-builder?b=200044-200479&c=mage")
 Check(onlyBasic and #onlyBasic.items == 0 and #onlyBasic.basic == 2, "a build of basic echoes only: nothing to add")
+-- the in-game loadout code (v2 update): id.quality.picks[.1], 7-digit class echoes, refused echoes
+local code = ns.Share.Decode("EBH1:200954.3.2,201340.2.1,200044.1.1,201378.3.1,1000123.2.2:DEATHKNIGHT:My DK build")
+Check(code and code.echoBuild and code.class == "Death Knight" and code.echoes == 4 and #code.items == 2
+    and #code.learned == 1 and #code.basic == 1, "EBH1 code: 2 tomes to add, 1 learned, 1 basic, the class echo left out")
+local refused = ns.Share.Decode("Paste this: ebh1:200954.3.1.1,201340.2.1::Echo build")
+Check(refused and refused.echoes == 1 and #refused.items == 1 and refused.items[1].row == cyclone and refused.class == nil,
+    "EBH1 code found in a text, no class: a refused echo (.1) gives no tome")
+local older = ns.Share.Decode("EBH1:201340.2.1:Old build")
+Check(older and #older.items == 1 and older.class == nil, "the older EBH1 format (no class field) is read")
+Check(not ns.Share.Decode("EBH1:1000123.2.2:MAGE:only class echoes"), "an EBH1 code without any echo: not a build")
 Check(select(2, ns.Share.Decode("ETH1:Yangr:20,35,48,52,63,227,228,234,231,240:7768f7")) == "ShareCorrupt",
     "a hand-made string with a wrong checksum is still refused")
 
@@ -760,6 +777,8 @@ else
         return Peers.Run(name, "return EbonAPI:NewAddon('EbonTomeHunter', 1, 0):Share('" .. dataset .. "', "
             .. "(time() + 5) * 1000, " .. string.format("%q", text) .. ")")
     end
+    -- EbonAPI 2.2+ lets the client restore the player's channels first: its /join waits up to 30 s
+    Until(60, function() return ns.Net.SyncState() == "online" end)
     Check(ns.Net.Available() and ns.Net.SyncState() == "online", "connected to EbonAPI, in its channel")
     Check(api:GetShared("T300569") and api:GetShared("T300569"):find("^300569%^CrystalsongForest%^490%^540%^28434%^Sinewy Wolf%^"),
         "our find is the dataset of its tome (T300569)")
@@ -998,6 +1017,16 @@ Check(ns.DB.evidence[wolfKey].Ivy.total == 700, "the totals of another player's 
 Check(EV.Verdict(300569, "Sinewy Wolf", 28434), "two players with enough corpses: stale")
 EV.ImportShared(300569, Line("#28434", "Kim", 3, nowEv + 30, nowEv + 30, 3, 1, 0, nowEv + 30))
 Check(not EV.Verdict(300569, "Sinewy Wolf", 28434), "a drop reported after their counts: good source again")
+-- our other characters: their lines (older versions shared the account's counters under each name)
+ns.DB.ownNames = { Alt = true }
+ns.DB.evidence[wolfKey].Alt = { n = 1, since = nowEv, drop = 0, total = 1, drops = 0, stamp = nowEv }
+ns.DB.reports.emptyKey = {}
+EV.ImportShared(300569, Line("#28434", "Alt", 800, nowEv, 0, 800, 0, 0, nowEv + 60))
+Check(ns.DB.evidence[wolfKey].Alt.total == 1, "a line of another character of the account is not another player's")
+EV.Tidy()
+Check(not ns.DB.evidence[wolfKey].Alt and not ns.DB.reports.emptyKey and ns.DB.ownNames[UnitName("player")],
+    "at login: our other characters' lines and the empty tables go, this character is one of ours")
+ns.DB.ownNames = nil
 EV.ImportShared(300569, Line("#28434", "Joe", 5, nowEv, 0, 5, 9, 0, nowEv))
 Check(not ns.DB.evidence[wolfKey].Joe, "a counter with more drops than corpses is refused")
 Check(ns.DB.evidence[wolfKey].Kim and not EV.SharedText(300569):find("^Kim^", 1, true),
@@ -1153,7 +1182,10 @@ local raidCount = 0
 for id in pairs(ns.Catalog.RAID_BOSSES) do
     if ns.Catalog.Get(id) then raidCount = raidCount + 1 end
 end
-Check(raidCount == 20, "the 20 raid tomes are all in the catalogue, got " .. raidCount)
+Check(raidCount == 32, "the 32 raid tomes (12 Classic / TBC since the v2 update) are all in the catalogue, got " .. raidCount)
+local wrath = ns.Catalog.Get(301462)
+Check(wrath and wrath.location and wrath.location.placeName == ns.L.RaidMC and wrath.location.mobs[1] == "Ragnaros",
+    "Wrath of Ragnaros: Ragnaros in Molten Core")
 Check(ns.Catalog.Get(300569).location.source ~= "raid", "a tome with EbonholdHub places keeps them")
 Check(#ns.Travel.Sources(301370) == 3, "Shock Vortex: the three princes of the Blood Prince Council")
 
@@ -1346,6 +1378,25 @@ BagsChanged()
 mailbox:Hide()
 BagsChanged()
 Check(#alerts == alertsBefore and ns.DB.sightings[300437] == nil, "a tome taken from the mailbox is not loot")
+-- the bank opened in DragonUI's Bagster (BankFrame stays hidden): known by its events
+Fire("BANKFRAME_OPENED")
+Check(ns.Loot.TransactionOpen(), "bank opened (its event, no BankFrame shown): items entering the bags are not loot")
+Fire("BANKFRAME_CLOSED")
+Check(not ns.Loot.TransactionOpen(), "bank closed: the bags are watched again")
+-- the Scavenger's Eye of the Toolbelt (ProjectEbonhold.ToolbeltService, read only)
+if type(ProjectEbonhold) == "table" then
+    local keptBelt, loot = ProjectEbonhold.ToolbeltService, { on = true, minQuality = 0, classMask = 4294967295 }
+    ProjectEbonhold.ToolbeltService = { GetState = function() return { loot = loot } end }
+    Check(ns.Loot.ScavengerProblem() == nil, "Scavenger's Eye picking up everything: nothing to tell")
+    loot.classMask = 4294967295 - 2 ^ 9
+    Check(ns.Loot.ScavengerProblem() == "class", "Scavenger's Eye without the Recipe type: the tomes stay on the corpses")
+    loot.classMask, loot.minQuality = 4294967295, 4
+    Check(ns.Loot.ScavengerProblem() == "quality", "Scavenger's Eye at Epic minimum: the rare tomes stay")
+    loot.on = false
+    Check(ns.Loot.ScavengerProblem() == nil, "Scavenger's Eye off: nothing to tell")
+    ProjectEbonhold.ToolbeltService = keptBelt
+end
+Check(ns.L.ScavengerSkipsTomes ~= "ScavengerSkipsTomes", "the Scavenger's Eye warning has a text")
 
 Advance(11)
 unitState.mouseover = { name = "Snowblind Wolf", guid = wolfGUID, dead = true }

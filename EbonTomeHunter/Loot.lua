@@ -26,6 +26,8 @@ local TRANSACTION_FRAMES = {
     "MerchantFrame", "BankFrame", "GuildBankFrame", "MailFrame", "OpenMailFrame", "TradeFrame",
     "AuctionFrame", "TradeSkillFrame", "QuestFrame", "GossipFrame",
     "ExtBankFrame", "VoidStorageFrame", "ModernShopFrame", "ItemPurchasePopup", "EbonholdExtractionFrame",
+    -- v2 update: Call Board contract rewards (caches, items), item recovery
+    "EbonholdCallboardFrame", "ItemRecoveryFrame",
 }
 
 local lootSource      -- { at, closedAt, name, npcId, place }: the last loot window
@@ -331,13 +333,34 @@ end)
 ------------------------------------------------------------------------
 -- Tomes appearing in the bags (Greedy Scavenger: no chat line at all)
 ------------------------------------------------------------------------
+-- Sessions followed by their events too: DragonUI's Bagster (built into ProjectEbonhold since the
+-- v2 update) hides BankFrame and opens the bank and the guild bank in frames of its own.
+local SESSION_EVENTS = {
+    BANKFRAME_OPENED = "bank", BANKFRAME_CLOSED = false, GUILDBANKFRAME_OPENED = "gbank", GUILDBANKFRAME_CLOSED = false,
+    MAIL_SHOW = "mail", MAIL_CLOSED = false, MERCHANT_SHOW = "merchant", MERCHANT_CLOSED = false,
+    TRADE_SHOW = "trade", TRADE_CLOSED = false, AUCTION_HOUSE_SHOW = "ah", AUCTION_HOUSE_CLOSED = false,
+}
+local CLOSES = {
+    BANKFRAME_CLOSED = "bank", GUILDBANKFRAME_CLOSED = "gbank", MAIL_CLOSED = "mail", MERCHANT_CLOSED = "merchant",
+    TRADE_CLOSED = "trade", AUCTION_HOUSE_CLOSED = "ah",
+}
+local sessions = {}   -- [kind] = true while that window is open
+for event, kind in pairs(SESSION_EVENTS) do
+    ns.RegisterEvent(event, function()
+        if kind then sessions[kind] = true else sessions[CLOSES[event]] = nil end
+        transactionAt = GetTime()   -- (items may still arrive just after a close)
+    end)
+end
+
 local function TransactionOpen()
+    if next(sessions) then return true end
     for _, name in ipairs(TRANSACTION_FRAMES) do
         local frame = _G[name]
         if type(frame) == "table" and frame.IsShown and frame:IsShown() then return true end
     end
     return false
 end
+Loot.TransactionOpen = TransactionOpen
 
 local function CountTomes()
     local counts = {}
@@ -363,8 +386,24 @@ ns.RegisterEvent("PLAYER_ENTERING_WORLD", function()
     settleUntil = GetTime() + SETTLE
 end)
 
+-- The Scavenger's Eye of the Toolbelt (v2 update: it replaces the Greedy Scavenger pet) loots
+-- the corpses around the player, by item class: nil, or the reason it leaves the tomes behind.
+local RECIPE_BIT = 2 ^ 9   -- ITEM_CLASS 9: Recipe (the tomes)
+function Loot.ScavengerProblem()
+    local state = ns.PE.Call("ToolbeltService", "GetState")
+    local loot = type(state) == "table" and type(state.loot) == "table" and state.loot or nil
+    if not (loot and loot.on) then return nil end
+    local mask = tonumber(loot.classMask)
+    if mask and floor(mask / RECIPE_BIT) % 2 == 0 then return "class" end
+    if (tonumber(loot.minQuality) or 0) > 2 then return "quality" end   -- the tomes are rare or epic
+    return nil
+end
+
 ns.On("READY", function()
     bagTomes = CountTomes()   -- what the bags hold at login is not "just looted"
+    ns.Timer.After(30, function()   -- (the Toolbelt state comes from the server after the login)
+        if Loot.ScavengerProblem() then ns.Print(L.ScavengerSkipsTomes) end
+    end)
 end)
 
 ns.On("BAGS_CHANGED", function()

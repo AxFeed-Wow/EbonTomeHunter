@@ -1,5 +1,31 @@
 # Historique des versions
 
+## 3.3.0 — 2026-11-16
+
+Mise à jour pour la grosse mise à jour « v2 » de Project Ebonhold (16/11/2026) et pour EbonAPI 2.2.
+Compatible avec la 3.x (même réseau), aucun nouveau fichier : un `/reload` suffit.
+
+- **160 tomes** (148 avant) : les 12 nouveaux tomes des boss de raid Classic et Burning Crusade
+  (Living Bomb, Wrath of Ragnaros, Shadow Flame, Eye of C'Thun, Embers of Al'ar…). Chacun montre son
+  boss et l'entrée du raid, en anglais et en français. « Steady Casting » (300437) devient « Last Breath ».
+- **Code de build du jeu `EBH1:`** (Echo Journal > Loadouts > Export, « Copy in-game code » du site,
+  Community Builds) : collé dans la fenêtre Partager, il ajoute les tomes du build comme un lien Echo
+  Builder. Un Echo refusé (`.1`) ne donne pas de tome ; les Echos de classe sont ignorés.
+- **Jeu traduit** : le scan et la recherche d'un tome à l'hôtel des ventes utilisent le nom de l'objet
+  que connaît le client (français, allemand, espagnol), l'anglais sinon.
+- **Œil du charognard** (Toolbelt, remplace le familier Greedy Scavenger) : les tomes qu'il ramasse sont
+  toujours détectés ; l'addon prévient s'il laisse les tomes sur les cadavres (type Recette décoché ou
+  qualité minimale Épique).
+- **Plus de faux drops** : un tome sorti de la banque, de la banque de guilde (fenêtres de DragonUI),
+  du courrier, d'un marchand, d'un échange ou de l'hôtel des ventes, ou reçu du Call Board, n'est plus
+  pris pour un drop.
+- **Sources périmées** : les compteurs du compte partent sous un seul nom ; avant, chaque personnage
+  les republiait sous le sien et ils revenaient comptés deux fois. Les lignes de vos autres personnages
+  et les tables vides des anciennes versions sont nettoyées à la connexion.
+- EbonAPI 2.2 : il attend que le jeu restaure vos canaux avant de rejoindre le sien (l'ancienne limite
+  « numéro de canal décalé » disparaît).
+- L'atlas des tomes d'EbonBuilds n'existe plus dans EbonBuilds 3.x : rien n'est lu (sans erreur).
+
 ## 3.2.0 — 2026-10-06
 
 Un réseau bien plus léger, des sources plus propres (une par monstre, sans « inconnu »), la

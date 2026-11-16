@@ -49,10 +49,10 @@
  },
  {
   "itemId": 300437,
-  "itemName": "Tome of Echo: Steady Casting",
-  "itemNameVerified": true,
-  "echoName": "Steady Casting",
-  "quality": 3,
+  "itemName": "Tome of Echo: Last Breath",
+  "itemNameVerified": false,
+  "echoName": "Last Breath",
+  "quality": 2,
   "echoes": [
    {
     "spellId": 200437,
@@ -60,8 +60,8 @@
     "classMask": 1535
    }
   ],
-  "description": "Grants this character the ability to discover Steady Casting when offered new Echoes. Steady Casting: Reduces pushback suffered from damaging attacks while casting.",
-  "icon": "INTERFACE\\ICONS\\inv_glove_cloth_challengemage_d_01"
+  "description": "Grants you the ability to discover Last Breath when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Misc_Gem_Pearl_04"
  },
  {
   "itemId": 300438,
@@ -483,7 +483,7 @@
   "itemId": 300583,
   "itemName": "Tome of Echo: Crypt Lord’s Swarm",
   "itemNameVerified": true,
-  "echoName": "Crypt Lord’s Swarm",
+  "echoName": "Crypt Lord's Swarm",
   "quality": 4,
   "echoes": [
    {
@@ -499,7 +499,7 @@
   "itemId": 300585,
   "itemName": "Tome of Echo: Widow’s Venom",
   "itemNameVerified": true,
-  "echoName": "Widow’s Venom",
+  "echoName": "Widow's Venom",
   "quality": 4,
   "echoes": [
    {
@@ -515,7 +515,7 @@
   "itemId": 300589,
   "itemName": "Tome of Echo: Broodmother’s Webbing",
   "itemNameVerified": true,
-  "echoName": "Broodmother’s Webbing",
+  "echoName": "Broodmother's Webbing",
   "quality": 4,
   "echoes": [
    {
@@ -547,7 +547,7 @@
   "itemId": 300595,
   "itemName": "Tome of Echo: The Unclean’s Fever",
   "itemNameVerified": true,
-  "echoName": "The Unclean’s Fever",
+  "echoName": "The Unclean's Fever",
   "quality": 4,
   "echoes": [
    {
@@ -563,7 +563,7 @@
   "itemId": 300597,
   "itemName": "Tome of Echo: The Sporelord’s Gift",
   "itemNameVerified": true,
-  "echoName": "The Sporelord’s Gift",
+  "echoName": "The Sporelord's Gift",
   "quality": 4,
   "echoes": [
    {
@@ -579,7 +579,7 @@
   "itemId": 300599,
   "itemName": "Tome of Echo: Drillmaster’s Rebuke",
   "itemNameVerified": true,
-  "echoName": "Drillmaster’s Rebuke",
+  "echoName": "Drillmaster's Rebuke",
   "quality": 4,
   "echoes": [
    {
@@ -595,7 +595,7 @@
   "itemId": 300601,
   "itemName": "Tome of Echo: The Harvester’s Tithe",
   "itemNameVerified": true,
-  "echoName": "The Harvester’s Tithe",
+  "echoName": "The Harvester's Tithe",
   "quality": 4,
   "echoes": [
    {
@@ -755,7 +755,7 @@
   "itemId": 300690,
   "itemName": "Tome of Echo: Reaper’s Reprieve",
   "itemNameVerified": true,
-  "echoName": "Reaper’s Reprieve",
+  "echoName": "Reaper's Reprieve",
   "quality": 3,
   "echoes": [
    {
@@ -771,7 +771,7 @@
   "itemId": 300693,
   "itemName": "Tome of Echo: Reaper’s Verdict",
   "itemNameVerified": true,
-  "echoName": "Reaper’s Verdict",
+  "echoName": "Reaper's Verdict",
   "quality": 4,
   "echoes": [
    {
@@ -787,7 +787,7 @@
   "itemId": 300695,
   "itemName": "Tome of Echo: Reaper’s Doom",
   "itemNameVerified": true,
-  "echoName": "Reaper’s Doom",
+  "echoName": "Reaper's Doom",
   "quality": 4,
   "echoes": [
    {
@@ -915,7 +915,7 @@
   "itemId": 300818,
   "itemName": "Tome of Echo: Eonar Seed",
   "itemNameVerified": true,
-  "echoName": "Eonar’s Seed",
+  "echoName": "Eonar's Seed",
   "quality": 4,
   "echoes": [
    {
@@ -1043,7 +1043,7 @@
   "itemId": 300852,
   "itemName": "Tome of Echo: Emberlord Gift",
   "itemNameVerified": true,
-  "echoName": "Emberlord’s Gift",
+  "echoName": "Emberlord's Gift",
   "quality": 3,
   "echoes": [
    {
@@ -1267,7 +1267,7 @@
   "itemId": 300894,
   "itemName": "Tome of Echo: Archmage Mark",
   "itemNameVerified": true,
-  "echoName": "Archmage’s Mark",
+  "echoName": "Archmage's Mark",
   "quality": 3,
   "echoes": [
    {
@@ -1507,7 +1507,7 @@
   "itemId": 300944,
   "itemName": "Tome of Echo: Crusader's Surge",
   "itemNameVerified": true,
-  "echoName": "Crusader’s Surge",
+  "echoName": "Crusader's Surge",
   "quality": 3,
   "echoes": [
    {
@@ -1587,7 +1587,7 @@
   "itemId": 300954,
   "itemName": "Tome of Echo: Nature Surge",
   "itemNameVerified": true,
-  "echoName": "Nature’s Surge",
+  "echoName": "Nature's Surge",
   "quality": 3,
   "echoes": [
    {
@@ -1954,13 +1954,7 @@
   "itemNameVerified": true,
   "echoName": "Quickened Tempo",
   "quality": 4,
-  "echoes": [
-   {
-    "spellId": 201298,
-    "quality": 3,
-    "classMask": 1535
-   }
-  ],
+  "echoes": [],
   "description": "Grants this character the ability to discover Quickened Tempo when offered new Echoes. Quickened Tempo: Haste now reduces your global cooldown.",
   "icon": "INTERFACE\\ICONS\\inv_sword_1h_firelandsraid_d_02"
  },
@@ -1968,7 +1962,7 @@
   "itemId": 301300,
   "itemName": "Tome of Echo: Impaler’s Tribute",
   "itemNameVerified": true,
-  "echoName": "Impaler’s Tribute",
+  "echoName": "Impaler's Tribute",
   "quality": 4,
   "echoes": [
    {
@@ -2016,7 +2010,7 @@
   "itemId": 301312,
   "itemName": "Tome of Echo: Nether Lord’s Command",
   "itemNameVerified": true,
-  "echoName": "Nether Lord’s Command",
+  "echoName": "Nether Lord's Command",
   "quality": 4,
   "echoes": [
    {
@@ -2032,7 +2026,7 @@
   "itemId": 301318,
   "itemName": "Tome of Echo: Champion’s Rally",
   "itemNameVerified": true,
-  "echoName": "Champion’s Rally",
+  "echoName": "Champion's Rally",
   "quality": 4,
   "echoes": [
    {
@@ -2080,7 +2074,7 @@
   "itemId": 301336,
   "itemName": "Tome of Echo: Broodmother’s Fury",
   "itemNameVerified": true,
-  "echoName": "Broodmother’s Fury",
+  "echoName": "Broodmother's Fury",
   "quality": 4,
   "echoes": [
    {
@@ -2110,9 +2104,9 @@
  },
  {
   "itemId": 301344,
-  "itemName": "Tome of Echo: Deathwhisper’s Barrier",
+  "itemName": "Tome of Echo: Deathwhisper's Barrier",
   "itemNameVerified": false,
-  "echoName": "Deathwhisper’s Barrier",
+  "echoName": "Deathwhisper's Barrier",
   "quality": 4,
   "echoes": [
    {
@@ -2121,7 +2115,7 @@
     "classMask": 1535
    }
   ],
-  "description": "Grants you the ability to discover Deathwhisper’s Barrier when offered new Echoes.",
+  "description": "Grants you the ability to discover Deathwhisper's Barrier when offered new Echoes.",
   "icon": "INTERFACE\\ICONS\\inv_shield_1h_artifactstormfist_d_05"
  },
  {
@@ -2411,5 +2405,197 @@
   ],
   "description": "Grants you the ability to discover Twilight Combustion when offered new Echoes.",
   "icon": "INTERFACE\\ICONS\\inv_shadowflame_buff"
+ },
+ {
+  "itemId": 301458,
+  "itemName": "Tome of Echo: Living Bomb",
+  "itemNameVerified": false,
+  "echoName": "Living Bomb",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201458,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Living Bomb when offered new Echoes.",
+  "icon": "INTERFACE\\ICONS\\inv_misc_orb_05"
+ },
+ {
+  "itemId": 301462,
+  "itemName": "Tome of Echo: Wrath of Ragnaros",
+  "itemNameVerified": false,
+  "echoName": "Wrath of Ragnaros",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201462,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Wrath of Ragnaros when offered new Echoes.",
+  "icon": "Interface\\Icons\\Achievement_Boss_Ragnaros"
+ },
+ {
+  "itemId": 301466,
+  "itemName": "Tome of Echo: Brood Affliction",
+  "itemNameVerified": false,
+  "echoName": "Brood Affliction",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201466,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Brood Affliction when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Misc_Head_Dragon_Red"
+ },
+ {
+  "itemId": 301472,
+  "itemName": "Tome of Echo: Shadow Flame",
+  "itemNameVerified": false,
+  "echoName": "Shadow Flame",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201472,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Shadow Flame when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Misc_Head_Dragon_Black"
+ },
+ {
+  "itemId": 301476,
+  "itemName": "Tome of Echo: Blood Siphon",
+  "itemNameVerified": false,
+  "echoName": "Blood Siphon",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201476,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Blood Siphon when offered new Echoes.",
+  "icon": "Interface\\Icons\\inv_misc_gem_bloodstone_03"
+ },
+ {
+  "itemId": 301480,
+  "itemName": "Tome of Echo: Anubisath Aegis",
+  "itemNameVerified": false,
+  "echoName": "Anubisath Aegis",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201480,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Anubisath Aegis when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Shield_23"
+ },
+ {
+  "itemId": 301488,
+  "itemName": "Tome of Echo: Eye of C'Thun",
+  "itemNameVerified": false,
+  "echoName": "Eye of C'Thun",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201488,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Eye of C'Thun when offered new Echoes.",
+  "icon": "Interface\\Icons\\inv_misc_eye_02"
+ },
+ {
+  "itemId": 301492,
+  "itemName": "Tome of Echo: Prismatic Beams",
+  "itemNameVerified": false,
+  "echoName": "Prismatic Beams",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201492,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Prismatic Beams when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Enchant_PrismaticSphere"
+ },
+ {
+  "itemId": 301496,
+  "itemName": "Tome of Echo: Duality of Hydross",
+  "itemNameVerified": false,
+  "echoName": "Duality of Hydross",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201496,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Duality of Hydross when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Elemental_Crystal_Water"
+ },
+ {
+  "itemId": 301502,
+  "itemName": "Tome of Echo: Embers of Al'ar",
+  "itemNameVerified": false,
+  "echoName": "Embers of Al'ar",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201502,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Embers of Al'ar when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Feather_16"
+ },
+ {
+  "itemId": 301506,
+  "itemName": "Tome of Echo: Doomfire Trail",
+  "itemNameVerified": false,
+  "echoName": "Doomfire Trail",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201506,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Doomfire Trail when offered new Echoes.",
+  "icon": "Interface\\Icons\\Spell_Fire_FelFire"
+ },
+ {
+  "itemId": 301510,
+  "itemName": "Tome of Echo: Blue Dragonflight Orbs",
+  "itemNameVerified": false,
+  "echoName": "Blue Dragonflight Orbs",
+  "quality": 4,
+  "echoes": [
+   {
+    "spellId": 201510,
+    "quality": 3,
+    "classMask": 1535
+   }
+  ],
+  "description": "Grants you the ability to discover Blue Dragonflight Orbs when offered new Echoes.",
+  "icon": "Interface\\Icons\\INV_Elemental_Primal_Water"
  }
 ]

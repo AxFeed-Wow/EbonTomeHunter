@@ -41,10 +41,27 @@ local function Notify()
     ns.Fire("SCAN_STATE")
 end
 
+-- The item name the client knows (translated on a frFR / deDE / esES client since the v2 update),
+-- nil while the item is not in its cache.
+local function ClientName(itemId)
+    local name = tonumber(itemId) and GetItemInfo(tonumber(itemId))
+    return type(name) == "string" and name ~= "" and name or nil
+end
+
 -- Search text of a tome: its auction item name.
 function Scan.QueryName(row)
     if not row then return nil end
-    return row.tomeName or ("Tome of Echo: " .. tostring(row.name or ""))
+    return ClientName(row.itemId) or row.tomeName or ("Tome of Echo: " .. tostring(row.name or ""))
+end
+
+-- Search text of the full scan: what every tome name starts with in the client's language
+-- ("Tome of Echo" from a cached tome name, else the English one).
+function Scan.FullQuery()
+    for itemId in pairs(ns.TomeData or {}) do
+        local prefix = (ClientName(itemId) or ""):match("^(.-)%s*:")
+        if prefix and prefix ~= "" then return prefix end
+    end
+    return FULL_QUERY
 end
 
 ------------------------------------------------------------------------
@@ -281,7 +298,7 @@ function Scan.Start()
     -- A full scan makes the pending searches pointless.
     wipe(Scan.queue)
     if Scan.job then Abort(Scan.job) end
-    local job = NewJob("scan", FULL_QUERY)
+    local job = NewJob("scan", Scan.FullQuery())
     job.complete = true
     Enqueue(job, true)
 end

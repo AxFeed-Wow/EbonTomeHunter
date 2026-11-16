@@ -48,7 +48,20 @@ local function Data()
     return db.corpses, db.evidence, db.reports
 end
 
-local function Me() return UnitName("player") end
+-- Our counters are the account's (EbonTomeHunterDB): they go out under ONE name, the first
+-- character that shared them. Under each character's name, another character of the account
+-- would get them back from the network as another player's and count them twice.
+local function Me()
+    local db = ns.DB
+    if type(db.evidenceName) ~= "string" or db.evidenceName == "" then db.evidenceName = UnitName("player") end
+    return db.evidenceName
+end
+
+-- The account's characters: their lines of older versions are ours, not another player's.
+local function OwnNames()
+    if type(ns.DB.ownNames) ~= "table" then ns.DB.ownNames = {} end
+    return ns.DB.ownNames
+end
 
 -- "#1234" when the NPC id is known (the same in every client language), else the name.
 function E.MobKey(name, npcId, nameOnly)
@@ -93,6 +106,25 @@ local function Index()
     return index
 end
 ns.On("CATALOG_CHANGED", function() index = nil end)
+
+-- At login: this character is one of ours; the lines of our other characters (older versions
+-- shared the counters under each name) and the empty tables of older versions go.
+function E.Tidy()
+    local own, me = OwnNames(), Me()
+    own[UnitName("player") or ""], own[""] = true, nil
+    local _, evidence, reports = Data()
+    for _, tbl in ipairs({ evidence, reports }) do
+        for k, players in pairs(tbl) do
+            if type(players) == "table" then
+                for name in pairs(own) do
+                    if name ~= me then players[name] = nil end
+                end
+            end
+            if type(players) ~= "table" or next(players) == nil then tbl[k] = nil end
+        end
+    end
+end
+ns.On("LOGIN", E.Tidy)
 
 ------------------------------------------------------------------------
 -- Verdict
@@ -226,11 +258,13 @@ end
 local function Keep(tbl, key, player, value)
     local players = tbl[key]
     if not players then
+        if value == nil then return end   -- (nothing to remove: no empty table left behind)
         players = {}
         tbl[key] = players
     end
     if value == nil or players[player] then
         players[player] = value
+        if next(players) == nil then tbl[key] = nil end
         return
     end
     local n = 0
@@ -358,13 +392,13 @@ function E.ImportShared(itemId, text)
     itemId = tonumber(itemId)
     if not (itemId and ns.Catalog.Get(itemId)) then return false end
     local corpses, evidence, reports = Data()
-    local me, changed = Me(), false
+    local me, changed, own = Me(), false, OwnNames()
     for line in tostring(text or ""):gmatch("[^;]+") do
         local mob, player, n, since, drop, total, drops, report, stamp =
             line:match("^([^%^]+)%^([^%^]+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)$")
         n, since, drop, total, drops = tonumber(n), tonumber(since), tonumber(drop), tonumber(total), tonumber(drops)
         report, stamp = tonumber(report), tonumber(stamp)
-        if mob and #mob <= 41 and #player <= 24 and not line:find("[|%c]") and n <= 100000 and drops <= total
+        if mob and not (own[player] and player ~= me) and #mob <= 41 and #player <= 24 and not line:find("[|%c]") and n <= 100000 and drops <= total
             and total <= 1000000 and Plausible(since) and Plausible(drop) and Plausible(report) and Plausible(stamp) then
             local k = Key(itemId, mob)
             local held

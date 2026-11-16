@@ -14,7 +14,7 @@ Find, buy and farm the **Echo tomes** of Project Ebonhold: Auction House prices 
 
 ## Features
 
-* **Catalogue of the 148 tomes**: lowest Auction House price, number of listings, trend, drop
+* **Catalogue of the 160 tomes**: lowest Auction House price, number of listings, trend, drop
   places, mobs, and the tomes your character already learned (green check).
 * **Auction House**: two extra tabs (*Tomes*, *Wishlist*).
   * Full scan, wishlist search, listings sorted by unit price.
@@ -153,7 +153,7 @@ Trouver, acheter et farmer les **tomes d'Echo** de Project Ebonhold : prix et ac
 
 ## Fonctionnalités
 
-* **Catalogue des 148 tomes** : prix le plus bas à l'hôtel des ventes, nombre d'annonces, tendance,
+* **Catalogue des 160 tomes** : prix le plus bas à l'hôtel des ventes, nombre d'annonces, tendance,
   lieux de drop, monstres, tomes déjà appris par ton personnage (coche verte).
 * **Hôtel des ventes** : deux onglets en plus (*Tomes*, *Wishlist*).
   * Scan complet, recherche de la wishlist, annonces triées par prix unitaire.
@@ -234,9 +234,6 @@ Ancienne version (*EbonTomePrices*) : supprimer son dossier, sinon les deux se c
   rejoindre : tu ne reçois ni ne partages de lieux de drop. Tout le reste fonctionne. Pour libérer
   une place : `/chatlist` liste tes canaux, `/leave <numéro>` quitte celui que tu n'utilises pas,
   puis `/reload`.
-* EbonAPI rejoint son canal dès la connexion, parfois avant que le jeu te rende tes propres canaux :
-  l'un d'eux peut alors changer de numéro (`/5` au lieu de `/4`…). Cela vient d'EbonAPI, pas
-  d'EbonTomeHunter.
 * Les lieux de drop circulent de joueur en joueur par EbonAPI, aussi par ceux qui utilisent un autre
   addon qui s'en sert : une trouvaille t'arrive dès que tu croises l'un d'eux, ce qui peut prendre
   quelques minutes.

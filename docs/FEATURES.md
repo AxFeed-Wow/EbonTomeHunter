@@ -7,13 +7,13 @@ Distances : en « mètres » du jeu (= yards du client anglais).
 - **Ouverture :** `/eth` (ou `/tomehunter`), ou clic gauche sur le bouton de la minimap. Clic droit
   sur le bouton : les options ; glisser : le déplacer autour de la minimap.
 - **Infobulle du bouton :** tomes en wishlist, leur coût total, combien n'ont pas encore de prix,
-  tomes appris par ce personnage (X/148), date du dernier scan.
+  tomes appris par ce personnage (X/160), date du dernier scan.
 - **Première ouverture de la fenêtre :** le tutoriel démarre (§15). Tant qu'il n'a pas été vu, une
   ligne dans le chat le signale à la connexion.
 
 ## 2. Le catalogue
 
-- **Les 148 tomes** viennent de `TomeData.lua`, extrait du client. 128 ont leur vrai nom d'objet,
+- **Les 160 tomes** viennent de `TomeData.lua`, extrait du client. 128 ont leur vrai nom d'objet,
   leur qualité et leur description vus en jeu.
 - **Tome inconnu :** un tome vu à l'HV ou dans les sacs mais absent des données (nouveau patch) est
   ajouté automatiquement.
@@ -274,8 +274,6 @@ Distances : en « mètres » du jeu (= yards du client anglais).
   - WoW limite chaque personnage à **10 canaux de discussion**. EbonAPI utilise un canal caché commun
     à tous ses addons ; s'ils sont tous pris, ni envoi ni réception. Pour libérer une place :
     `/chatlist`, `/leave <numéro>`, puis `/reload` ;
-  - EbonAPI rejoint son canal dès la connexion, parfois avant que le jeu te rende tes propres
-    canaux : l'un d'eux peut alors changer de numéro ;
   - un jeu de données forgé, daté très loin dans le futur, est refusé par EbonTomeHunter mais gardé
     tel quel par EbonAPI chez les joueurs qui n'ont qu'un autre de ses addons : chez eux, ce tome ne
     se met plus à jour. Les utilisateurs d'EbonTomeHunter continuent de se l'échanger directement.

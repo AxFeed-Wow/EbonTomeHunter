@@ -257,17 +257,26 @@ def build_tomes(spells, perks, items):
         if 300000 <= perk["requiredSpell"] < 400000:
             by_gate.setdefault(perk["requiredSpell"], []).append(perk)
     tomes = []
-    for tid in sorted(i for i in spells if 300000 <= i < 400000):
+    # Only "Tome of X" spells are tomes: since the v2 update (2026-11-16) the 300000-399999 range
+    # also holds other custom spells (legendary item effects: 321142 Immolation, 371903...).
+    for tid in sorted(i for i in spells if 300000 <= i < 400000 and spells[i]["name"].startswith("Tome of ")):
         spell = spells[tid]
-        base = spell["name"][len("Tome of "):] if spell["name"].startswith("Tome of ") else spell["name"]
+        base = spell["name"][len("Tome of "):]
         linked = sorted(by_gate.get(tid, []), key=lambda p: p["spellId"])
         cached = items.get(tid)
+        # a cached item of an older patch names another echo (300437 Steady Casting -> Last Breath)
+        # (no word in common; "Eonar Seed" / "Eonar's Seed" and ’ / ' are the same tome)
+        words = lambda s: {w for w in re.findall(r"[a-z]{4,}", s.lower()) if w not in ("tome", "echo")}
+        if cached and not (words(cached["name"]) & words(base)):
+            cached = None
         max_q = max((p["quality"] for p in linked), default=None)
         tomes.append({
             "itemId": tid,                                   # item id == tome spell id
             "itemName": cached["name"] if cached else "Tome of Echo: " + base,
             "itemNameVerified": bool(cached),
-            "echoName": echo_name(linked[0]["comment"]) if linked else base,
+            # the perk comment keeps the casing ("Dragonkin Bane") unless it names an older echo
+            "echoName": echo_name(linked[0]["comment"])
+                if linked and echo_name(linked[0]["comment"]).lower() == base.lower() else base,
             "quality": cached["quality"] if cached else (max_q + 1 if max_q is not None else 3),
             "echoes": [{"spellId": p["spellId"], "quality": p["quality"], "classMask": p["classMask"]} for p in linked],
             "description": (cached or {}).get("description") or spell["description"],

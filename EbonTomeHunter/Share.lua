@@ -87,40 +87,75 @@ local function ClassName(slug)
     return (slug:gsub("%-", " "):gsub("(%a)(%w*)", function(a, b) return strupper(a) .. b end))
 end
 
+-- The in-game code (v2 update, 2026-11-16) names its class in capitals: "DEATHKNIGHT".
+local CODE_CLASSES = {
+    WARRIOR = "Warrior", PALADIN = "Paladin", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
+    DEATHKNIGHT = "Death Knight", SHAMAN = "Shaman", MAGE = "Mage", WARLOCK = "Warlock", DRUID = "Druid",
+}
+
+local function NewBuild(class)
+    return { echoBuild = true, author = "", class = class, echoes = 0, items = {}, learned = {}, basic = {},
+        copies = 0, unknown = 0, seenEcho = {}, seenTome = {} }
+end
+
+-- One echo of a build: its tome to add (1 copy), already learned, or a basic echo. Class echoes
+-- (7-digit ids) have no tome and are left out.
+local function AddEcho(result, id)
+    if not (id and id >= ECHO_MIN and id <= ECHO_MAX) or result.seenEcho[id] then return end
+    result.seenEcho[id] = true
+    result.echoes = result.echoes + 1
+    local row = ns.Catalog.FindBySpell(id)
+    if not row then
+        result.basic[#result.basic + 1] = EchoName(id)
+    elseif not result.seenTome[row.itemId] then
+        result.seenTome[row.itemId] = true
+        if ns.Known and ns.Known.IsKnown(row.itemId) then
+            result.learned[#result.learned + 1] = row
+        else
+            result.items[#result.items + 1] = { itemId = row.itemId, qty = 1, row = row }
+            result.copies = result.copies + 1
+        end
+    end
+end
+
+local function Finish(result)
+    result.seenEcho, result.seenTome = nil, nil
+    if result.echoes == 0 then return nil end
+    return result
+end
+
+-- The in-game Echo loadout code (Echo Journal > Loadouts > Export, the site's "Copy in-game code"):
+-- "EBH1:<id.quality.picks[.1]>,...:<CLASS>:<name>", or the older "EBH1:<echoes>:<name>". A 4th
+-- field of 1 is an echo the player refused: no tome for it.
+function S.DecodeLoadoutCode(text)
+    local code = tostring(text or ""):match("[Ee][Bb][Hh]1:([^\r\n]+)")
+    if not code then return nil end
+    local echoes, rest = code:match("^([^:]*):(.*)$")
+    if not echoes then return nil end
+    local class = rest:match("^([^:]*):") or ""   -- nil: the older format, only a name
+    local result = NewBuild(CODE_CLASSES[strupper(class)])
+    for token in echoes:gmatch("[^,]+") do
+        local id, _, _, refused = token:match("^%s*(%d+)%.(%d+)%.?(%d*)%.?(%d*)%s*$")
+        if id and refused ~= "1" then AddEcho(result, tonumber(id)) end
+    end
+    return Finish(result)
+end
+
 -- An Echo Builder build found in the text, or nil. Returns { echoBuild = true, class,
 -- echoes, items (tomes to add), learned (tome rows already known), basic (echo names) }.
 function S.DecodeEchoBuild(text)
     text = tostring(text or "")
+    local code = S.DecodeLoadoutCode(text)
+    if code then return code end
     local build = text:match("echo%-builder%S-[?&]b=([%w%.%-!%%]+)")
     if not build then build = strtrim(text):match("^(2%d%d%d%d%d[%d%.%-!]*)$") end
     if not build then return nil end
     build = build:gsub("%%21", "!"):gsub("%%2[Dd]", "-"):gsub("%%2[Ee]", ".")
-    local result = {
-        echoBuild = true, author = "", class = ClassName(text:match("echo%-builder%S-[?&]c=([%w%-]+)")),
-        echoes = 0, items = {}, learned = {}, basic = {}, copies = 0, unknown = 0,
-    }
-    local seenEcho, seenTome = {}, {}
+    local result = NewBuild(ClassName(text:match("echo%-builder%S-[?&]c=([%w%-]+)")))
     for token in (build:match("^([^!]*)") or ""):gmatch("[^%-]+") do
-        local id = tonumber(token:match("^(%d+)"))
-        if id and id >= ECHO_MIN and id <= ECHO_MAX and not seenEcho[id] then
-            seenEcho[id] = true
-            result.echoes = result.echoes + 1
-            local row = ns.Catalog.FindBySpell(id)
-            if not row then
-                result.basic[#result.basic + 1] = EchoName(id)
-            elseif not seenTome[row.itemId] then
-                seenTome[row.itemId] = true
-                if ns.Known and ns.Known.IsKnown(row.itemId) then
-                    result.learned[#result.learned + 1] = row
-                else
-                    result.items[#result.items + 1] = { itemId = row.itemId, qty = 1, row = row }
-                    result.copies = result.copies + 1
-                end
-            end
-        end
+        AddEcho(result, tonumber(token:match("^(%d+)")))
     end
-    if result.echoes == 0 then return nil end
-    return result
+    return Finish(result)
 end
 
 -- The same build with its already learned tomes added anyway (the player's choice: a

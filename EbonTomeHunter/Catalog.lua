@@ -153,7 +153,31 @@ end
 -- place shown is the raid entrance, with the boss's NPC id (Wowhead, stale sources).
 local ICC = { mapFile = "IcecrownGlacier", x = 0.537, y = 0.872, place = L.RaidICC }
 local RS = { mapFile = "Dragonblight", x = 0.599, y = 0.545, place = L.RaidRS }
+-- Classic and TBC raids (v2 update, 2026-11-16: one tome per boss, always dropped). Entrance
+-- points are approximate (zone maps); NPC ids from memory, to check on Wowhead.
+local MC = { mapFile = "BurningSteppes", x = 0.29, y = 0.38, place = L.RaidMC }
+local BWL = { mapFile = "BurningSteppes", x = 0.29, y = 0.38, place = L.RaidBWL }
+local ZG = { mapFile = "Stranglethorn", x = 0.53, y = 0.17, place = L.RaidZG }
+local AQ20 = { mapFile = "Silithus", x = 0.29, y = 0.94, place = L.RaidAQ20 }
+local AQ40 = { mapFile = "Silithus", x = 0.27, y = 0.89, place = L.RaidAQ40 }
+local KARA = { mapFile = "DeadwindPass", x = 0.47, y = 0.75, place = L.RaidKara }
+local SSC = { mapFile = "Zangarmarsh", x = 0.50, y = 0.41, place = L.RaidSSC }
+local TK = { mapFile = "Netherstorm", x = 0.74, y = 0.64, place = L.RaidTK }
+local HYJAL = { mapFile = "Tanaris", x = 0.66, y = 0.49, place = L.RaidHyjal }
+local SWP = { mapFile = "Sunwell", x = 0.44, y = 0.45, place = L.RaidSWP }
 local RAID_BOSSES = {
+    [301458] = { MC, { "Baron Geddon", 12056 } },
+    [301462] = { MC, { "Ragnaros", 11502 } },
+    [301466] = { BWL, { "Chromaggus", 14020 } },
+    [301472] = { BWL, { "Nefarian", 11583 } },
+    [301476] = { ZG, { "Hakkar", 14834 } },
+    [301480] = { AQ20, { "Ossirian the Unscarred", 15339 } },
+    [301488] = { AQ40, { "C'Thun", 15727 } },
+    [301492] = { KARA, { "Netherspite", 15689 } },
+    [301496] = { SSC, { "Hydross the Unstable", 21216 } },
+    [301502] = { TK, { "Al'ar", 19514 } },
+    [301506] = { HYJAL, { "Archimonde", 17968 } },
+    [301510] = { SWP, { "Kil'jaeden", 25315 } },
     [301340] = { ICC, { "Lord Marrowgar", 36612 } },
     [301344] = { ICC, { "Lady Deathwhisper", 36855 } },
     [301348] = { ICC, { "Muradin Bronzebeard", 36948 }, { "High Overlord Saurfang", 36939 } },   -- Gunship Battle

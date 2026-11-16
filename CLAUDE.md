@@ -139,10 +139,9 @@ Dépôt : **github.com/AxFeed-Wow/EbonTomeHunter** (compte `gh` : AxFeed-Wow). D
   l'addon.
 - Limite des 10 canaux de discussion de WoW (« You can only be in 10 channels at a time. ») : quand
   le personnage est déjà dans 10 canaux, EbonAPI ne rejoint pas son canal. Décision : ne pas
-  contourner, le signaler comme limite connue (README, `docs/FEATURES.md`). EbonAPI rejoint son canal
-  dès `PLAYER_LOGIN`, avant la restauration des canaux du joueur : limite connue, à signaler à son
-  auteur (on ne modifie pas EbonAPI).
-- Greedy Scavenger : le monstre se déduit des indices du serveur et du journal de combat, sinon le
+  contourner, le signaler comme limite connue (README, `docs/FEATURES.md`). Depuis EbonAPI 2.2, son
+  `/join` attend jusqu'à 30 s que le jeu restaure les canaux du joueur : l'ancienne limite (« rejoint
+  avant la restauration ») est réglée ; les tests attendent ces 30 s.- Greedy Scavenger : le monstre se déduit des indices du serveur et du journal de combat, sinon le
   lieu garde des candidats que les drops suivants réduisent ; enquête en jeu avec `/ethdev scav`.
   Écarté : demander au joueur de laisser les tomes au sol.
 - Sources périmées : le seuil suit le taux de drop de la source (1 % laissé à la malchance), et un
