@@ -25,7 +25,8 @@ Do not include passwords, account names or other personal data.
 ## What counts as a vulnerability
 
 EbonTomeHunter receives data from other players: drop places and stale-source reports through
-EbonAPI (a separate addon), and wishlists sent by addon message. For example:
+its own hidden chat channel (`ebontomehunternet`, any player can write on it; EbonAPI, a separate
+addon, is kept aside), and wishlists sent by addon message. For example:
 
 * a message that triggers an action (purchase, teleport, message sending) without the player's
   consent;
@@ -73,7 +74,9 @@ N'inclus ni mot de passe, ni nom de compte, ni autre donnée personnelle.
 ## Ce qui compte comme une vulnérabilité
 
 EbonTomeHunter reçoit des données d'autres joueurs : des lieux de drop et des preuves de sources
-périmées par EbonAPI (un addon à part), et des wishlists envoyées par message d'addon. Par exemple :
+périmées par son propre canal de discussion caché (`ebontomehunternet`, n'importe quel joueur peut y
+écrire ; EbonAPI, un addon à part, est gardé de côté), et des wishlists envoyées par message d'addon.
+Par exemple :
 
 * un message qui déclenche une action (achat, téléportation, envoi de message) sans l'accord du
   joueur ;

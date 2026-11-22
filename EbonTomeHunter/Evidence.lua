@@ -51,6 +51,8 @@ end
 -- Our counters are the account's (EbonTomeHunterDB): they go out under ONE name, the first
 -- character that shared them. Under each character's name, another character of the account
 -- would get them back from the network as another player's and count them twice.
+local MakeRoom, Capped   -- (below)
+
 local function Me()
     local db = ns.DB
     if type(db.evidenceName) ~= "string" or db.evidenceName == "" then db.evidenceName = UnitName("player") end
@@ -323,9 +325,37 @@ local function Entries(itemId)
     return out
 end
 
--- The text of the tome's dataset E<itemId> (Net.lua): one line per source and player. EbonAPI
--- takes 32 KB per dataset: past TEXT_MAX, the newest lines are kept (the same choice on every
--- client, so that they all write the same text).
+-- Is a counter worth telling (SharedText): SEND_EVERY corpses without the tome, or a report.
+local function Told(counter, report)
+    return (tonumber(counter and counter.n) or 0) >= SEND_EVERY or (tonumber(report) or 0) > 0
+end
+
+-- The lines of a tome (sorted by source, then player) with MAX_PLAYERS players per source at
+-- most: those heard of last, then by name (the choice MakeRoom makes when it stores them).
+function Capped(lines)
+    local out, first = {}, 1
+    for i = 1, #lines + 1 do
+        if i > #lines or lines[i].mob ~= lines[first].mob then
+            local group = {}
+            for j = first, i - 1 do group[#group + 1] = lines[j] end
+            if #group > MAX_PLAYERS then
+                table.sort(group, function(x, y)
+                    if x.rank ~= y.rank then return x.rank > y.rank end
+                    return x.player < y.player
+                end)
+                for j = #group, MAX_PLAYERS + 1, -1 do group[j] = nil end
+                table.sort(group, function(x, y) return x.player < y.player end)
+            end
+            for _, line in ipairs(group) do out[#out + 1] = line end
+            first = i
+        end
+    end
+    return out
+end
+
+-- The text of the tome's dataset E<itemId> (Net.lua): one line per source and player. Past
+-- TEXT_MAX, the newest lines are kept (the same choice on every client, so that they all write
+-- the same text).
 local TEXT_MAX = 30000
 function E.SharedText(itemId)
     itemId = tonumber(itemId)
@@ -333,16 +363,29 @@ function E.SharedText(itemId)
     local lines, size, me = {}, 0, Me()
     for _, e in ipairs(Entries(itemId)) do
         local c = e.counter or {}
-        local told = (tonumber(c.n) or 0) >= SEND_EVERY or (tonumber(e.report) or 0) > 0
+        local told = Told(c, e.report)
         if told and e.player == me then c.told = true end
         if told or (e.player == me and c.told) then
-            local i = #lines + 1
-            local text = table.concat({ e.mob, e.player, floor(tonumber(c.n) or 0), floor(tonumber(c.since) or 0),
-                floor(tonumber(c.drop) or 0), floor(math.max(tonumber(c.total) or 0, tonumber(c.n) or 0)),
-                floor(tonumber(c.drops) or 0), floor(tonumber(e.report) or 0), floor(tonumber(c.stamp) or 0) }, "^")
-            lines[i] = { text = text, stamp = floor(tonumber(c.stamp) or 0), index = i }
-            size = size + #text + 1
+            local n = floor(tonumber(c.n) or 0)
+            local total = floor(math.max(tonumber(c.total) or 0, n))
+            if e.player == me then
+                -- our own line says the counter as it was when last told (every SEND_EVERY corpses,
+                -- a drop): the text must not change with every corpse, the others hold that one
+                local since = n % SEND_EVERY
+                n, total = n - since, total - since
+            end
+            local stamp, report = floor(tonumber(c.stamp) or 0), floor(tonumber(e.report) or 0)
+            lines[#lines + 1] = {
+                text = table.concat({ e.mob, e.player, n, floor(tonumber(c.since) or 0), floor(tonumber(c.drop) or 0),
+                    total, floor(tonumber(c.drops) or 0), report, stamp }, "^"),
+                stamp = stamp, mob = e.mob, player = e.player, rank = math.max(stamp, report),
+            }
         end
+    end
+    lines = Capped(lines)
+    for i, line in ipairs(lines) do
+        line.index = i
+        size = size + #line.text + 1
     end
     if size > TEXT_MAX then
         local newest = {}
@@ -385,6 +428,30 @@ function E.SharedTomes()
     return out
 end
 
+-- A source holds MAX_PLAYERS other players at most, the same ones on every client: those heard
+-- of last (the stamp of their counter, or their report), then by name. Room for `player`: true,
+-- once the one heard of longest ago left when the source is full; false when that is `player`.
+function MakeRoom(k, player, rank, me)
+    local _, evidence, reports = Data()
+    local seen, n, worst, worstRank = {}, 0, nil, nil
+    for _, players in ipairs({ evidence[k] or {}, reports[k] or {} }) do
+        for name in pairs(players) do
+            if name ~= me and not seen[name] then
+                seen[name], n = true, n + 1
+                local c, r = evidence[k] and evidence[k][name], reports[k] and reports[k][name]
+                -- (a counter of an older version that is not told any more leaves first)
+                local held = Told(c, r) and math.max(tonumber(c and c.stamp) or 0, tonumber(r) or 0) or -1
+                if not worst or held < worstRank or (held == worstRank and name > worst) then worst, worstRank = name, held end
+            end
+        end
+    end
+    if seen[player] or n < MAX_PLAYERS then return true end
+    if rank < worstRank or (rank == worstRank and player > worst) then return false end
+    Keep(evidence, k, worst, nil)
+    Keep(reports, k, worst, nil)
+    return true
+end
+
 -- A dataset E<itemId> received: each player's entry is kept when newer than ours (its
 -- stamp), our own too (a new computer gets its counters back). Returns true when we know
 -- more than the dataset said (Net.lua publishes it again).
@@ -398,15 +465,16 @@ function E.ImportShared(itemId, text)
             line:match("^([^%^]+)%^([^%^]+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)%^(%d+)$")
         n, since, drop, total, drops = tonumber(n), tonumber(since), tonumber(drop), tonumber(total), tonumber(drops)
         report, stamp = tonumber(report), tonumber(stamp)
-        if mob and not (own[player] and player ~= me) and #mob <= 41 and #player <= 24 and not line:find("[|%c]") and n <= 100000 and drops <= total
+        if mob and not (own[player] and player ~= me) and #mob <= 41 and #player <= 24 and not line:find("[|%z\1-\31\127]") and n <= 100000 and drops <= total
             and total <= 1000000 and Plausible(since) and Plausible(drop) and Plausible(report) and Plausible(stamp) then
             local k = Key(itemId, mob)
             local held
             if player == me then held = corpses[k] else held = evidence[k] and evidence[k][player] end
-            if not held or (tonumber(held.stamp) or 0) < stamp then
+            if (not held or (tonumber(held.stamp) or 0) < stamp)
+                and (player == me or MakeRoom(k, player, math.max(stamp, report), me)) then
                 local counter = { n = n, since = since, drop = drop, total = total, drops = drops, stamp = stamp }
                 if player == me then corpses[k] = counter else Keep(evidence, k, player, counter) end
-                Keep(reports, k, player, report > 0 and math.min(report, time()) or nil)
+                Keep(reports, k, player, report > 0 and report or nil)   -- (as said: one text for all)
                 changed = true
             end
         end
@@ -503,5 +571,6 @@ ns.On("TOME_DROPPED", function(itemId, name, npcId)
     if not key then return end
     if corpse and corpse.name == name then corpse.dropped[itemId] = true end
     Dropped(itemId, key)
+    ns.Net.PublishEvidence(itemId)   -- (our line, when it was told: back to 0)
     Changed(itemId)
 end)

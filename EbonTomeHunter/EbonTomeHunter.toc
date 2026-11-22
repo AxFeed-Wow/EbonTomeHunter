@@ -3,7 +3,7 @@
 ## Notes: Find, buy and farm the Echo tomes of Project Ebonhold: Auction House prices and purchases, wishlist, tomes learned, drop places on the world map, teleport near the mobs, drops shared between players.
 ## Notes-frFR: Trouver, acheter et farmer les tomes d'Echo de Project Ebonhold : prix et achats à l'hôtel des ventes, wishlist, tomes appris, lieux de drop sur la carte, téléportation près des monstres, drops partagés entre joueurs.
 ## Author: AxFeed-Wow
-## Version: 3.3.1
+## Version: 3.4.0
 ## X-Website: https://github.com/AxFeed-Wow/EbonTomeHunter
 ## SavedVariables: EbonTomeHunterDB
 ## SavedVariablesPerCharacter: EbonTomeHunterCharDB
@@ -25,6 +25,8 @@ Wowhead.lua
 Travel.lua
 Sources.lua
 History.lua
+Link.lua
+NetApi.lua
 Net.lua
 Comm.lua
 Hints.lua

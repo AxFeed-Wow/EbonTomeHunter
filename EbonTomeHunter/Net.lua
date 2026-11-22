@@ -1,54 +1,47 @@
 local addonName, ns = ...
 local L = ns.L
 
--- Drop places shared between the players, through EbonAPI (by Siphelis,
--- github.com/Siphelis/EbonAPI): a separate addon each player installs, never shipped nor
--- changed here (its licence forbids both). Without it, the places stay on this computer.
--- Every tome is one EbonAPI dataset, "T<item id>": its places, those of every player put
--- together. EbonAPI spreads the datasets from player to player and keeps them in its saved
--- data, also for players who do not run EbonTomeHunter (AutoCallboard, SkillTreeAutoLoad... users):
--- a find reaches the others even when they are never online at the same time, as soon as
--- they meet any EbonAPI user, and one hidden channel serves every addon of EbonAPI.
--- A client takes a newer dataset (higher state), merges it into what it knows and, when it
--- knows more, publishes the union again: every copy converges to the union of the finds.
+-- Drop places shared between the players. This file holds the data: the places of every tome,
+-- how two copies of them merge, and their texts. A transport carries the texts between the
+-- players: Link.lua, a hidden chat channel of our own, or NetApi.lua, the EbonAPI addon of
+-- Siphelis (kept aside while it does not work with the server's v2 update: USE_EBONAPI below).
+-- Every tome is one dataset, "T<item id>": its places, those of every player put together.
+-- A client merges the lines it receives into what it knows; every copy converges to the union
+-- of the finds, also between players who are never online at the same time (through any
+-- player who met both).
 --   dataset T<itemId>  place;place;...   (12 places at most, the best known first)
 --     place = itemId^mapFile^x^y^npcId^mob^zone^found^finder^finders^candidates
 --       x, y: 0..1000 on the zone map; found: time() of the last drop there; finder: the
 --       first player who found it; finders: how many did; candidates (no mob known):
---       "npcId:Name,..." the mobs one of which dropped it (Greedy Scavenger, Hints.lua)
+--       "npcId:Name,..." the mobs one of which dropped it (Scavenger's Eye, Hints.lua)
 --   dataset E<itemId>  the evidence of stale sources (Evidence.lua)
---   channel ops KQ / KA: kill statistics asked by the developer helper (/ethdev stats)
+--   messages KQ / KA: kill statistics asked by the developer helper (/ethdev stats)
 -- A place must say which mob dropped the tome, or which ones it may be (candidates): a place
 -- without either (older versions) is neither kept nor shared. The candidates are narrowed by
 -- every drop: at the same spot, only the mobs killed each time remain; anywhere, a candidate
 -- that is a known source of the tome (a confirmed place, EbonholdHub, the server's hint) is
 -- the mob when it is the only one; several known sources among them stay candidates.
--- A dataset state is time() * 1000 plus a checksum of its text: two players who publish
--- different texts in the same second (a group farming together) still get different states,
--- or neither would take the other's. A state more than a day in the future is refused
--- (forged), as is any text with an escape sequence.
+-- Any text with an escape sequence is refused, as is a place dated in the future.
 ns.Net = {}
 local Net = ns.Net
 
-local API_NAME = "EbonTomeHunter"
-local API_MAJOR, API_MINOR = 1, 0
+local USE_EBONAPI = false     -- true: the network goes through EbonAPI (NetApi.lua) again
 local URL = "https://github.com/AxFeed-Wow/EbonTomeHunter"
 local MAX_PER_TOME = 12
 local MAX_FINDERS = 10
 local MAX_CANDIDATES = 4
 local CANDIDATES_ROOM = 200   -- a place with its candidates stays under this many bytes
-local PUBLISH_DELAY = 3       -- seconds: several changes leave as one publication
+local PUBLISH_DELAY = 3       -- seconds: several changes leave together
 local FUTURE = 86400
-local STATE_SCALE = 1000
 local LIVE = 3600             -- a place found this recently is news (wishlist alert)
 local OLD_PLACE = 90 * 86400  -- a place nobody found again for 90 days comes after the others
 local STATS_TOP = 60
 local STATS_WAIT = 15
 local STATS_GAP = 30
 
-local api                     -- the EbonAPI handle; nil without EbonAPI (or when it is too old)
-local apiReady, catalogReady, started = false, false, false
-local dirty = {}              -- [dataset name] = true: to publish again
+local transport               -- ns.Link or ns.NetApi; nil when EbonAPI is chosen but missing
+local catalogReady, started = false, false
+local dirty = {}              -- [dataset name] = true: changed, to tell the others
 local publishPending = false
 local statsRequest            -- our statistics request: { qid, results = { [name] = { total, kills } } }
 local lastStatsRequest, lastStatsAnswer = -math.huge, -math.huge
@@ -78,7 +71,9 @@ local function Utf8Cut(text, maxBytes)
 end
 
 local function Clean(text, maxLength)
-    text = tostring(text or ""):gsub("[~%^;|%c]", ""):gsub("^%s+", ""):gsub("%s+$", "")
+    -- (explicit bytes, not %c / %s: those follow the locale of the computer, and a byte of an
+    -- accented letter such as the second one of "\195\144" must stay)
+    text = tostring(text or ""):gsub("[~%^;|%z\1-\31\127]", ""):gsub(" +", " "):gsub("^ ", ""):gsub(" $", "")
     return Utf8Cut(text, maxLength)
 end
 
@@ -146,7 +141,7 @@ function Net.Decode(text)
     text = tostring(text or "")
     -- names end up in chat lines and windows: an escape sequence ("|c" colour, "|H" link,
     -- "|T" texture) or a control character was not written by EbonTomeHunter
-    if text:find("[|%c]") then return nil end
+    if text:find("[|%z\1-\31\127]") then return nil end
     local f = { strsplit("^", text) }
     if #f < 9 then return nil end
     local itemId = tonumber(f[1])
@@ -161,7 +156,7 @@ function Net.Decode(text)
     local finders = tonumber(f[10])
     return {
         itemId = itemId, mapFile = f[2] ~= "" and f[2] or nil, x = x and x / 1000, y = y and y / 1000,
-        npcId = tonumber(f[5]), mob = mob, zone = f[7], at = math.min(at, now),
+        npcId = tonumber(f[5]), mob = mob, zone = f[7], at = at,   -- (as said, even a little ahead of our clock: one text for all)
         by = f[9] ~= "" and f[9] or nil, n = finders and math.max(0, math.min(99, floor(finders))) or nil,
         cands = cands,
     }
@@ -428,11 +423,9 @@ function Net.Count()
 end
 
 ------------------------------------------------------------------------
--- Datasets (EbonAPI)
+-- Datasets (what the transport carries: Link.lua, or NetApi.lua)
 ------------------------------------------------------------------------
--- Does our text hold a place the dataset lacks? Only then is it published again: a dataset
--- with more places than ours (3.x clients share the places without a mob) is not answered with
--- a shorter one, which they would answer in turn.
+-- Does our text hold a line the other lacks?
 function Net.HasNews(mine, held)
     local known = {}
     for line in tostring(held or ""):gmatch("[^;]+") do known[line] = true end
@@ -455,41 +448,49 @@ local function DatasetItem(name)
     return kind, tonumber(id)
 end
 
--- A state higher than the copy we hold (see the top of this file).
-local function NextState(held, text)
-    local sum = 0
-    for i = 1, #text do sum = (sum * 31 + text:byte(i)) % STATE_SCALE end
-    return math.max(time() * STATE_SCALE, (tonumber(held) or 0) + 1) + sum
+-- A dataset name of a tome of the catalogue.
+function Net.DatasetKnown(name)
+    local kind, itemId = DatasetItem(name)
+    return kind ~= nil and ns.Catalog.Get(itemId) ~= nil
+end
+
+-- The names of the datasets we may hold a text for.
+function Net.DatasetNames()
+    local names = {}
+    for itemId, list in pairs(Store()) do
+        if tonumber(itemId) and #list > 0 then names[#names + 1] = "T" .. itemId end
+    end
+    if ns.Evidence and ns.Evidence.SharedTomes then
+        for itemId in pairs(ns.Evidence.SharedTomes()) do names[#names + 1] = "E" .. itemId end
+    end
+    return names
+end
+
+-- The text of a dataset as we hold it ("" when we hold nothing).
+function Net.DatasetText(name)
+    local kind, itemId = DatasetItem(name)
+    if kind == "T" then return PlacesText(itemId) end
+    if kind == "E" and ns.Evidence and ns.Evidence.SharedText then return ns.Evidence.SharedText(itemId) end
+    return ""
 end
 
 local function Flush()
     publishPending = false
-    if not (api and started and Opt().netEnabled) then return end
+    if not (transport and started and Opt().netEnabled) then return end
     for name in pairs(dirty) do
         dirty[name] = nil
-        local kind, itemId = DatasetItem(name)
-        local text
-        if kind == "T" then
-            text = PlacesText(itemId)
-        elseif kind == "E" and ns.Evidence and ns.Evidence.SharedText then
-            text = ns.Evidence.SharedText(itemId)
-        end
-        local held, state = api:GetShared(name)
-        local news = Net.HasNews(text, held)
-        if kind == "E" then news = ns.Evidence.HasNews(itemId, held, text) end
-        if text and text ~= "" and news then
-            pcall(api.Share, api, name, NextState(state, text), text)
-        end
+        transport.Changed(name)
     end
 end
 
--- A dataset to publish again soon (several changes leave together).
+-- A dataset of ours changed: told to the others soon (several changes leave together).
 local function Publish(name)
     dirty[name] = true
     if publishPending then return end
     publishPending = true
     ns.Timer.After(PUBLISH_DELAY, Flush)
 end
+Net.Publish = Publish
 
 function Net.PublishEvidence(itemId)
     if tonumber(itemId) then Publish("E" .. floor(tonumber(itemId))) end
@@ -508,8 +509,8 @@ local function Receive(record, alert)
     return isNew
 end
 
--- The places of a received dataset, merged. Returns the new places; the tome's dataset is
--- published again when we know more than it said.
+-- The places of received lines, merged. Returns the new places, and whether we know more
+-- than they said.
 local function ImportPlaces(itemId, text, alert)
     local fresh = 0
     for part in tostring(text or ""):gmatch("[^;]+") do
@@ -517,77 +518,55 @@ local function ImportPlaces(itemId, text, alert)
         if record and record.itemId == itemId and Receive(record, alert) then fresh = fresh + 1 end
     end
     if Refine(itemId) then Changed(itemId) end
-    if Net.HasNews(PlacesText(itemId), text) then Publish("T" .. itemId) end
-    return fresh
+    return fresh, Net.HasNews(PlacesText(itemId), text)
 end
 Net.ImportPlaces = ImportPlaces
 
-local function ImportDataset(name, text, alert)
+-- Lines of a dataset received from another player (the transport calls it), merged into what
+-- we hold. Returns the new places, and whether we know more than they said.
+function Net.Import(name, text, alert)
     local kind, itemId = DatasetItem(name)
-    if not (itemId and text) then return 0 end
+    if not (itemId and text) then return 0, false end
     if kind == "T" then return ImportPlaces(itemId, text, alert) end
     if kind == "E" and ns.Evidence and ns.Evidence.ImportShared then
-        if ns.Evidence.ImportShared(itemId, text) then Publish(name) end
+        return 0, ns.Evidence.ImportShared(itemId, text) and true or false
     end
-    return 0
-end
-
--- Which datasets of ours to take (EbonAPI asks, on the receiving side): the kinds we know,
--- with a state higher than ours and not in the future.
-local function Accept(name, theirState, myState)
-    if not DatasetItem(name) then return false end
-    local theirs = tonumber(theirState) or 0
-    if theirs > (time() + FUTURE) * STATE_SCALE then return false end
-    return myState == nil or theirs > (tonumber(myState) or 0)
-end
-Net.Accept = Accept
-
--- Every dataset EbonAPI holds merged in, then ours published where they know less than we
--- do (the places of older versions, or found with the network off, join the network).
-local function SyncAll()
-    local fresh = 0
-    for _, name in ipairs(api:SharedNames() or {}) do
-        local text = api:GetShared(name)
-        fresh = fresh + ImportDataset(name, text, false)
-    end
-    for itemId in pairs(Store()) do
-        if tonumber(itemId) then Publish("T" .. itemId) end
-    end
-    if ns.Evidence and ns.Evidence.SharedTomes then
-        for itemId in pairs(ns.Evidence.SharedTomes()) do Publish("E" .. itemId) end
-    end
-    if fresh > 0 then ns.Print(L.NetReceived, fresh) end
+    return 0, false
 end
 
 local TellUpdate   -- (below: a newer version)
 
--- Once EbonAPI and the catalogue are both ready.
+-- Once the transport and the catalogue are both ready.
 local function Start()
-    if started or not (api and apiReady and catalogReady) then return end
+    if started or not (transport and catalogReady and transport.Ready()) then return end
     started = true
-    if Opt().netEnabled then SyncAll() end
+    if Opt().netEnabled then transport.Start() end
     TellUpdate()   -- (already known from an earlier exchange)
     ns.Fire("NET_SYNC_STATE")
 end
+Net.TransportReady = Start
 
-local function OnShareReceived(_, addon, name, _, sender)
-    if addon ~= API_NAME or not started or not Opt().netEnabled then return end
-    local text = api:GetShared(name)
-    ImportDataset(name, text, true)
+-- Started, and the network option on (the transport asks before it takes anything).
+function Net.Running()
+    return started and Opt().netEnabled and true or false
+end
+
+-- The transport joined or lost its channel, or took something from `sender`.
+function Net.Notify(sender)
     ns.Fire("NET_SYNC_STATE", sender)
 end
 
 ------------------------------------------------------------------------
 -- Own drops
 ------------------------------------------------------------------------
--- A tome the player just looted: stored, and its dataset published when the place is new or
+-- A tome the player just looted: stored, and told to the others when the place is new or
 -- this player confirms a known one.
 function Net.Report(record)
     local _, changed = Net.Add(record)
     if not changed then return false end
     Refine(record.itemId)
     Changed(record.itemId)
-    if api and Opt().netEnabled then Publish("T" .. record.itemId) end
+    if transport and Opt().netEnabled then Publish("T" .. record.itemId) end
     return true
 end
 
@@ -595,24 +574,26 @@ end
 -- State
 ------------------------------------------------------------------------
 function Net.Available()
-    return api ~= nil
+    return transport ~= nil
 end
 
--- "off" (network option off), "noapi" (EbonAPI missing or too old), "joining" (EbonAPI not
--- in its channel yet) or "online".
+-- "off" (network option off), "noapi" (no transport: EbonAPI chosen but missing or too old),
+-- "joining" (not in the channel yet) or "online".
 function Net.SyncState()
     if not Opt().netEnabled then return "off" end
-    if not api then return "noapi" end
-    if not api:IsChannelJoined() then return "joining" end
+    if not transport then return "noapi" end
+    if not transport.Joined() then return "joining" end
     return "online"
 end
 
+-- Tomes whose places are on the network.
 function Net.DatasetCount()
-    local n = 0
-    for _, name in ipairs(api and api:SharedNames() or {}) do
-        if DatasetItem(name) == "T" then n = n + 1 end
-    end
-    return n
+    return transport and transport.Count() or 0
+end
+
+-- Other users heard lately (nil when the transport cannot tell).
+function Net.PeerCount()
+    return transport and transport.PeerCount and transport.PeerCount() or nil
 end
 
 function Net.StatusText()
@@ -623,26 +604,30 @@ function Net.StatusText()
     return format(L.NetStatus, text, places, tomes)
 end
 
--- /eth net sync: EbonAPI announces our datasets now (at most every 30 s).
+-- /eth net: what went through the channel in this session (nil when the transport cannot tell).
+function Net.TrafficText()
+    local stats = transport and transport.Stats and transport.Stats()
+    if not stats or Net.SyncState() == "off" then return nil end
+    return format(L.NetTraffic, stats.sent, stats.received, Net.PeerCount() or 0)
+end
+
+-- /eth net sync: our data is compared with the others' now (at most every 30 s).
 function Net.ForceSync()
     if Net.SyncState() ~= "online" then
         ns.Print(Net.StatusText())
         return false
     end
-    local ok = api:SyncShares()
+    local ok = transport.Sync()
     ns.Print(ok and L.NetSyncAsked or L.NetSyncWait)
     return ok
 end
 
--- A newer EbonTomeHunter seen on the network by EbonAPI (which tells the player itself).
+-- A newer EbonTomeHunter seen on the network.
 function Net.NewerVersion()
-    if not api then return nil end
-    local latest = api:AvailableUpdate()
-    return latest
+    return transport and transport.Newer() or nil
 end
 
--- A newer version: told once in the chat (EbonAPI's own line may go unnoticed among its others),
--- the network button turns into "Update!".
+-- A newer version: told once in the chat, the network button turns into "Update!".
 TellUpdate = function()
     local latest = Net.NewerVersion()
     if latest and ns.DB.updateTold ~= latest then
@@ -651,6 +636,7 @@ TellUpdate = function()
     end
     ns.Fire("NET_SYNC_STATE")
 end
+Net.TellUpdate = TellUpdate
 
 ------------------------------------------------------------------------
 -- Kill statistics (asked by the developer helper, /ethdev stats)
@@ -660,7 +646,7 @@ end
 function Net.RequestStats()
     if Net.SyncState() ~= "online" or GetTime() - lastStatsRequest < STATS_GAP then return false end
     local current = { qid = format("%05x", math.random(0, 0xFFFFF)), results = {} }
-    if not api:Say("KQ", current.qid) then return false end
+    if not transport.Say("KQ", current.qid) then return false end
     lastStatsRequest = GetTime()
     statsRequest = current
     ns.Timer.After(STATS_WAIT, function()
@@ -686,7 +672,7 @@ local function OnStatsAsked(_, body)
     local entries = {}
     for i = 1, math.min(#list, STATS_TOP) do entries[i] = list[i].npcId .. ":" .. list[i].n end
     ns.Timer.After(1 + math.random() * 4, function()
-        if api then api:Say("KA", qid .. "^" .. total .. "^" .. table.concat(entries, ";")) end
+        if transport then transport.Say("KA", qid .. "^" .. total .. "^" .. table.concat(entries, ";")) end
     end)
 end
 
@@ -702,28 +688,15 @@ end
 ------------------------------------------------------------------------
 -- Life cycle
 ------------------------------------------------------------------------
--- Binds EbonTomeHunter to EbonAPI (loaded before us: OptionalDeps). False without it, or
--- when it is too old for us (EbonAPI then tells the player).
+-- Takes the transport: our own channel (Link.lua), or EbonAPI when USE_EBONAPI is set (false
+-- without it, or when it is too old for us).
 function Net.Connect()
-    if api then return true end
-    if type(EbonAPI) ~= "table" or type(EbonAPI.NewAddon) ~= "function" then return false end
-    local ok, handle = pcall(EbonAPI.NewAddon, EbonAPI, API_NAME, API_MAJOR, API_MINOR)
-    if not (ok and type(handle) == "table") then return false end
-    api = handle
-    pcall(api.Version, api, ns.version, URL)
-    api:ShareRule(Accept)
-    api:On("SHARE_RECEIVED", OnShareReceived)
-    api:On("CHANNEL_JOINED", function() ns.Fire("NET_SYNC_STATE") end)
-    api:On("CHANNEL_LOST", function() ns.Fire("NET_SYNC_STATE") end)
-    api:On("UPDATE_AVAILABLE", function(_, name)
-        if name == API_NAME then TellUpdate() end
-    end)
-    api:OnChannel("KQ", OnStatsAsked)
-    api:OnChannel("KA", OnStatsAnswer)
-    api:On("READY", function()   -- sticky: runs right away when EbonAPI is already ready
-        apiReady = true
-        Start()
-    end)
+    if transport then return true end
+    local candidate = USE_EBONAPI and ns.NetApi or ns.Link
+    if not (candidate and candidate.Connect()) then return false end
+    transport = candidate
+    transport.Listen("KQ", OnStatsAsked)
+    transport.Listen("KA", OnStatsAnswer)
     return true
 end
 
@@ -762,19 +735,21 @@ ns.On("READY", function()
     Start()
 end)
 
--- No EbonAPI: the places stay here. Said once per version of EbonTomeHunter.
+-- EbonAPI chosen but missing: the places stay here. Said once per version of EbonTomeHunter.
 ns.On("LOGIN", function()
     ns.Timer.After(20, function()
-        if api or not Opt().netEnabled or ns.DB.apiHint == ns.version then return end
+        if transport or not Opt().netEnabled or ns.DB.apiHint == ns.version then return end
         ns.DB.apiHint = ns.version
         ns.Print(L.NetNeedApi)
     end)
 end)
 
--- Network on again: what EbonAPI received meanwhile is merged, our finds are published.
+-- Network switched on or off.
 ns.On("SETTINGS_CHANGED", function(key)
     if key ~= "netEnabled" then return end
-    if Opt().netEnabled and started then SyncAll() end
+    if started then
+        if Opt().netEnabled then transport.Start() else transport.Stop() end
+    end
     ns.Fire("NET_SYNC_STATE")
 end)
 

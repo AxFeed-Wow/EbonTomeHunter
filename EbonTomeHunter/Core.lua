@@ -1,7 +1,7 @@
 local addonName, ns = ...
 local L = ns.L
 
-ns.version = "3.3.1"
+ns.version = "3.4.0"
 -- Public namespace: lets macros, other addons and the offline tests reach the API.
 EbonTomeHunter = ns
 
@@ -342,6 +342,8 @@ SlashCmdList["EBONTOMEHUNTER"] = function(input)
             ns.Net.ForceSync()
         else
             ns.Print(ns.Net.StatusText())
+            local traffic = ns.Net.TrafficText()
+            if traffic then ns.Print(traffic) end
         end
     elseif command == "history" or command == "log" then
         ns.History.Toggle()

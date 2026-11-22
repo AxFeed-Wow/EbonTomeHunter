@@ -92,6 +92,7 @@ function Cat.Build()
     -- the complete, static tome list extracted from the client (TomeData.lua: one row per
     -- real tome item, item id == tome spell id): auction listings match by exact item id
     Cat.BuildFromTomeData(AddRow)
+    Cat.BuildFromServer(AddRow)
     Cat.MergeLearned()
     table.sort(Cat.rows, function(a, b) return (a.name or "") < (b.name or "") end)
     Cat.AttachAllSightings()
@@ -378,6 +379,81 @@ function Cat.BuildFromTomeData(AddRow)
         -- Every echo (all quality variants) resolves to its tome.
         for _, echoId in ipairs(echoes) do Cat.bySpell[echoId] = row end
     end
+end
+
+-- Tomes TomeData.lua does not list yet (a server patch newer than the addon), read in game in
+-- ProjectEbonhold's own echo list: an echo whose requiredSpell is a tome (isTome, or the tome id
+-- range) names its tome, whose item id is that spell id. The new tome gets a full row (prices,
+-- wishlist, learned, places, network) without waiting for an update of the addon; the echoes
+-- of a known tome that TomeData lacks (new quality variants) are attached too. Read only.
+local TOME_MIN, TOME_MAX = 300000, 399999
+local CLASS_PREFIXES = { "Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Death Knight", "Shaman", "Mage", "Warlock", "Druid" }
+
+local function EchoNameFromComment(comment)
+    local name = tostring(comment or ""):gsub(" %- %a+$", "")   -- "Frost Bite - Rare"
+    for _, class in ipairs(CLASS_PREFIXES) do
+        if name:sub(1, #class + 3) == class .. " - " then name = name:sub(#class + 4) end
+    end
+    return name ~= "" and name or nil
+end
+
+function Cat.BuildFromServer(AddRow)
+    local perks = ns.PE.Service("PerkDatabase")
+    if not perks then return 0 end
+    local byTome = {}
+    for echoId, perk in pairs(perks) do
+        local tomeId = type(perk) == "table" and tonumber(perk.requiredSpell)
+        if tomeId and tonumber(echoId) and (perk.isTome or (tomeId >= TOME_MIN and tomeId <= TOME_MAX))
+            and tomeId >= TOME_MIN and tomeId <= TOME_MAX then
+            byTome[tomeId] = byTome[tomeId] or {}
+            tinsert(byTome[tomeId], tonumber(echoId))
+        end
+    end
+    local added = {}
+    for tomeId, echoes in pairs(byTome) do
+        table.sort(echoes)
+        local row = Cat.byItem[tomeId]
+        if row then
+            for _, echoId in ipairs(echoes) do
+                if not Cat.bySpell[echoId] then
+                    Cat.bySpell[echoId] = row
+                    row.echoes = row.echoes or {}
+                    tinsert(row.echoes, echoId)
+                end
+            end
+        else
+            local quality, name = 0, nil
+            for _, echoId in ipairs(echoes) do
+                quality = math.max(quality, tonumber(perks[echoId].quality) or 0)
+                name = name or EchoNameFromComment(perks[echoId].comment)
+            end
+            local spellName = type(GetSpellInfo) == "function" and GetSpellInfo(tomeId) or nil   -- "Tome of X"
+            if type(spellName) == "string" and Cat.IsTomeName(spellName) then name = Cat.EchoNameFromTome(spellName) end
+            name = name or ("#" .. tomeId)
+            row = {
+                itemId = tomeId, spellId = echoes[1], echoes = echoes, name = name,
+                tomeName = "Tome of Echo: " .. name, tomeAlias = "Tome of " .. name,
+                quality = ITEM_QUALITY_NAMES[quality + 1],   -- the tome is one quality above its echo
+                discovered = true,                           -- from the game's data, not from TomeData.lua
+            }
+            AddRow(row)
+            if Cat.byItem[tomeId] == row then
+                for _, echoId in ipairs(echoes) do Cat.bySpell[echoId] = row end
+                added[#added + 1] = tomeId
+            end
+        end
+    end
+    -- told once per tome
+    if type(ns.DB.discovered) ~= "table" then ns.DB.discovered = {} end
+    local fresh = 0
+    for _, tomeId in ipairs(added) do
+        if not ns.DB.discovered[tomeId] then
+            ns.DB.discovered[tomeId] = true
+            fresh = fresh + 1
+        end
+    end
+    if fresh > 0 then ns.Print(L.ScanLearned, fresh) end
+    return #added
 end
 
 -- Maps a key saved by an older version (echo spell id, or a learned tome name)

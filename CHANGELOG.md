@@ -1,5 +1,37 @@
 # Historique des versions
 
+## 3.4.0 — 2026-11-22
+
+Le réseau entre joueurs passe par un canal caché propre à l'addon : EbonAPI ne fonctionne plus bien
+depuis la mise à jour v2 du serveur. **Deux nouveaux fichiers : redémarrer complètement le jeu** après
+la mise à jour (un `/reload` ne suffit pas). Réseau séparé de celui des 3.0 à 3.3 : les lieux déjà
+connus de chaque joueur sont gardés et repartent sur le nouveau réseau.
+
+- **Réseau sans EbonAPI.** Les lieux de drop et les sources périmées se partagent par un canal de
+  discussion caché de l'addon. EbonAPI n'est plus nécessaire ; son code est gardé de côté
+  (`NetApi.lua`, `USE_EBONAPI` dans `Net.lua`) pour y revenir quand il sera corrigé.
+- **Très peu de messages.** Les joueurs ne comparent que des empreintes et n'envoient que les lignes
+  qui manquent : un drop = une ligne ; des joueurs à jour échangent une seule ligne par quart d'heure
+  pour tout le réseau, quel que soit leur nombre. Une ligne au plus toutes les 0,4 s. Sur le banc de
+  test avec les données d'un vrai compte (1 575 lieux, 194 jeux, 179 Ko), un nouveau venu parti de
+  zéro est à jour en 8 à 9 minutes, puis le réseau retombe à une ligne par quart d'heure.
+- **Toujours permanent.** Chaque joueur garde tous les lieux et les transmet : deux joueurs jamais
+  connectés en même temps se retrouvent à jour dès qu'un troisième les a croisés.
+- **10 canaux.** Le canal prend une des 10 places de canaux du personnage ; si elles sont toutes
+  prises, l'addon le dit une fois et rejoint tout seul dès qu'une place se libère. Il attend que le
+  jeu ait rendu ses canaux au joueur avant de rejoindre le sien.
+- **Tomes plus récents que l'addon.** Un tome ajouté par le serveur après cette version est découvert
+  en jeu dans la liste d'Echos de Project Ebonhold : il a sa ligne (prix, wishlist, appris, lieux,
+  réseau) sans attendre une mise à jour, et l'addon le signale une fois.
+- **Tous les joueurs finissent avec les mêmes données.** Les dates reçues sont gardées telles quelles
+  (deux ordinateurs n'ont jamais exactement la même heure), les 50 joueurs gardés par source sont les
+  mêmes partout, notre propre compteur ne change plus de texte à chaque cadavre, et un nom avec une
+  majuscule accentuée (« Ð », « É ») n'est plus rejeté selon les réglages de la machine.
+- `/eth net` affiche aussi les lignes envoyées et reçues et les joueurs entendus ; l'infobulle du
+  bouton Réseau compte les joueurs entendus.
+- Outils : `tools/check.py` n'a plus besoin d'EbonAPI ; le banc de test fait tourner plusieurs
+  joueurs simulés sur le canal de l'addon.
+
 ## 3.3.1 — 2026-11-16
 
 Suite de la mise à jour v2 de Project Ebonhold. Compatible avec la 3.x ; un fichier retiré du `.toc`

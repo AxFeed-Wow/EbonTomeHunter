@@ -576,7 +576,7 @@ function UI.SyncTip()
     local state = ns.Net.SyncState()
     local lines = { ns.Net.StatusText() }
     if state == "online" then
-        lines[#lines + 1] = format(L.SyncTipDatasets, ns.Net.DatasetCount())
+        lines[#lines + 1] = format(L.SyncTipDatasets, ns.Net.DatasetCount(), ns.Net.PeerCount() or 0)
     elseif state == "noapi" then
         lines[#lines + 1] = L.SyncTipNoApi
     end

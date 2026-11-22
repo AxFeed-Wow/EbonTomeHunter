@@ -538,8 +538,8 @@ class Network:
     """Several mocked clients whose channel lines and addon whispers reach each other. The
     first one runs the scenario; its Advance() moves every client by the same steps."""
 
-    def __init__(self, rep, label, deps, main, whitelist, own):
-        self.rep, self.label = rep, label
+    def __init__(self, rep, label, deps, main, whitelist, own, with_ebonhold=True):
+        self.rep, self.label, self.with_ebonhold = rep, label, with_ebonhold
         self.deps, self.main_addon, self.whitelist, self.own = deps, main, whitelist, own
         self.clients = {}   # lowercase player name -> (player, lua, mock)
         self.saved = {}     # player -> saved data of its last session (Lua source)
@@ -588,7 +588,15 @@ class Network:
         if player.lower() in self.clients:
             return False
         addons = list(self.deps) + ([self.main_addon] if bytes(kind or b"full") == b"full" else [])
-        lua, mock = new_client(player, addons, self.whitelist, True, self.own, self.rep, f"{self.label} player {player}",
+        # a developer's test with real data: PEER_SAVED_<NAME> names a SavedVariables file that player
+        # starts from (read where it is, never written)
+        real = os.environ.get("PEER_SAVED_" + player.upper())
+        if real and player not in self.saved and os.path.isfile(real):
+            names = [n for n in saved_names(self.main_addon[2])]
+            with open(real, "rb") as fh:
+                self.saved[player] = (b"local " + ", ".join(names).encode() + b"\n" + fh.read()
+                                      + b"\nreturn { " + ", ".join(f"{n} = {n}" for n in names).encode() + b" }")
+        lua, mock = new_client(player, addons, self.whitelist, self.with_ebonhold, self.own, self.rep, f"{self.label} player {player}",
                                self.saved.get(player, b"return {}"))
         self.add(player, lua, mock)
         mock.Login()
@@ -628,11 +636,12 @@ def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold
     main = (addon_name, addon_dir, meta, files)
     deps = list(deps)
     lua, mock = new_client("Tester", deps + [main], whitelist, with_ebonhold, own, rep, label)
+    # other players can always join the scenario (Peers): the addon's own network needs no --with
+    net = Network(rep, label, deps, main, whitelist, own, with_ebonhold)
+    net.add("Tester", lua, mock, driver=True)
+    mock.peers = lua.table_from({b"Start": net.start, b"Stop": net.stop, b"Run": net.run, b"Online": net.online})
     if deps:
-        net = Network(rep, label, deps, main, whitelist, own)
-        net.add("Tester", lua, mock, driver=True)
-        mock.peers = lua.table_from({b"Start": net.start, b"Stop": net.stop, b"Run": net.run, b"Online": net.online})
-        rep.info(label, "with " + ", ".join(d[0] for d in deps) + ": other players can join the scenario (Peers)")
+        rep.info(label, "with " + ", ".join(d[0] for d in deps))
     errs = mock.Boot(addon_name.encode())
     scenario = os.path.join(addon_dir, "tests", "scenario.lua")
     if os.path.isfile(scenario):
@@ -641,10 +650,9 @@ def smoke_test(addon_dir, addon_name, meta, files, whitelist, rep, with_ebonhold
         rep.info(label, "tests/scenario.lua executed")
     for i in range(1, len(errs) + 1):
         rep.error(label, errs[i].decode("utf-8", "replace"))
-    if deps:
-        for player, _, other in list(net.clients.values()):
-            if other is not mock:
-                net.collect(player, other)
+    for player, _, other in list(net.clients.values()):
+        if other is not mock:
+            net.collect(player, other)
     notes = mock.notes
     for i in range(1, len(notes) + 1):
         rep.info(label, notes[i].decode("utf-8", "replace"))

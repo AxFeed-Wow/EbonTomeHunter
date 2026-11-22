@@ -29,10 +29,10 @@ the feature solves, how you picture it, and why it is useful.
 2. `python tools/check.py` must print `ALL CHECKS PASSED`. It runs the validator and the test
    scenario (`EbonTomeHunter/tests/scenario.lua`) in a fake WoW client, with and without
    ProjectEbonhold, with an English and a French client, then checks the locale. 0 error and
-   0 warning are required. The network tests with several players need
-   [EbonAPI](https://github.com/Siphelis/EbonAPI) on your computer (set `EBONAPI_DIR` to its addon
-   folder, or have it installed in the game): it is read where it is, never copied into this
-   repository (its licence forbids redistributing or modifying it).
+   0 warning are required. The network tests run several simulated players on the addon's own
+   channel: nothing else to install. [EbonAPI](https://github.com/Siphelis/EbonAPI), kept aside
+   since 3.4.0 (`NetApi.lua`), is never copied into this repository nor modified (its licence
+   forbids it).
 3. To try a change in game: `python tools/install.py` (add `--wow <game folder>` when the game is not
    in `C:/ebonhold`). A new file in the `.toc` needs a full restart of the game; otherwise `/reload`
    is enough.
@@ -116,10 +116,10 @@ problème la fonctionnalité résout, comment tu l'imagines, et pourquoi elle es
 2. `python tools/check.py` doit afficher `ALL CHECKS PASSED`. Il lance le validateur et le scénario de
    test (`EbonTomeHunter/tests/scenario.lua`) dans un faux client WoW, avec et sans ProjectEbonhold,
    avec un client anglais et un client français, puis vérifie la locale. Il faut 0 erreur et
-   0 avertissement. Les tests réseau à plusieurs joueurs demandent
-   [EbonAPI](https://github.com/Siphelis/EbonAPI) sur ta machine (`EBONAPI_DIR` = son dossier d'addon,
-   ou installé dans le jeu) : il est lu là où il est, jamais copié dans ce dépôt (sa licence interdit
-   de le redistribuer ou de le modifier).
+   0 avertissement. Les tests réseau font tourner plusieurs joueurs simulés sur le canal propre de
+   l'addon : rien d'autre à installer. [EbonAPI](https://github.com/Siphelis/EbonAPI), gardé de côté
+   depuis la 3.4.0 (`NetApi.lua`), n'est jamais copié dans ce dépôt ni modifié (sa licence
+   l'interdit).
 3. Pour essayer en jeu : `python tools/install.py` (ajouter `--wow <dossier du jeu>` si le jeu n'est
    pas dans `C:/ebonhold`). Un nouveau fichier dans le `.toc` demande de relancer complètement le jeu ;
    sinon un `/reload` suffit.

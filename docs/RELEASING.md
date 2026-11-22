@@ -63,14 +63,19 @@ du jeu, sinon un `/reload` suffit.
 
 ## Prévenir les joueurs d'une nouvelle version
 
-Depuis la 3.0.0, EbonAPI annonce la version de chaque addon qui l'utilise (`api:Version`) et prévient
-lui-même un joueur resté sur une version plus ancienne dès qu'il croise un utilisateur à jour. Rien à
-faire à la publication : il suffit que des joueurs aient la nouvelle version. Les 2.x (leur propre
-canal caché, message `I`) ne voient ni les 3.x ni leurs lieux : la 3.0.0 est une version majeure.
+Depuis la 3.4.0, l'annonce `A` du réseau de l'addon (`Link.lua`) porte la version de son auteur : un
+joueur resté sur une version plus ancienne est prévenu une fois dès qu'il entend un utilisateur à
+jour (`Net.NewerVersion`). Rien à faire à la publication : il suffit que des joueurs aient la
+nouvelle version. De 3.0.0 à 3.3.x, c'était EbonAPI qui annonçait les versions (`api:Version`).
+Les réseaux ne se voient pas entre eux : 2.x (canal caché, message `I`), 3.0 à 3.3 (EbonAPI) et
+3.4 (canal `ebontomehunternet`) ; la 3.4.0 est donc à annoncer comme une mise à jour importante
+(Ebonhold Addon Manager la propose, c'est le `## Version` du `.toc` qui change).
 
-EbonAPI n'est jamais inclus dans le zip ni dans le dépôt (licence) : le README et le chat (une fois)
-disent de l'installer. Dans le catalogue d'Ebonhold Addon Manager, l'entrée EbonTomeHunter peut le
-signaler (champ `requires`).
+La 3.4.0 ajoute deux fichiers au `.toc` (`Link.lua`, `NetApi.lua`) : redémarrage complet du jeu
+nécessaire après la mise à jour, un `/reload` ne suffit pas. À dire dans les notes de release.
+
+EbonAPI n'est jamais inclus dans le zip ni dans le dépôt (licence), et n'est plus requis : seul son
+adaptateur `NetApi.lua` est publié.
 
 ## Intégration continue
 

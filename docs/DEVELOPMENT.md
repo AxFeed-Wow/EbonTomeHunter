@@ -12,8 +12,8 @@
 
 | Commande | Rôle |
 |---|---|
-| `python tools/check.py` | **à lancer après chaque modification** : validateur en client anglais puis français, et contrôle de la locale. Il faut ALL CHECKS PASSED (0 erreur, 0 avertissement). Avec EbonAPI trouvé (voir plus bas), les deux passent avec lui, et l'anglais une fois de plus sans lui |
-| `python tools/validate_addon.py EbonTomeHunter [--with <dossier d'addon>]` | le validateur seul, avec le détail des messages (`WOW_LOCALE=frFR` pour un client français). `--with` charge un autre addon avant le nôtre, là où il est (EbonAPI), et permet plusieurs joueurs dans le scénario |
+| `python tools/check.py` | **à lancer après chaque modification** : validateur en client anglais puis français, et contrôle de la locale. Il faut ALL CHECKS PASSED (0 erreur, 0 avertissement). Plus besoin d'EbonAPI (ni de `EBONAPI_DIR`) : les joueurs simulés (`Peers`) tournent sur le canal de l'addon, partout |
+| `python tools/validate_addon.py EbonTomeHunter [--with <dossier d'addon>]` | le validateur seul, avec le détail des messages (`WOW_LOCALE=frFR` pour un client français). `--with` charge un autre addon avant le nôtre, là où il est (par exemple EbonAPI, pour essayer `USE_EBONAPI`) ; les autres joueurs du scénario n'en ont plus besoin |
 | `python tools/check_locale.py` | textes : anglais et français au complet, clés utilisées et définies |
 | `python tools/install.py [--wow DIR] [--remove-legacy] [--dry-run]` | copie l'addon dans le jeu (sans `tests/`) après avoir sauvegardé la version installée dans `backups/`, puis vérifie octet par octet |
 | `python tools/package.py` | `dist/EbonTomeHunter-<version>.zip` pour une release (vérifie que les versions du `.toc` et de `Core.lua` concordent) |
@@ -60,11 +60,10 @@ Ce que le faux client reproduit (fidèlement) :
 - **Évènements inconnus :** un évènement inconnu du vrai client fait échouer `RegisterEvent`
   (`api_events_335.txt` : ceux que FrameXML inscrit, plus les évènements de chat par type,
   `CHAT_MSG_MONSTER_EMOTE`, `CHAT_MSG_MONEY`…, que le chat inscrit dynamiquement).
-- **Canaux et plusieurs joueurs** (seulement avec `--with`) : chaque joueur est un client simulé
+- **Canaux et plusieurs joueurs** (toujours, depuis la 3.4.0) : chaque joueur est un client simulé
   complet (son propre Lua). `JoinChannelByName`, `GetChannelName`, `GetChannelList`,
   `LeaveChannelByName` gèrent ses canaux (10 au plus) ; une ligne de canal atteint les autres membres,
-  un chuchotement d'addon son destinataire, ou « No player named … » revient s'il est absent. Sans
-  `--with`, un client seul n'a aucun canal (ces fonctions ne renvoient rien).
+  un chuchotement d'addon son destinataire, ou « No player named … » revient s'il est absent.
 
 Il reste **permissif** : un « OK » ne prouve pas que ça marche en jeu. Il faut relire la logique
 (ordre de chargement, `nil` possibles, combat) et dire à l'utilisateur ce qui reste à tester en jeu.
@@ -83,7 +82,7 @@ Le scénario est un script Lua exécuté après le démarrage, avec ces fonction
 | `Check(condition, "message")` | vérification (un échec = une erreur du validateur) |
 | `ChatContains("texte")` | le chat contient-il ce texte ? |
 | `Note("texte")` | ligne d'information dans le rapport (pratique pour déboguer) |
-| `Peers.Start(nom[, "api"])` | (avec `--with`) un autre joueur se connecte : les addons `--with` + le nôtre (`"api"` : les addons `--with` seuls) ; ses SavedVariables d'une session précédente sont rendues |
+| `Peers.Start(nom[, "api"])` | un autre joueur se connecte : les addons `--with` (s'il y en a) + le nôtre (`"api"` : les addons `--with` seuls) ; ses SavedVariables d'une session précédente sont rendues |
 | `Peers.Stop(nom)` | il se déconnecte (SavedVariables gardées pour son prochain `Start`) |
 | `Peers.Run(nom, "code Lua")` | exécute du code chez lui ; renvoie une valeur simple (`return …`) |
 | `Peers.Online(nom, false / true)` | le coupe du réseau sans le déconnecter (ni envoi ni réception) ; marche aussi pour `"Tester"`, le joueur du scénario |
@@ -99,16 +98,16 @@ Techniques utilisées :
   `StaticPopupDialogs.X.OnAccept(nil, data)`.
 - **Messages serveur ProjectEbonhold :**
   `Fire("CHAT_MSG_ADDON", "AAM0x9", code .. "\t" .. corps, "WHISPER", "Tester")`.
-- **Réseau (EbonAPI) :** le vrai EbonAPI est chargé quand `check.py` le trouve : `EBONAPI_DIR`, sinon
-  `../ModelAddonsEbonhold/EbonAPI/EbonAPI` à côté du dépôt, sinon le dossier AddOns du jeu (il est lu
-  là où il est, jamais copié : sa licence l'interdit). Le scénario a deux branches :
-  `if not EbonAPI` (joueur sans EbonAPI, la CI) et le réseau avec d'autres joueurs (`Peers`).
-  `Advance` fait avancer tous les clients ensemble ; EbonAPI annonce 15 s après un changement et fait
-  un tour toutes les 2 min : prévoir `Advance(40)` à `Advance(150)`. Un joueur qui revient en ligne
-  (`Peers.Online(nom, true)`) ne se reconnecte pas : `api:SyncShares()` fait l'annonce d'une
-  connexion. EbonAPI garde tout ce qu'il reçoit : une section qui publie des données de test les
-  retire à la fin (`api:Unshare(nom)`), sinon elles reviennent dans les sections suivantes.
-- **Lieux reçus sans EbonAPI :** `ns.Net.ImportPlaces(itemId, ns.Net.Encode({ … }), false)`, et
+- **Réseau (canal de l'addon) :** plus besoin d'EbonAPI. Le scénario fait tourner d'autres joueurs
+  simulés (`Peers`) sur le canal `ebontomehunternet` (`Link.lua`) ; `check.py` lance le validateur
+  en anglais puis en français, sans rien d'autre à installer (la CI aussi). `Advance` fait avancer
+  tous les clients ensemble. Le canal n'est rejoint que 8 à 30 s après la connexion et l'annonce
+  vient ensuite (15 à 30 s, puis toutes les 15 min) : prévoir des `Advance` assez longs. Un joueur
+  qui revient en ligne (`Peers.Online(nom, true)`) ne se reconnecte pas : `/eth net sync` (ou
+  `Net.ForceSync()`) fait l'annonce d'une connexion. `ns.Link.Stats()` et `ns.Link.PeerCount()`
+  disent ce qui a circulé. Pour essayer avec des données réelles, `PEER_SAVED_<NOM>` désigne un
+  fichier de SavedVariables dont le joueur `<NOM>` part (lu là où il est, jamais écrit).
+- **Lieux reçus sans réseau :** `ns.Net.ImportPlaces(itemId, ns.Net.Encode({ … }), false)`, et
   `ns.Evidence.ImportShared(itemId, "mob^joueur^n^…")` pour les preuves.
 - **Sacs :** redéfinir `GetContainerNumSlots` / `GetContainerItemLink` / `GetContainerItemInfo`,
   puis `Fire("BAG_UPDATE", 0)` et `Advance(2)`.
@@ -129,14 +128,13 @@ Sections actuelles :
 - chaîne de partage ;
 - marqueurs de carte ;
 - liens Wowhead et Sources ;
-- loot et réseau (sans EbonAPI, puis avec EbonAPI et plusieurs joueurs) ;
+- loot et réseau (un joueur seul, puis plusieurs joueurs sur le canal de l'addon) ;
 - sources périmées (seuil selon le taux de drop, preuves des autres joueurs) ;
 - statistiques de kills ;
 - historique des drops ;
 - tomes de raid ;
-- Greedy Scavenger (dont les indices du serveur : sort vu, type de créature, candidats) ;
+- Œil du charognard (dont les indices du serveur : sort vu, type de créature, candidats) ;
 - téléportation ;
-- atlas d'EbonBuilds ;
 - envoi direct ;
 - onglets de l'HV : recherche et achat.
 
@@ -163,16 +161,20 @@ modules peuvent écouter le même). Vérifier que l'évènement existe dans `too
 `ns.PE.Service("Service")` pour tester une présence. Toujours prévoir le cas où il est absent.
 Pour savoir ce qui existe, lire sa source (`tools/extract_pe_source.py`) et `docs/EBONHOLD.md`.
 
-**Données réseau** (EbonAPI) : un jeu de données par tome (`T<id>` lieux, `E<id>` preuves), 32 Ko
-au plus, jamais de `|`.
+**Données réseau** : un jeu de données par tome (`T<id>` lieux, `E<id>` preuves), texte de lignes
+séparées par `;` (une ligne = un lieu ou une source, compréhensible seule), jamais de `|`, 30 000
+octets au plus. `Net.lua` fournit les textes (`Net.DatasetText`) et reçoit les lignes
+(`Net.Import`) ; `Link.lua` (ou `NetApi.lua`) les porte.
 - Le texte doit être **canonique** : le même contenu donne le même texte sur tous les clients (ordre
-  total, champs convergents), sinon deux clients se republient sans fin.
-- Tout ce qui est reçu est validé (`Net.Decode`, `Evidence.ImportShared`) ; la règle `Net.Accept`
-  décide quels états prendre.
-- Changement de format incompatible : un autre préfixe de nom de jeu de données (les anciens clients
-  refusent les noms qu'ils ne connaissent pas), ou un autre nom d'addon pour `EbonAPI:NewAddon`.
-- Message ponctuel : `api:Say(op, corps)` / `api:OnChannel(op, fn)` (op alphanumérique ; EbonAPI
-  découpe un long corps en plusieurs lignes).
+  total, champs convergents), sinon deux clients échangent sans fin. Un texte qui change sans raison
+  (un compteur à chaque cadavre) change aussi l'empreinte : voir `Evidence.SharedText`.
+- Tout ce qui est reçu est validé (`Net.Decode`, `Evidence.ImportShared`).
+- Changement de format incompatible : un autre préfixe de nom de jeu de données, ou la version de
+  protocole `WIRE` de `Link.lua` (`E4`), que les anciens clients ignorent.
+- Message ponctuel : `ns.Net` passe par `transport.Say(op, corps)` / `transport.Listen(op, fn)` (op
+  alphanumérique ; `Link` découpe un long corps en messages `X`).
+- Revenir à EbonAPI : mettre `USE_EBONAPI = true` en tête de `Net.lua` ; `NetApi.lua` fait le reste
+  (à tester avec `--with <dossier d'EbonAPI>`, jamais copié dans le dépôt).
 
 **Les frames** : créées une seule fois (à la première ouverture), jamais recréées ; listes
 virtuelles (`W.List`) pour tout ce qui est long.
@@ -191,6 +193,8 @@ virtuelles (`W.List`) pour tout ce qui est long.
 - `/console scriptErrors 1` affiche les erreurs Lua à l'écran.
 - `C:/ebonhold/Logs/FrameXML.log` : erreurs de chargement (fichier absent du `.toc`, XML…).
   C'est le premier fichier à lire quand l'addon « ne fait rien ».
-- `/eth net` : état du réseau ; `/eth help` : commandes.
-- `/eapi status`, `/eapi trace 20 share` (EbonAPI) : son état, ses pairs, et ses derniers échanges.
+- `/eth net` : état du réseau, lignes envoyées / reçues, joueurs entendus (0 reçu après plusieurs
+  minutes : canal pas rejoint, voir `/chatlist` : 10 canaux pris ?) ; `/eth help` : commandes.
+- Avec `USE_EBONAPI` : `/eapi status`, `/eapi trace 20 share` (EbonAPI) : son état, ses pairs, et ses
+  derniers échanges.
 - Après une modification : `/reload`, ou redémarrage complet si le `.toc` a de nouveaux fichiers.

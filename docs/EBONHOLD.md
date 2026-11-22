@@ -105,9 +105,11 @@ rendre muet un client trop bavard. `RegisterAddonMessagePrefix` n'existe pas en 
 - **GUID de créature** (3.3.5a) : `0xF130` + entrée (6 chiffres hexadécimaux) + apparition (6 chiffres
   hexadécimaux) → `tonumber(guid:sub(7, 12), 16)`. `F150` = véhicule.
 
-## Le familier Greedy Scavenger
+## L'Œil du charognard (Scavenger's Eye, Toolbelt ; ancien « Greedy Scavenger »)
 
-Familier (compagnon) de ProjectEbonhold qui **ramasse lui-même le butin des cadavres** du joueur.
+Objet du Toolbelt de ProjectEbonhold (jusqu'ici familier « Greedy Scavenger », nom encore porté par
+la créature 600602 et par l'addon GreedyScavengerUI) qui **ramasse lui-même le butin des cadavres**
+du joueur. Les constats ci-dessous ont été faits avec le familier.
 - Il se configure par menus gossip : qualité minimale, types d'objets, destruction automatique.
   GreedyScavengerUI redessine ces menus.
 - **Ses objets arrivent dans les sacs sans aucune ligne `CHAT_MSG_LOOT`**, ni fenêtre de butin. Ce
@@ -138,8 +140,13 @@ restauration (jusqu'à 30 s) avant de proposer quoi que ce soit : rejoindre un c
 se fait l'enregistre deux fois et casse l'envoi (bugs #2664/#2676). Avec les canaux de zone et les
 canaux cachés d'autres addons (EbonAffixAlert, EbonBuilds, EbonClearance, Nexus…), la limite des 10
 canaux est vite atteinte. EbonTomeHunter 2.x rejoignait son propre canal après cette restauration ;
-depuis 3.0.0 il passe par le canal commun d'EbonAPI, qu'EbonAPI rejoint dès `PLAYER_LOGIN` (avant la
-restauration : un canal du joueur peut changer de numéro ; à signaler à son auteur).
+de 3.0.0 à 3.3.x il passait par le canal commun d'EbonAPI, rejoint dès `PLAYER_LOGIN` (avant la
+restauration : un canal du joueur pouvait changer de numéro). Depuis 3.4.0 il a de nouveau son
+propre canal caché, `ebontomehunternet` (`Link.lua`), rejoint seulement une fois les canaux du
+joueur rendus : liste de `GetChannelList` stable (8 s au moins, 30 s au plus après la connexion).
+Il prend l'une des 10 places ; s'il n'y en a plus, le joueur est prévenu une fois et le canal est
+rejoint tout seul dès qu'une place se libère. Serveur : AzerothCore rend muet un client qui envoie
+10 lignes de chat en une seconde, d'où une ligne toutes les 0,4 s au plus.
 
 ## Fenêtres de ProjectEbonhold qui font entrer des objets dans les sacs
 
@@ -193,13 +200,17 @@ EbonTomeHunter ne s'y fie pas et garde ses propres timers.
 - Beaucoup de sources sont des raids et donjons (Ulduar, Naxxramas…) : pas de carte de zone.
 - Sans licence indiquée : **lecture en jeu seulement** (`Atlas.lua`), jamais copié ni modifié.
 
-## EbonAPI (réseau, depuis 3.0.0)
+## EbonAPI (réseau de 3.0.0 à 3.3.x ; GARDÉ DE CÔTÉ depuis 3.4.0)
 
+- Depuis 3.4.0 le réseau passe par le canal de l'addon (`Link.lua`) : EbonAPI ne marche plus bien
+  depuis la mise à jour v2 du serveur (16/11/2026). Son adaptateur reste dans `NetApi.lua`, activé
+  par `USE_EBONAPI = true` en tête de `Net.lua` (`false` aujourd'hui) ; à tester quand EbonAPI sera
+  corrigé. Les joueurs n'ont pas à l'installer (il reste dans `## OptionalDeps`).
 - Addon de Siphelis ([github.com/Siphelis/EbonAPI](https://github.com/Siphelis/EbonAPI), aussi dans
   Ebonhold Addon Manager), utilisé par les addons de Siphelis (AutoCallboard, SkillTreeAutoLoad, son
   EbonBuilds). Licence **PolyForm Strict** :
   usage non commercial permis, **ni redistribution ni modification** : il n'est jamais copié dans ce
-  dépôt ni modifié ; chaque joueur l'installe, les tests le lisent là où il est.
+  dépôt ni modifié ; seul notre adaptateur est dans le dépôt.
 - `EbonAPI:NewAddon(nom, majeure, mineure)` : poignée de l'addon (nil si EbonAPI est trop ancien, il
   le dit au joueur). Évènements `READY`, `CHANNEL_JOINED` (collants), `CHANNEL_LOST`,
   `SHARE_RECEIVED(évènement, addon, nom, état, expéditeur)`.
@@ -237,9 +248,9 @@ et de Kalimdor (`shownOn` dans `MapData.lua`). Il ne faut pas les comparer aux p
 |---|---|
 | Auctionator | les onglets de l'HV cohabitent : EbonTomeHunter s'ajoute après ses onglets |
 | EbonholdHub / EbonCompletionist | source des lieux de drop (optionnelle) |
-| EbonAPI | réseau entre joueurs (optionnel : sans lui, les lieux restent locaux) |
-| EbonBuilds (vook) | atlas des tomes lu en jeu (sources en plus) |
-| AutoCallboard, SkillTreeAutoLoad | utilisent EbonAPI : leurs utilisateurs transmettent aussi nos jeux de données |
-| EbonClearance | gère aussi le Scavenger et le butin (aucun conflit connu) |
+| EbonAPI | gardé de côté depuis 3.4.0 (`NetApi.lua`, `USE_EBONAPI`) : le réseau n'en a plus besoin |
+| EbonBuilds (vook) | son atlas des tomes n'est plus lu (retiré en 3.3.1) |
+| AutoCallboard, SkillTreeAutoLoad | utilisent EbonAPI : ils ne relaient plus nos données depuis 3.4.0 |
+| EbonClearance | gère aussi l'Œil du charognard et le butin (aucun conflit connu) |
 | GreedyScavengerUI | menus du Scavenger |
 | PallyPilot / CallboardHunter | autre façon de se téléporter vers une zone (CallboardHunter) |
