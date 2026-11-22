@@ -59,7 +59,8 @@ local replied = {}             -- [name] = { n, since }
 local says, sayParts = {}, {}  -- X messages: [op] = handler, [sender/id] = { n, parts, got, at }
 local recentD = { -10, -10, -10 }   -- when the last texts of other users were heard
 local lastSync = -math.huge
-local stats = { sent = 0, received = 0 }
+local stats = { sent = 0, received = 0, echoed = 0, altered = 0 }
+local awaiting = {}             -- our last lines, until the server gives them back (it does, like any chat line)
 local nextPoll, lastSignature, stable, joinTries, nextTry = 0, nil, 0, 0, 0
 local MAX_CHANNELS = 10      -- chat channels a character can be in
 local toldFull = false
@@ -472,7 +473,8 @@ local function Tick()
     end
     if not building then Due(now) end
     if queue[1] and pcall(SendChatMessage, queue[1], "CHANNEL", nil, index) then
-        tremove(queue, 1)
+        awaiting[#awaiting + 1] = tremove(queue, 1)
+        if #awaiting > 30 then tremove(awaiting, 1) end
         stats.sent = stats.sent + 1
     end
 end
@@ -489,8 +491,21 @@ end)
 
 ns.RegisterEvent("CHAT_MSG_CHANNEL", function(text, author, _, channelString, _, _, _, _, channelName)
     if not wanted or not (IsOurChannel(channelString) or IsOurChannel(channelName)) then return end
-    local kind, payload = tostring(text or ""):match("^" .. WIRE .. "(%u)~(.*)$")
-    if not (kind and on[kind]) or not author or author == "" or author == UnitName("player") then return end
+    text = tostring(text or "")
+    if author == UnitName("player") then
+        -- our own line, back from the server: the proof it carries them, unchanged (/eth net)
+        for i, wire in ipairs(awaiting) do
+            if wire == text then
+                tremove(awaiting, i)
+                stats.echoed = stats.echoed + 1
+                return
+            end
+        end
+        if text:sub(1, #WIRE) == WIRE then stats.altered = stats.altered + 1 end
+        return
+    end
+    local kind, payload = text:match("^" .. WIRE .. "(%u)~(.*)$")
+    if not (kind and on[kind]) or not author or author == "" then return end
     if payload:find("[|%z\1-\31\127]") then return end
     stats.received = stats.received + 1
     peers[author] = GetTime()
@@ -585,7 +600,8 @@ function Link.PeerCount()
     return n
 end
 
--- { sent, received }: lines of this session (tests, /eth net).
+-- { sent, received, echoed, altered }: lines of this session (tests, /eth net). echoed: ours the
+-- server gave back as sent; altered: ours it gave back changed.
 function Link.Stats() return stats end
 
 local function Version(text)

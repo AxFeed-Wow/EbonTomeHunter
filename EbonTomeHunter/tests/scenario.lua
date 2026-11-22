@@ -862,6 +862,10 @@ do
     Advance(20)
     Check(Sent() == mine + 1 and Sent("Bob") == bobSent, "in step with Bob: one line from us, none from him")
     Check(not Link.Sync(), "announced again right away: refused (30 s)")
+    Check(Link.Stats().echoed == Sent() and Link.Stats().altered == 0 and Link.Stats().received > 0,
+        "every line of ours came back from the server unchanged (what /eth net shows a player alone)")
+    Slash("/eth net")
+    Check(ChatContains(format(ns.L.NetTraffic, Sent(), Sent(), Link.Stats().received, 1)), "/eth net tells the traffic of the session")
 
     -- lines nobody should take: a place dated 3 days ahead, an escape sequence, anything else
     Raw("Bob", "E4P~T300448~300448^Mulgore^500^500^^Plainstrider^Mulgore^" .. (time() + 3 * 86400) .. "^Bob^1")

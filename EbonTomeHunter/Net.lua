@@ -608,7 +608,9 @@ end
 function Net.TrafficText()
     local stats = transport and transport.Stats and transport.Stats()
     if not stats or Net.SyncState() == "off" then return nil end
-    return format(L.NetTraffic, stats.sent, stats.received, Net.PeerCount() or 0)
+    local text = format(L.NetTraffic, stats.sent, stats.echoed or 0, stats.received, Net.PeerCount() or 0)
+    if (stats.altered or 0) > 0 then text = text .. " " .. format(L.NetAltered, stats.altered) end
+    return text
 end
 
 -- /eth net sync: our data is compared with the others' now (at most every 30 s).

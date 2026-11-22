@@ -557,8 +557,7 @@ class Network:
 
         def channel(sender, name, msg):
             for _, _, other in list(net.clients.values()):
-                if other is not mock:
-                    other.DeliverChannel(name, sender, msg)
+                other.DeliverChannel(name, sender, msg)   # (the sender too: the server echoes chat lines)
 
         def step(dt):
             if not driver:

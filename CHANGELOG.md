@@ -27,7 +27,8 @@ connus de chaque joueur sont gardés et repartent sur le nouveau réseau.
   (deux ordinateurs n'ont jamais exactement la même heure), les 50 joueurs gardés par source sont les
   mêmes partout, notre propre compteur ne change plus de texte à chaque cadavre, et un nom avec une
   majuscule accentuée (« Ð », « É ») n'est plus rejeté selon les réglages de la machine.
-- `/eth net` affiche aussi les lignes envoyées et reçues et les joueurs entendus ; l'infobulle du
+- `/eth net` affiche aussi les lignes envoyées (et combien le serveur en a renvoyé intactes : la preuve,
+  même seul, que le canal fonctionne), les lignes reçues et les joueurs entendus ; l'infobulle du
   bouton Réseau compte les joueurs entendus.
 - Outils : `tools/check.py` n'a plus besoin d'EbonAPI ; le banc de test fait tourner plusieurs
   joueurs simulés sur le canal de l'addon.
